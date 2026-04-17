@@ -22,3 +22,10 @@ The system SHALL maintain dedicated tables for Pokémon forms and type definitio
 #### Scenario: Accessing form data
 - **WHEN** a user queries for Pokémon form variations
 - **THEN** the system SHALL provide data from the `pokemon_forms` table.
+
+### Requirement: Pokémon relationship with battle formats
+The system SHALL support relationships between Pokémon records and the `format_pokemon` table to enable legality queries.
+
+#### Scenario: Querying Pokémon legality
+- **WHEN** a user queries for all legal Pokémon in the "Regulation M-A" format
+- **THEN** the system SHALL return records based on entries in the `format_pokemon` junction table.

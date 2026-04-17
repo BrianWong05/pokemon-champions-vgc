@@ -57,6 +57,24 @@ export const types = sqliteTable('types', {
   damageClassId: integer('damage_class_id'),
 });
 
+export const formats = sqliteTable('formats', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  isActive: integer('is_active', { mode: 'boolean' }).default(true),
+});
+
+export const formatPokemon = sqliteTable('format_pokemon', {
+  formatId: integer('format_id')
+    .notNull()
+    .references(() => formats.id, { onDelete: 'cascade' }),
+  pokemonId: integer('pokemon_id')
+    .notNull()
+    .references(() => pokemon.id, { onDelete: 'cascade' }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.formatId, t.pokemonId] }),
+}));
+
 export const pokemonForms = sqliteTable('pokemon_forms', {
   id: integer('id').primaryKey(),
   identifier: text('identifier').notNull(),
@@ -76,11 +94,27 @@ export const pokemonForms = sqliteTable('pokemon_forms', {
 export const pokemonRelations = relations(pokemon, ({ many }) => ({
   pokemonMoves: many(pokemonMoves),
   forms: many(pokemonForms),
+  formatLegality: many(formatPokemon),
 }));
 
 export const pokemonFormsRelations = relations(pokemonForms, ({ one }) => ({
   pokemon: one(pokemon, {
     fields: [pokemonForms.pokemonId],
+    references: [pokemon.id],
+  }),
+}));
+
+export const formatsRelations = relations(formats, ({ many }) => ({
+  pokemonLegality: many(formatPokemon),
+}));
+
+export const formatPokemonRelations = relations(formatPokemon, ({ one }) => ({
+  format: one(formats, {
+    fields: [formatPokemon.formatId],
+    references: [formats.id],
+  }),
+  pokemon: one(pokemon, {
+    fields: [formatPokemon.pokemonId],
     references: [pokemon.id],
   }),
 }));
