@@ -3,8 +3,78 @@ import requests
 import sqlite3
 import os
 import io
+import re
 
 BASE_URL = "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/"
+
+# 1.1 Form Localization Mapping
+FORM_MAPPINGS = {
+    "mega": {
+        "en": "Mega {name}",
+        "ja": "メガ{name}",
+        "zh": "超級{name}"
+    },
+    "alola": {
+        "en": "Alolan {name}",
+        "ja": "アローラ{name}",
+        "zh": "阿羅拉的樣子 {name}"
+    },
+    "galar": {
+        "en": "Galarian {name}",
+        "ja": "ガラル{name}",
+        "zh": "伽勒爾的樣子 {name}"
+    },
+    "hisui": {
+        "en": "Hisuian {name}",
+        "ja": "ヒスイ{name}",
+        "zh": "洗翠的樣子 {name}"
+    },
+    "paldea": {
+        "en": "Paldean {name}",
+        "ja": "パルデア{name}",
+        "zh": "帕底亞的樣子 {name}"
+    },
+    "mega-x": {
+        "en": "Mega {name} X",
+        "ja": "メガ{name}X",
+        "zh": "超級{name}X"
+    },
+    "mega-y": {
+        "en": "Mega {name} Y",
+        "ja": "メガ{name}Y",
+        "zh": "超級{name}Y"
+    }
+}
+
+# 1.2 Implement localize_form_name function
+def localize_form_name(row, lang):
+    identifier = row['identifier']
+    base_name = row[f'name_{lang}']
+    is_default = row['is_default']
+    
+    # If it's a default form and doesn't have a known suffix, return base name
+    if is_default and '-' not in identifier:
+        return base_name
+
+    # Extract suffix (e.g., charizard-mega-x -> mega-x)
+    parts = identifier.split('-', 1)
+    if len(parts) < 2:
+        return base_name
+        
+    suffix = parts[1]
+    
+    # Check for direct mapping
+    if suffix in FORM_MAPPINGS:
+        mapping = FORM_MAPPINGS[suffix]
+        return mapping[lang].format(name=base_name)
+    
+    # Check for partial matches (e.g., "mega-x" might be split or handled differently)
+    # This covers cases where the identifier might be "name-form-something-else"
+    for key, mapping in FORM_MAPPINGS.items():
+        if identifier.endswith(f"-{key}"):
+            return mapping[lang].format(name=base_name)
+
+    return base_name
 
 def fetch_csv(filename):
     print(f"Fetching {filename}...")
@@ -14,7 +84,7 @@ def fetch_csv(filename):
     return pd.read_csv(io.StringIO(response.text))
 
 def main():
-    # 2.1 Fetch CSVs
+    # Fetch CSVs
     pokemon_df = fetch_csv("pokemon.csv")
     pokemon_species_df = fetch_csv("pokemon_species.csv")
     pokemon_species_names_df = fetch_csv("pokemon_species_names.csv")
@@ -23,7 +93,7 @@ def main():
     pokemon_stats_df = fetch_csv("pokemon_stats.csv")
     pokemon_forms_df = fetch_csv("pokemon_forms.csv")
 
-    # 2.2 Localized names
+    # Localized names
     # local_language_id: 9 (en), 1 (ja-Hrkt), 4 (zh-Hant)
     names_en = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 9][['pokemon_species_id', 'name']].rename(columns={'name': 'name_en'})
     names_ja = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 1][['pokemon_species_id', 'name']].rename(columns={'name': 'name_ja'})
@@ -38,27 +108,26 @@ def main():
     # Merge with names
     pokemon_merged = pokemon_merged.merge(names_df, left_on='species_id', right_on='pokemon_species_id', how='left')
 
-    # 2.3 Pivot stats
-    # Stat IDs: 1 (hp), 2 (atk), 3 (def), 4 (spa), 5 (spd), 6 (spe)
+    # 1.3 & 1.4 Integrate and apply localization function
+    print("Constructing localized names for alternate forms...")
+    pokemon_merged['name_en'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'en'), axis=1)
+    pokemon_merged['name_ja'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'ja'), axis=1)
+    pokemon_merged['name_zh'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'zh'), axis=1)
+
+    # Pivot stats
     stat_mapping = {1: 'hp', 2: 'atk', 3: 'def', 4: 'spa', 5: 'spd', 6: 'spe'}
     pokemon_stats_df['stat_name'] = pokemon_stats_df['stat_id'].map(stat_mapping)
-    
-    # Drop rows with unmapped stats (if any new ones exist) and pivot
     pokemon_stats_df = pokemon_stats_df.dropna(subset=['stat_name'])
     stats_pivot = pokemon_stats_df.pivot(index='pokemon_id', columns='stat_name', values='base_stat').reset_index()
 
     # Merge stats into pokemon
     pokemon_merged = pokemon_merged.merge(stats_pivot, left_on='id', right_on='pokemon_id', how='left')
 
-    # 2.4 Process types
+    # Process types
     pt_merged = pokemon_types_df.merge(types_df[['id', 'identifier']], left_on='type_id', right_on='id', how='left')
-    
     type1 = pt_merged[pt_merged['slot'] == 1][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type1'})
     type2 = pt_merged[pt_merged['slot'] == 2][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type2'})
-
     types_pivot = type1.merge(type2, on='pokemon_id', how='left')
-
-    # Merge types into pokemon
     pokemon_merged = pokemon_merged.merge(types_pivot, left_on='id', right_on='pokemon_id', how='left')
     
     # Final data selection
@@ -69,15 +138,11 @@ def main():
         'height', 'weight', 'base_experience', 'order', 'is_default'
     ]].copy()
 
-    # Database Creation (3.1, 3.2, 3.3)
+    # Database Creation
     db_path = "vgc_pokemon.db"
-    
-    # If the db exists, we connect to it to avoid overwriting existing non-pokemon tables (like moves/abilities from a previous spec)
-    # But since we're recreating the `pokemon` table, we'll drop it if it exists.
     conn = sqlite3.connect(db_path)
     
     print(f"Writing to SQLite database {db_path}...")
-    
     conn.execute("DROP TABLE IF EXISTS pokemon;")
     conn.execute("DROP TABLE IF EXISTS pokemon_forms;")
     conn.execute("DROP TABLE IF EXISTS types;")
@@ -104,13 +169,8 @@ def main():
         is_default BOOLEAN
     );
     """
-    
     conn.execute(create_table_sql)
-    
-    # Insert data
     final_df.to_sql('pokemon', conn, if_exists='append', index=False)
-    
-    # Create secondary tables
     pokemon_forms_df.to_sql('pokemon_forms', conn, if_exists='replace', index=False)
     types_df.to_sql('types', conn, if_exists='replace', index=False)
     
