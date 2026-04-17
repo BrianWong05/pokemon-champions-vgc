@@ -90,11 +90,32 @@ export const pokemonForms = sqliteTable('pokemon_forms', {
   formOrder: integer('form_order'),
 });
 
+export const calculatedSpeeds = sqliteTable('calculated_speeds', {
+  pokemonId: integer('pokemon_id')
+    .primaryKey()
+    .references(() => pokemon.id, { onDelete: 'cascade' }),
+  maxPlus: integer('max_plus').notNull(),
+  maxNeutral: integer('max_neutral').notNull(),
+  uninvested: integer('uninvested').notNull(),
+  minMinus: integer('min_minus').notNull(),
+});
+
 // Relations
-export const pokemonRelations = relations(pokemon, ({ many }) => ({
+export const pokemonRelations = relations(pokemon, ({ many, one }) => ({
   pokemonMoves: many(pokemonMoves),
   forms: many(pokemonForms),
   formatLegality: many(formatPokemon),
+  calculatedSpeed: one(calculatedSpeeds, {
+    fields: [pokemon.id],
+    references: [calculatedSpeeds.pokemonId],
+  }),
+}));
+
+export const calculatedSpeedsRelations = relations(calculatedSpeeds, ({ one }) => ({
+  pokemon: one(pokemon, {
+    fields: [calculatedSpeeds.pokemonId],
+    references: [pokemon.id],
+  }),
 }));
 
 export const pokemonFormsRelations = relations(pokemonForms, ({ one }) => ({
