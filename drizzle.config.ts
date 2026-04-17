@@ -5,6 +5,6 @@ export default defineConfig({
   out: './drizzle/migrations',
   dialect: 'sqlite',
   dbCredentials: {
-    url: 'sqlite.db',
+    url: 'vgc_pokemon.db',
   },
 });

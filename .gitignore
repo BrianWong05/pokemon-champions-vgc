@@ -26,3 +26,6 @@ dist-ssr
 # OpenSpec artifacts
 .openspec/changes/*
 !.openspec/changes/.keep
+
+# Python
+.venv/*
