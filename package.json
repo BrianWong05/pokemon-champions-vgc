@@ -23,8 +23,10 @@
   "homepage": "https://github.com/BrianWong05/pokemon-champions-vgc#readme",
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
+    "@types/better-sqlite3": "^7.6.13",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
+    "drizzle-kit": "^0.31.10",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.3",
@@ -33,6 +35,8 @@
   "dependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "better-sqlite3": "^12.9.0",
+    "drizzle-orm": "^0.45.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   }
