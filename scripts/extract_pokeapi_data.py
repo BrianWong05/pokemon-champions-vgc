@@ -115,7 +115,7 @@ def main():
     pokemon_merged['name_zh'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'zh'), axis=1)
 
     # Pivot stats
-    stat_mapping = {1: 'hp', 2: 'atk', 3: 'def', 4: 'spa', 5: 'spd', 6: 'spe'}
+    stat_mapping = {1: 'base_hp', 2: 'base_attack', 3: 'base_defense', 4: 'base_sp_atk', 5: 'base_sp_def', 6: 'base_speed'}
     pokemon_stats_df['stat_name'] = pokemon_stats_df['stat_id'].map(stat_mapping)
     pokemon_stats_df = pokemon_stats_df.dropna(subset=['stat_name'])
     stats_pivot = pokemon_stats_df.pivot(index='pokemon_id', columns='stat_name', values='base_stat').reset_index()
@@ -134,7 +134,7 @@ def main():
     final_df = pokemon_merged[[
         'id', 'identifier', 'name_en', 'name_ja', 'name_zh',
         'type1', 'type2',
-        'hp', 'atk', 'def', 'spa', 'spd', 'spe',
+        'base_hp', 'base_attack', 'base_defense', 'base_sp_atk', 'base_sp_def', 'base_speed',
         'height', 'weight', 'base_experience', 'order', 'is_default'
     ]].copy()
 
@@ -156,12 +156,12 @@ def main():
         name_zh TEXT,
         type1 TEXT NOT NULL,
         type2 TEXT,
-        hp INTEGER NOT NULL,
-        atk INTEGER NOT NULL,
-        def INTEGER NOT NULL,
-        spa INTEGER NOT NULL,
-        spd INTEGER NOT NULL,
-        spe INTEGER NOT NULL,
+        base_hp INTEGER NOT NULL,
+        base_attack INTEGER NOT NULL,
+        base_defense INTEGER NOT NULL,
+        base_sp_atk INTEGER NOT NULL,
+        base_sp_def INTEGER NOT NULL,
+        base_speed INTEGER NOT NULL,
         height INTEGER,
         weight INTEGER,
         base_experience INTEGER,

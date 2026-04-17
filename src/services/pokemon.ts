@@ -37,13 +37,13 @@ export const fetchRegulationMAPokemonSpeed = async (): Promise<PokemonWithSpeeds
     .select({
       id: pokemon.id,
       name: pokemon.nameEn,
-      baseSpeed: pokemon.spe,
+      baseSpeed: pokemon.baseSpeed,
     })
     .from(pokemon)
     .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
     .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
     .where(eq(formats.name, 'Regulation M-A'))
-    .orderBy(desc(pokemon.spe));
+    .orderBy(desc(pokemon.baseSpeed));
 
   return result.map((row) => ({
     id: row.id,
