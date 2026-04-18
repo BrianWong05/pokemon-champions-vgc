@@ -26,8 +26,11 @@ const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon }) => {
       <div className="divide-y">
         {/* Header for the grid */}
         <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 items-center">
-          <div className="col-span-4 lg:col-span-5">
+          <div className="col-span-3 lg:col-span-4">
             <Typography variant="label">Pokemon</Typography>
+          </div>
+          <div className="col-span-1 text-center">
+            <Typography variant="label">Base</Typography>
           </div>
           <div className="col-span-2 text-center">
             <Typography variant="label">Max+</Typography>

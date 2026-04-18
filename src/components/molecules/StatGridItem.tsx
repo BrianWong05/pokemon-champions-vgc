@@ -5,6 +5,7 @@ import StatValue from '@/components/atoms/StatValue';
 interface StatGridItemProps {
   id: number;
   name: string;
+  baseSpeed: number;
   maxPlus: number;
   maxNeutral: number;
   uninvested: number;
@@ -14,6 +15,7 @@ interface StatGridItemProps {
 const StatGridItem: React.FC<StatGridItemProps> = ({ 
   id, 
   name, 
+  baseSpeed,
   maxPlus, 
   maxNeutral, 
   uninvested, 
@@ -21,9 +23,13 @@ const StatGridItem: React.FC<StatGridItemProps> = ({
 }) => {
   return (
     <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors">
-      <div className="col-span-4 lg:col-span-5 flex items-center space-x-3">
+      <div className="col-span-3 lg:col-span-4 flex items-center space-x-3">
         <PokemonImage id={id} name={name} />
         <span className="font-medium text-gray-900 truncate">{name}</span>
+      </div>
+
+      <div className="col-span-1 text-center">
+        <span className="text-sm font-bold text-gray-400">{baseSpeed}</span>
       </div>
       
       <div className="col-span-2 text-center">
