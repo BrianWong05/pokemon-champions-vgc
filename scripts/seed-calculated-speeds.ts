@@ -1,4 +1,4 @@
-import { db } from '../src/db';
+import { db } from '../src/db/node';
 import { pokemon, formatPokemon, formats, calculatedSpeeds } from '../src/db/schema';
 import { eq, and } from 'drizzle-orm';
 
