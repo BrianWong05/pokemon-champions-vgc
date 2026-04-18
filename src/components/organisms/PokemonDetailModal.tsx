@@ -3,6 +3,7 @@ import Typography from '@/components/atoms/Typography';
 import StatBar from '@/components/atoms/StatBar';
 import FormItem from '@/components/molecules/FormItem';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import TypeBadge from '@/components/atoms/TypeBadge';
 
 export interface FullPokemonDetail {
   id: number;
@@ -64,15 +65,9 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
                     {pokemon.nameZh}
                   </span>
                 )}
-                <div className="flex space-x-1 ml-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase text-white bg-gray-600`}>
-                    {pokemon.type1}
-                  </span>
-                  {pokemon.type2 && (
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase text-white bg-gray-400`}>
-                      {pokemon.type2}
-                    </span>
-                  )}
+                <div className="flex space-x-1.5 ml-2">
+                  <TypeBadge type={pokemon.type1} />
+                  {pokemon.type2 && <TypeBadge type={pokemon.type2} />}
                 </div>
               </div>
             </div>
