@@ -13,6 +13,31 @@ const EvSpConverterPage: React.FC = () => {
     spe: 0,
   });
 
+  const handleSpreadChange = (newSpread: EvSpread) => {
+    // Find which stat changed
+    const changedStat = (Object.keys(newSpread) as (keyof EvSpread)[]).find(
+      (key) => newSpread[key] !== spread[key]
+    );
+
+    if (!changedStat) return;
+
+    // Calculate current sum of all other stats
+    const otherStatsSum = (Object.keys(spread) as (keyof EvSpread)[])
+      .filter((key) => key !== changedStat)
+      .reduce((sum, key) => sum + spread[key], 0);
+
+    // Calculate remaining pool
+    const maxAllowed = 510 - otherStatsSum;
+
+    // Cap the new value
+    const cappedValue = Math.min(newSpread[changedStat], maxAllowed);
+
+    setSpread({
+      ...newSpread,
+      [changedStat]: cappedValue,
+    });
+  };
+
   const totals = useMemo(() => {
     const values = Object.values(spread);
     const totalEvs = values.reduce((sum, val) => sum + val, 0);
@@ -36,7 +61,7 @@ const EvSpConverterPage: React.FC = () => {
 
       <EvSpForm 
         spread={spread} 
-        onSpreadChange={setSpread} 
+        onSpreadChange={handleSpreadChange} 
         totalEvs={totals.totalEvs} 
         totalSp={totals.totalSp} 
       />
