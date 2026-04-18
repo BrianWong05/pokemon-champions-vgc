@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, calculatedSpeeds } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import SpeedTierTemplate from '@/components/templates/SpeedTierTemplate';
+import TierSection from '@/components/organisms/TierSection';
 
 interface PokemonWithSpeeds {
   id: number;
@@ -13,7 +15,7 @@ interface PokemonWithSpeeds {
   minMinus: number;
 }
 
-const SpeedTierList: React.FC = () => {
+const SpeedTierPage: React.FC = () => {
   const [pokemonData, setPokemonData] = useState<PokemonWithSpeeds[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,80 +73,22 @@ const SpeedTierList: React.FC = () => {
       }));
   }, [pokemonData]);
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="text-xl font-medium text-gray-600 animate-pulse">
-          Loading speed tiers...
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center text-gray-900">
-        Regulation M-A Speed Tiers
-      </h1>
-      
-      {groupedPokemon.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          No speed data found for Regulation M-A.
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {groupedPokemon.map((group) => (
-            <div key={group.baseSpeed} className="border rounded-lg overflow-hidden shadow-sm bg-white">
-              <div className="bg-gray-100 px-4 py-2 border-b">
-                <h2 className="text-xl font-semibold text-gray-800">Base {group.baseSpeed}</h2>
-              </div>
-              
-              <div className="divide-y">
-                {/* Header for the grid */}
-                <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider items-center">
-                  <div className="col-span-4 lg:col-span-5">Pokemon</div>
-                  <div className="col-span-2 text-center">Max+</div>
-                  <div className="col-span-2 text-center">Max</div>
-                  <div className="col-span-2 text-center">Neutral</div>
-                  <div className="col-span-2 lg:col-span-1 text-center">Min-</div>
-                </div>
-
-                {group.pokemon.map((p) => (
-                  <div key={p.id} className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors">
-                    <div className="col-span-4 lg:col-span-5 flex items-center space-x-3">
-                      <img 
-                        src={`${import.meta.env.BASE_URL}images/pokemon/thumbnails/${p.id}.png`} 
-                        alt={p.name}
-                        className="w-10 h-10 object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
-                        }}
-                      />
-
-                      <span className="font-medium text-gray-900 truncate">{p.name}</span>
-                    </div>
-                    
-                    <div className="col-span-2 text-center font-bold text-red-600">
-                      {p.maxPlus}
-                    </div>
-                    <div className="col-span-2 text-center font-semibold text-orange-600">
-                      {p.maxNeutral}
-                    </div>
-                    <div className="col-span-2 text-center text-gray-700">
-                      {p.uninvested}
-                    </div>
-                    <div className="col-span-2 lg:col-span-1 text-center text-blue-600">
-                      {p.minMinus}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <SpeedTierTemplate 
+      title="Regulation M-A Speed Tiers"
+      isLoading={isLoading}
+      isEmpty={groupedPokemon.length === 0}
+      emptyMessage="No speed data found for Regulation M-A."
+    >
+      {groupedPokemon.map((group) => (
+        <TierSection 
+          key={group.baseSpeed} 
+          baseSpeed={group.baseSpeed} 
+          pokemon={group.pokemon} 
+        />
+      ))}
+    </SpeedTierTemplate>
   );
 };
 
-export default SpeedTierList;
+export default SpeedTierPage;
