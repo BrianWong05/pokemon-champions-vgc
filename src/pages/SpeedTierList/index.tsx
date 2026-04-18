@@ -8,6 +8,7 @@ import TierSection from '@/components/organisms/TierSection';
 interface PokemonWithSpeeds {
   id: number;
   name: string;
+  nameZh: string | null;
   baseSpeed: number;
   maxPlus: number;
   maxNeutral: number;
@@ -28,6 +29,7 @@ const SpeedTierPage: React.FC = () => {
           .select({
             id: pokemon.id,
             name: pokemon.nameEn,
+            nameZh: pokemon.nameZh,
             baseSpeed: pokemon.baseSpeed,
             maxPlus: calculatedSpeeds.maxPlus,
             maxNeutral: calculatedSpeeds.maxNeutral,

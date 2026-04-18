@@ -6,6 +6,7 @@ import Typography from '@/components/atoms/Typography';
 interface PokemonWithSpeeds {
   id: number;
   name: string;
+  nameZh: string | null;
   baseSpeed: number;
   maxPlus: number;
   maxNeutral: number;
@@ -26,7 +27,7 @@ const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon }) => {
       <div className="divide-y">
         {/* Header for the grid */}
         <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 items-center">
-          <div className="col-span-3 lg:col-span-4">
+          <div className="col-span-4 lg:col-span-5">
             <Typography variant="label">Pokemon</Typography>
           </div>
           <div className="col-span-1 text-center">
@@ -38,10 +39,7 @@ const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon }) => {
           <div className="col-span-2 text-center">
             <Typography variant="label">Max</Typography>
           </div>
-          <div className="col-span-2 text-center">
-            <Typography variant="label">Neutral</Typography>
-          </div>
-          <div className="col-span-2 lg:col-span-1 text-center">
+          <div className="col-span-3 lg:col-span-2 text-center">
             <Typography variant="label">Min-</Typography>
           </div>
         </div>

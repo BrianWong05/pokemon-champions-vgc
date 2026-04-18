@@ -5,6 +5,7 @@ import StatValue from '@/components/atoms/StatValue';
 interface StatGridItemProps {
   id: number;
   name: string;
+  nameZh: string | null;
   baseSpeed: number;
   maxPlus: number;
   maxNeutral: number;
@@ -15,17 +16,24 @@ interface StatGridItemProps {
 const StatGridItem: React.FC<StatGridItemProps> = ({ 
   id, 
   name, 
+  nameZh,
   baseSpeed,
   maxPlus, 
   maxNeutral, 
-  uninvested, 
   minMinus 
 }) => {
   return (
     <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors">
-      <div className="col-span-3 lg:col-span-4 flex items-center space-x-3">
+      <div className="col-span-4 lg:col-span-5 flex items-center space-x-3">
         <PokemonImage id={id} name={name} />
-        <span className="font-medium text-gray-900 truncate">{name}</span>
+        <div className="flex flex-col truncate">
+          <span className="font-medium text-gray-900 truncate">{name}</span>
+          {nameZh && (
+            <span className="text-xs text-gray-500 truncate leading-tight">
+              {nameZh}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="col-span-1 text-center">
@@ -38,10 +46,7 @@ const StatGridItem: React.FC<StatGridItemProps> = ({
       <div className="col-span-2 text-center">
         <StatValue value={maxNeutral} colorVariant="orange" isBold />
       </div>
-      <div className="col-span-2 text-center">
-        <StatValue value={uninvested} colorVariant="gray" />
-      </div>
-      <div className="col-span-2 lg:col-span-1 text-center">
+      <div className="col-span-3 lg:col-span-2 text-center">
         <StatValue value={minMinus} colorVariant="blue" />
       </div>
     </div>
