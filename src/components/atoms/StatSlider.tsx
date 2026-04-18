@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface StatInputProps {
+interface StatSliderProps {
   value: number;
   onChange: (value: number) => void;
   min?: number;
@@ -8,7 +8,7 @@ interface StatInputProps {
   className?: string;
 }
 
-const StatInput: React.FC<StatInputProps> = ({ 
+const StatSlider: React.FC<StatSliderProps> = ({ 
   value, 
   onChange, 
   min = 0, 
@@ -16,21 +16,20 @@ const StatInput: React.FC<StatInputProps> = ({
   className = '' 
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10) || 0;
-    onChange(Math.max(min, Math.min(max, val)));
+    onChange(parseInt(e.target.value, 10));
   };
 
   return (
     <input
-      type="number"
+      type="range"
       value={value}
       onChange={handleChange}
       min={min}
       max={max}
       step={4}
-      className={`w-24 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium ${className}`}
+      className={`h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 ${className}`}
     />
   );
 };
 
-export default StatInput;
+export default StatSlider;
