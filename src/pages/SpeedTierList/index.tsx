@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, calculatedSpeeds } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import SpeedTierTemplate from '@/components/templates/SpeedTierTemplate';
 import TierSection from '@/components/organisms/TierSection';
+import PokemonDetailModal, { FullPokemonDetail } from '@/components/organisms/PokemonDetailModal';
 
 interface PokemonWithSpeeds {
   id: number;
@@ -18,7 +19,76 @@ interface PokemonWithSpeeds {
 
 const SpeedTierPage: React.FC = () => {
   const [pokemonData, setPokemonData] = useState<PokemonWithSpeeds[]>([]);
+  const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
+  const [detailedPokemon, setDetailedPokemon] = useState<FullPokemonDetail | null>(null);
+  const [otherForms, setOtherForms] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleSelectPokemon = (id: number) => {
+    setSelectedPokemonId(id);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedPokemonId(null);
+    setDetailedPokemon(null);
+    setOtherForms([]);
+  };
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!selectedPokemonId) return;
+
+      try {
+        const database = await getDb();
+        
+        // 1. Fetch current pokemon details
+        const [details] = await database
+          .select()
+          .from(pokemon)
+          .where(eq(pokemon.id, selectedPokemonId));
+
+        if (details) {
+          setDetailedPokemon(details as FullPokemonDetail);
+
+          // 2. Find other forms
+          // Strategy: Match by base identifier (e.g., 'charizard' in 'charizard-mega-x')
+          // Extract base name from identifier (before first dash)
+          const baseId = details.identifier.split('-')[0];
+          
+          const forms = await database
+            .select({
+              id: pokemon.id,
+              name: pokemon.nameEn,
+            })
+            .from(pokemon)
+            .where(eq(pokemon.identifier, baseId)) // Base form
+            .limit(20);
+
+          const variants = await database
+            .select({
+              id: pokemon.id,
+              name: pokemon.nameEn,
+            })
+            .from(pokemon)
+            .where(
+              sql`${pokemon.identifier} LIKE ${`${baseId}-%`}`
+            )
+            .limit(20);
+
+          // Combine and filter unique IDs
+          const allForms = [...forms, ...variants]
+            .filter((v, i, self) => i === self.findIndex((t) => t.id === v.id))
+            .map(f => ({ id: f.id, name: f.name || 'Unknown' }));
+
+          setOtherForms(allForms);
+        }
+      } catch (error) {
+        console.error('Error fetching pokemon details:', error);
+      }
+    };
+
+    fetchDetails();
+  }, [selectedPokemonId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,8 +157,18 @@ const SpeedTierPage: React.FC = () => {
           key={group.baseSpeed} 
           baseSpeed={group.baseSpeed} 
           pokemon={group.pokemon} 
+          onSelectPokemon={handleSelectPokemon}
         />
       ))}
+
+      {detailedPokemon && (
+        <PokemonDetailModal 
+          pokemon={detailedPokemon} 
+          otherForms={otherForms} 
+          onClose={handleCloseModal}
+          onFormSelect={handleSelectPokemon}
+        />
+      )}
     </SpeedTierTemplate>
   );
 };

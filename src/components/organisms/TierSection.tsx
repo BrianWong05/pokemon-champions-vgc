@@ -17,9 +17,10 @@ interface PokemonWithSpeeds {
 interface TierSectionProps {
   baseSpeed: number;
   pokemon: PokemonWithSpeeds[];
+  onSelectPokemon: (id: number) => void;
 }
 
-const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon }) => {
+const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon, onSelectPokemon }) => {
   return (
     <div className="border rounded-lg overflow-hidden shadow-sm bg-white">
       <TierHeader baseSpeed={baseSpeed} />
@@ -45,7 +46,7 @@ const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon }) => {
         </div>
 
         {pokemon.map((p) => (
-          <StatGridItem key={p.id} {...p} />
+          <StatGridItem key={p.id} {...p} onSelect={onSelectPokemon} />
         ))}
       </div>
     </div>

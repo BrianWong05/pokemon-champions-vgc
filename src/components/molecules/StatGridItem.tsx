@@ -11,6 +11,7 @@ interface StatGridItemProps {
   maxNeutral: number;
   uninvested: number;
   minMinus: number;
+  onSelect: (id: number) => void;
 }
 
 const StatGridItem: React.FC<StatGridItemProps> = ({ 
@@ -20,10 +21,14 @@ const StatGridItem: React.FC<StatGridItemProps> = ({
   baseSpeed,
   maxPlus, 
   maxNeutral, 
-  minMinus 
+  minMinus,
+  onSelect
 }) => {
   return (
-    <div className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors">
+    <div 
+      className="grid grid-cols-12 gap-4 px-4 py-4 items-center hover:bg-blue-50/30 transition-colors cursor-pointer"
+      onClick={() => onSelect(id)}
+    >
       <div className="col-span-4 lg:col-span-5 flex items-center space-x-3">
         <PokemonImage id={id} name={name} />
         <div className="flex flex-col truncate">
