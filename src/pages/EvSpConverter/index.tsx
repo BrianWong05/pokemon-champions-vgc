@@ -1,0 +1,60 @@
+import React, { useState, useMemo } from 'react';
+import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
+import { calculateSP } from '@/utils/ev-conversion';
+import Typography from '@/components/atoms/Typography';
+
+const EvSpConverterPage: React.FC = () => {
+  const [spread, setSpread] = useState<EvSpread>({
+    hp: 0,
+    atk: 0,
+    def: 0,
+    spa: 0,
+    spd: 0,
+    spe: 0,
+  });
+
+  const totals = useMemo(() => {
+    const values = Object.values(spread);
+    const totalEvs = values.reduce((sum, val) => sum + val, 0);
+    const totalSp = values.reduce((sum, val) => sum + calculateSP(val), 0);
+    
+    return { totalEvs, totalSp };
+  }, [spread]);
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="text-center mb-12">
+        <Typography variant="h1" className="mb-4">
+          EV to SP Converter
+        </Typography>
+        <Typography variant="body" className="max-w-xl mx-auto block">
+          Pokémon Champions uses a custom "SP" (Special Points) system instead of EVs. 
+          Use this tool to translate your traditional VGC spreads. 
+          The formula is <code className="bg-gray-100 px-1 rounded font-mono font-bold text-blue-600">SP = floor((EV + 4) / 8)</code>.
+        </Typography>
+      </div>
+
+      <EvSpForm 
+        spread={spread} 
+        onSpreadChange={setSpread} 
+        totalEvs={totals.totalEvs} 
+        totalSp={totals.totalSp} 
+      />
+
+      <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-100">
+        <Typography variant="h2" className="text-blue-900 mb-2">
+          System Rules
+        </Typography>
+        <ul className="list-disc list-inside space-y-2 text-blue-800 text-sm">
+          <li>Max EVs per stat: <strong>252</strong> (yields 32 SP)</li>
+          <li>Total EVs allowed: <strong>510</strong></li>
+          <li>Total SP generated: <strong>66</strong> (based on 510 total EVs)</li>
+          <li>Minimum EVs for 1 SP: <strong>4</strong></li>
+          <li>Subsequent SP points every <strong>8</strong> EVs</li>
+        </ul>
+      </div>
+    </div>
+  );
+};
+
+export default EvSpConverterPage;
