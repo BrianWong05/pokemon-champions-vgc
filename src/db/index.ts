@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/sql-js';
 import initSqlJs from 'sql.js';
 // @ts-ignore
 import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
-import * as schema from './schema';
+import * as schema from '@/db/schema';
 
 // We'll use a promise to ensure the database is only initialized once
 let dbPromise: Promise<ReturnType<typeof drizzle<typeof schema>>> | null = null;

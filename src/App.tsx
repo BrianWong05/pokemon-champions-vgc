@@ -1,6 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
-import SpeedTierList from './pages/SpeedTierList'
+import SpeedTierList from '@/pages/SpeedTierList'
 
 const Home: React.FC = () => (
   <div className="min-h-screen bg-gray-100 flex items-center justify-center">

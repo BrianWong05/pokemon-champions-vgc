@@ -1,5 +1,5 @@
-import { getDb } from '../db';
-import { pokemon, formatPokemon, formats, calculatedSpeeds } from '../db/schema';
+import { getDb } from '@/db';
+import { pokemon, formatPokemon, formats, calculatedSpeeds } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 
 export interface SpeedBenchmarks {
