@@ -38,19 +38,20 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
 
   return (
     <div className={`flex flex-col space-y-4 ${className}`}>
-      <div className="flex items-center gap-2 px-1">
+      <div className="flex items-center gap-2 px-1 text-white">
         <div className={`w-1 h-4 ${themeColor} rounded-full`} />
         <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[10px] font-black">{label}</Typography>
       </div>
 
-      <div className="flex-1 p-4 bg-gray-800/30 rounded-2xl border border-gray-800/50 space-y-4 flex flex-col justify-between">
+      <div className="flex-1 p-6 bg-gray-800/30 rounded-3xl border border-gray-800/50 space-y-6 flex flex-col">
+        {/* HP Bar and Status */}
         <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-[8px] font-black uppercase tracking-tighter text-gray-500">
-              <span>Health Status (Incoming Damage)</span>
-              <span>{hpRemaining.toFixed(1)}%</span>
+          <div className="space-y-3">
+            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
+              <span>Pokémon Health Status</span>
+              <span className={barColor.replace('bg-', 'text-')}>{hpRemaining.toFixed(1)}%</span>
             </div>
-            <div className="h-2.5 w-full bg-gray-900 rounded-full overflow-hidden border-2 border-gray-800">
+            <div className="h-3 w-full bg-gray-900 rounded-full overflow-hidden border-2 border-gray-800 p-0.5">
               <div 
                 className={`h-full rounded-full transition-all duration-1000 ease-out ${barColor}`}
                 style={{ width: `${hpRemaining}%` }}
@@ -58,31 +59,33 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-between items-baseline border-t border-gray-800/50 pt-3">
+          <div className="flex justify-between items-center bg-gray-900/50 p-4 rounded-2xl border border-gray-800/50">
             <div className="flex flex-col">
-               <span className="text-3xl font-black text-white leading-none">
-                  {impactResult ? `${impactResult.maxPercent}%` : '--'}
+               <span className="text-3xl font-black text-white leading-none tracking-tighter">
+                  {impactResult ? `${impactResult.minPercent}% - ${impactResult.maxPercent}%` : '--'}
                </span>
-               <span className="text-[10px] font-bold text-gray-500 mt-1">
-                  {impactResult ? `${impactResult.minPercent}% - ${impactResult.maxPercent}% received` : 'No incoming attack'}
+               <span className="text-[10px] font-bold text-gray-500 mt-2 uppercase tracking-widest">
+                  Incoming Impact Range
                </span>
             </div>
-            <div className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isKo ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
+            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isKo ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
               {isKo ? 'OHKO' : 'Survival'}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t border-gray-800/50 pt-4 mt-auto">
+        {/* Moves Vertical Stack */}
+        <div className="flex flex-col gap-3 pt-2">
+          <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest px-1 mb-1">Move Damage Assessment</div>
           {moveResults.map((result, idx) => {
             const isActive = moveActiveIndex === idx;
             if (!result) {
               return (
                 <div 
                   key={idx}
-                  className="h-12 rounded-lg border border-dashed border-gray-800 bg-gray-800/5 flex items-center justify-center text-gray-700 text-[8px] font-black uppercase"
+                  className="h-16 rounded-2xl border-2 border-dashed border-gray-800/50 bg-gray-800/5 flex items-center justify-center text-gray-700 text-[10px] font-black uppercase tracking-widest"
                 >
-                  Slot {idx + 1}
+                  Empty Slot {idx + 1}
                 </div>
               );
             }
@@ -92,16 +95,29 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                 key={idx}
                 onClick={() => onSelectActive(idx)}
                 className={`
-                  h-12 p-2 rounded-lg border transition-all text-left relative overflow-hidden flex flex-col justify-center
+                  p-4 rounded-2xl border-2 transition-all text-left relative group
                   ${isActive 
-                    ? `border-blue-500 bg-blue-600/20 shadow-lg` 
-                    : 'border-gray-800 bg-gray-800/40 hover:border-gray-700 hover:bg-gray-800/60'}
+                    ? `border-blue-500 bg-blue-600/10 shadow-[0_0_25px_rgba(59,130,246,0.15)]` 
+                    : 'border-gray-800/50 bg-gray-800/40 hover:border-gray-700 hover:bg-gray-800/60'}
                 `}
               >
-                <div className="font-black text-[9px] truncate text-white leading-tight">{result.moveName}</div>
-                <div className="flex items-center justify-between mt-0.5">
-                   <span className="text-[10px] font-black text-blue-400">{result.maxPercent}%</span>
-                   <TypeBadge type={REVERSE_TYPE_IDS[result.moveType] || 'normal'} size="sm" className="scale-[0.7] origin-right -mr-1" />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="font-black text-xs text-gray-400 uppercase tracking-widest leading-none mb-2 group-hover:text-blue-400 transition-colors">
+                      {result.moveName}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <TypeBadge type={REVERSE_TYPE_IDS[result.moveType] || 'normal'} size="sm" className="scale-[0.9] origin-left -ml-1" />
+                      {result.isStab && (
+                        <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">STAB</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end justify-center">
+                    <span className="text-2xl font-black text-white whitespace-nowrap leading-none tracking-tighter">
+                      {result.minPercent}% - {result.maxPercent}%
+                    </span>
+                  </div>
                 </div>
               </button>
             );
@@ -128,35 +144,28 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
   p1Results, p1ActiveIndex, onSelectP1Active, p2MaxHp,
   p2Results, p2ActiveIndex, onSelectP2Active, p1MaxHp
 }) => {
-  // P1 Side (Left): 
-  // - Show P1's moves (to select what P1 will use)
-  // - Show P1's Health Status (damage RECEIVED from P2)
   const p1Impact = p2Results[p2ActiveIndex];
   const p1HpRemaining = p1Impact ? Math.max(0, 100 - p1Impact.maxPercent) : 100;
 
-  // P2 Side (Right): 
-  // - Show P2's moves (to select what P2 will use)
-  // - Show P2's Health Status (damage RECEIVED from P1)
   const p2Impact = p1Results[p1ActiveIndex];
   const p2HpRemaining = p2Impact ? Math.max(0, 100 - p2Impact.maxPercent) : 100;
 
   return (
     <div className="bg-gray-900 p-6 rounded-3xl shadow-2xl text-white space-y-6 border border-gray-800 h-full">
       <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-        <Typography variant="h2" className="text-white flex items-center gap-3">
+        <Typography variant="h2" className="text-white flex items-center gap-3 font-black uppercase tracking-tighter">
           <span className="w-1.5 h-6 bg-indigo-500 rounded-full" />
-          Battle Analysis
+          Battle Analysis Dashboard
         </Typography>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
         <div className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-           <div className="w-8 h-8 rounded-full bg-gray-900 border-2 border-gray-800 flex items-center justify-center text-[10px] font-black text-gray-600 uppercase tracking-tighter italic">
+           <div className="w-10 h-10 rounded-full bg-gray-900 border-4 border-gray-800 flex items-center justify-center text-xs font-black text-gray-500 uppercase tracking-tighter italic shadow-2xl">
               VS
            </div>
         </div>
 
-        {/* Left Column: Focused on P1 status */}
         <MoveResultColumn 
           label="Pokémon 1 Status"
           moveResults={p1Results}
@@ -168,7 +177,6 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           themeColor="bg-blue-600"
         />
 
-        {/* Right Column: Focused on P2 status */}
         <MoveResultColumn 
           label="Pokémon 2 Status"
           moveResults={p2Results}
