@@ -4,7 +4,8 @@ import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/Po
 import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
-import { TYPE_COLORS } from '@/utils/pokemon-types';
+import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { TYPE_COLORS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 
 interface AttackerPanelProps {
   pokemonList: PokemonBaseStats[];
@@ -14,8 +15,9 @@ interface AttackerPanelProps {
   onSpChange: (key: string, val: number) => void;
   nature: number;
   onNatureChange: (val: number) => void;
-  moveType: string;
-  onMoveTypeChange: (val: string) => void;
+  moveList: MoveData[];
+  selectedMoveId: number | null;
+  onSelectMove: (m: MoveData) => void;
   movePower: number;
   onMovePowerChange: (val: number) => void;
   moveCategory: 'physical' | 'special';
@@ -25,10 +27,11 @@ interface AttackerPanelProps {
 const AttackerPanel: React.FC<AttackerPanelProps> = ({
   pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, nature, onNatureChange,
-  moveType, onMoveTypeChange,
+  moveList, selectedMoveId, onSelectMove,
   movePower, onMovePowerChange, moveCategory, onMoveCategoryChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
+  const selectedMove = moveList.find(m => m.id === selectedMoveId);
   const types = Object.keys(TYPE_COLORS);
 
   return (
@@ -71,7 +74,7 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-end">
+        <div className="flex justify-between items-end border-b border-gray-50 pb-2">
           <Typography variant="label" className="text-gray-400">Nature & Category</Typography>
           <div className="flex gap-2">
             <select 
@@ -108,27 +111,31 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       </div>
 
       <div className="p-4 bg-blue-50 rounded-xl space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">Move Type</label>
-            <select
-              value={moveType}
-              onChange={(e) => onMoveTypeChange(e.target.value)}
-              className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-xs text-blue-900 outline-none focus:border-blue-500 transition-colors appearance-none"
-            >
-              {types.map(t => (
-                <option key={t} value={t}>{t.toUpperCase()}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">Move Power</label>
-            <input 
-              type="number" 
-              value={movePower} 
-              onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-center text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
-            />
+        <div className="flex flex-col gap-4">
+          <MoveSearchSelect 
+            label="Select Move" 
+            moveList={moveList} 
+            onSelect={onSelectMove}
+          />
+          
+          <div className="flex items-end gap-4 border-t border-blue-100 pt-3">
+            <div className="flex-1">
+              <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">Move Power</label>
+              <input 
+                type="number" 
+                value={movePower} 
+                onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
+                className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-center text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+            {selectedMove && (
+              <div className="flex flex-col items-center gap-1 min-w-[60px]">
+                <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest block">Type</label>
+                <div className="flex-1 flex items-center justify-center">
+                   <TypeBadge type={REVERSE_TYPE_IDS[selectedMove.typeId] || 'normal'} size="sm" />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

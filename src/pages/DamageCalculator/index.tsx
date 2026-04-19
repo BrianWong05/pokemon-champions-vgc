@@ -5,11 +5,12 @@ import DefenderPanel from '@/components/organisms/DefenderPanel';
 import ResultsPanel from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateDamage } from '@/utils/damage';
 import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
 import { TYPE_IDS } from '@/utils/pokemon-types';
+import { MoveData } from '@/components/molecules/MoveSearchSelect';
 
 interface SideState {
   selectedId: number | null;
@@ -34,17 +35,21 @@ interface CalcState {
   attacker: SideState;
   defender: SideState;
   move: {
-    type: string;
+    selectedId: number | null;
+    typeId: number | null;
     power: number;
     category: 'physical' | 'special';
+    effectiveness: number;
   };
 }
 
 type CalcAction = 
   | { type: 'SET_SP', payload: { side: 'attacker' | 'defender', key: string, val: number } }
   | { type: 'SET_NATURE', payload: { side: 'attacker' | 'defender', val: number } }
-  | { type: 'SET_MOVE', payload: Partial<CalcState['move']> }
-  | { type: 'SELECT_POKEMON', payload: { side: 'attacker' | 'defender', pokemon: PokemonBaseStats } };
+  | { type: 'SET_MOVE_POWER', payload: number }
+  | { type: 'SET_MOVE_CATEGORY', payload: 'physical' | 'special' }
+  | { type: 'SELECT_POKEMON', payload: { side: 'attacker' | 'defender', pokemon: PokemonBaseStats } }
+  | { type: 'SELECT_MOVE', payload: MoveData };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -58,7 +63,7 @@ const initialSide: SideState = {
 const initialState: CalcState = {
   attacker: { ...initialSide, spAtk: 32, spSpa: 32 },
   defender: initialSide,
-  move: { type: 'normal', power: 80, category: 'physical' },
+  move: { selectedId: null, typeId: null, power: 80, category: 'physical', effectiveness: 1.0 },
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
@@ -69,8 +74,10 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     }
     case 'SET_NATURE':
       return { ...state, [action.payload.side]: { ...state[action.payload.side], nature: action.payload.val } };
-    case 'SET_MOVE': 
-      return { ...state, move: { ...state.move, ...action.payload } };
+    case 'SET_MOVE_POWER':
+      return { ...state, move: { ...state.move, power: action.payload } };
+    case 'SET_MOVE_CATEGORY':
+      return { ...state, move: { ...state.move, category: action.payload } };
     case 'SELECT_POKEMON': {
       const { side, pokemon: p } = action.payload;
       return {
@@ -89,6 +96,17 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         }
       };
     }
+    case 'SELECT_MOVE':
+      return {
+        ...state,
+        move: {
+          ...state.move,
+          selectedId: action.payload.id,
+          typeId: action.payload.typeId,
+          power: action.payload.power || 0,
+          category: action.payload.damageClassId === 2 ? 'physical' : 'special'
+        }
+      };
     default: return state;
   }
 }
@@ -96,13 +114,14 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
 const DamageCalculatorPage: React.FC = () => {
   const [state, dispatch] = useReducer(calcReducer, initialState);
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
+  const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const db = await getDb();
-        const [pokeResult, efficacyResult] = await Promise.all([
+        const [pokeResult, efficacyResult, moveResult] = await Promise.all([
           db.select({
             id: pokemon.id,
             nameEn: pokemon.nameEn,
@@ -120,11 +139,13 @@ const DamageCalculatorPage: React.FC = () => {
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
           .where(eq(formats.name, 'Regulation M-A')),
-          fetchTypeEfficacy()
+          fetchTypeEfficacy(),
+          db.select().from(moves)
         ]);
         
         setPokemonList(pokeResult as PokemonBaseStats[]);
         setEfficacyMap(efficacyResult);
+        setMoveList(moveResult as MoveData[]);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       }
@@ -146,12 +167,13 @@ const DamageCalculatorPage: React.FC = () => {
     const maxHP = calculateHP(state.defender.baseHp, state.defender.spHp);
     
     // Automated STAB
-    const moveType = state.move.type.toLowerCase();
-    const isStab = state.attacker.type1?.toLowerCase() === moveType || state.attacker.type2?.toLowerCase() === moveType;
+    const attackerType1Id = state.attacker.type1 ? TYPE_IDS[state.attacker.type1.toLowerCase()] : null;
+    const attackerType2Id = state.attacker.type2 ? TYPE_IDS[state.attacker.type2.toLowerCase()] : null;
+    const isStab = state.move.typeId !== null && (state.move.typeId === attackerType1Id || state.move.typeId === attackerType2Id);
     const stabMod = isStab ? 1.5 : 1;
 
     // Automated Effectiveness
-    const moveTypeId = TYPE_IDS[moveType] || 1;
+    const moveTypeId = state.move.typeId || 1;
     const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
     const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
     
@@ -178,12 +200,13 @@ const DamageCalculatorPage: React.FC = () => {
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'attacker', key, val } })}
           nature={state.attacker.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'attacker', val } })}
-          moveType={state.move.type}
-          onMoveTypeChange={(val) => dispatch({ type: 'SET_MOVE', payload: { type: val } })}
+          moveList={moveList}
+          selectedMoveId={state.move.selectedId}
+          onSelectMove={(m) => dispatch({ type: 'SELECT_MOVE', payload: m })}
           movePower={state.move.power}
-          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE', payload: { power: val } })}
+          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: val })}
           moveCategory={state.move.category}
-          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE', payload: { category: val } })}
+          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: val })}
         />
       }
       defenderPanel={

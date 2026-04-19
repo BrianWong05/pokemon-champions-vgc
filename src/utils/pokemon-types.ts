@@ -19,6 +19,10 @@ export const TYPE_IDS: Record<string, number> = {
   fairy: 18,
 };
 
+export const REVERSE_TYPE_IDS: Record<number, string> = Object.fromEntries(
+  Object.entries(TYPE_IDS).map(([name, id]) => [id, name])
+);
+
 export const TYPE_COLORS: Record<string, string> = {
   bug: '#9f9f28',
   dark: '#4f4747',
