@@ -23,14 +23,19 @@ export const pokemon = sqliteTable('pokemon', {
 });
 
 export const moves = sqliteTable('moves', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  type: text('type').notNull(),
-  category: text('category').notNull(), // Physical, Special, Status
+  id: integer('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  nameEn: text('name_en').notNull(),
+  nameJa: text('name_ja'),
+  nameZh: text('name_zh'),
+  typeId: integer('type_id')
+    .notNull()
+    .references(() => types.id, { onDelete: 'cascade' }),
+  damageClassId: integer('damage_class_id'), // Physical, Special, Status
   power: integer('power'),
   accuracy: integer('accuracy'),
-  pp: integer('pp').notNull(),
-  effect: text('effect').notNull(),
+  pp: integer('pp'),
+  priority: integer('priority'),
 });
 
 export const abilities = sqliteTable('abilities', {
