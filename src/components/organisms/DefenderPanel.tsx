@@ -1,8 +1,13 @@
 import React from 'react';
 import StatControlGroup from '@/components/molecules/StatControlGroup';
 import Typography from '@/components/atoms/Typography';
+import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import PokemonImage from '@/components/atoms/PokemonImage';
 
 interface DefenderPanelProps {
+  pokemonList: PokemonBaseStats[];
+  selectedId: number | null;
+  onSelectPokemon: (p: PokemonBaseStats) => void;
   baseHp: number;
   onBaseHpChange: (val: number) => void;
   spHp: number;
@@ -19,6 +24,7 @@ interface DefenderPanelProps {
 }
 
 const DefenderPanel: React.FC<DefenderPanelProps> = ({
+  pokemonList, selectedId, onSelectPokemon,
   baseHp, onBaseHpChange, spHp, onSpHpChange,
   baseDef, onBaseDefChange, spDef, onSpDefChange, natureDef, onNatureDefChange,
   effectiveness, onEffectivenessChange, moveCategory
@@ -29,6 +35,20 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
         <span className="w-2 h-8 bg-red-600 rounded-full inline-block" />
         Defender
       </Typography>
+
+      <div className="flex items-end gap-4 p-4 bg-gray-50 rounded-xl">
+        {selectedId ? (
+          <PokemonImage id={selectedId} name="Defender" className="w-14 h-14" />
+        ) : (
+          <div className="w-14 h-14 bg-gray-200 rounded-lg animate-pulse" />
+        )}
+        <PokemonSearchSelect 
+          label="Select Defender" 
+          pokemonList={pokemonList} 
+          onSelect={onSelectPokemon}
+          className="flex-1"
+        />
+      </div>
 
       <div className="space-y-4">
         <StatControlGroup 

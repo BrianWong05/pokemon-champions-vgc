@@ -1,17 +1,23 @@
-import React, { useReducer, useMemo } from 'react';
+import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import AttackerPanel from '@/components/organisms/AttackerPanel';
 import DefenderPanel from '@/components/organisms/DefenderPanel';
 import ResultsPanel from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateDamage } from '@/utils/damage';
+import { getDb } from '@/db';
+import { pokemon, formatPokemon, formats } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 interface CalcState {
   attacker: {
+    selectedId: number | null;
     baseAtk: number;
     spAtk: number;
     nature: number;
   };
   defender: {
+    selectedId: number | null;
     baseHp: number;
     spHp: number;
     baseDef: number;
@@ -29,11 +35,13 @@ interface CalcState {
 type CalcAction = 
   | { type: 'SET_ATTACKER', payload: Partial<CalcState['attacker']> }
   | { type: 'SET_DEFENDER', payload: Partial<CalcState['defender']> }
-  | { type: 'SET_MOVE', payload: Partial<CalcState['move']> };
+  | { type: 'SET_MOVE', payload: Partial<CalcState['move']> }
+  | { type: 'SELECT_ATTACKER', payload: PokemonBaseStats }
+  | { type: 'SELECT_DEFENDER', payload: PokemonBaseStats };
 
 const initialState: CalcState = {
-  attacker: { baseAtk: 100, spAtk: 0, nature: 1.0 },
-  defender: { baseHp: 100, spHp: 0, baseDef: 100, spDef: 0, nature: 1.0 },
+  attacker: { selectedId: null, baseAtk: 100, spAtk: 32, nature: 1.0 },
+  defender: { selectedId: null, baseHp: 100, spHp: 0, baseDef: 100, spDef: 0, nature: 1.0 },
   move: { power: 80, category: 'physical', isStab: true, effectiveness: 1.0 },
 };
 
@@ -42,12 +50,61 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     case 'SET_ATTACKER': return { ...state, attacker: { ...state.attacker, ...action.payload } };
     case 'SET_DEFENDER': return { ...state, defender: { ...state.defender, ...action.payload } };
     case 'SET_MOVE': return { ...state, move: { ...state.move, ...action.payload } };
+    case 'SELECT_ATTACKER': 
+      return { 
+        ...state, 
+        attacker: { 
+          ...state.attacker, 
+          selectedId: action.payload.id,
+          baseAtk: state.move.category === 'physical' ? action.payload.baseAttack : action.payload.baseSpAtk 
+        } 
+      };
+    case 'SELECT_DEFENDER':
+      return {
+        ...state,
+        defender: {
+          ...state.defender,
+          selectedId: action.payload.id,
+          baseHp: action.payload.baseHp,
+          baseDef: state.move.category === 'physical' ? action.payload.baseDefense : action.payload.baseSpDef
+        }
+      };
     default: return state;
   }
 }
 
 const DamageCalculatorPage: React.FC = () => {
   const [state, dispatch] = useReducer(calcReducer, initialState);
+  const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
+
+  useEffect(() => {
+    const fetchPokemon = async () => {
+      try {
+        const db = await getDb();
+        const result = await db
+          .select({
+            id: pokemon.id,
+            nameEn: pokemon.nameEn,
+            nameZh: pokemon.nameZh,
+            baseHp: pokemon.baseHp,
+            baseAttack: pokemon.baseAttack,
+            baseDefense: pokemon.baseDefense,
+            baseSpAtk: pokemon.baseSpAtk,
+            baseSpDef: pokemon.baseSpDef,
+            baseSpeed: pokemon.baseSpeed,
+          })
+          .from(pokemon)
+          .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
+          .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
+          .where(eq(formats.name, 'Regulation M-A'));
+        
+        setPokemonList(result as PokemonBaseStats[]);
+      } catch (error) {
+        console.error('Failed to fetch pokemon list:', error);
+      }
+    };
+    fetchPokemon();
+  }, []);
 
   const results = useMemo(() => {
     const attackerStat = calculateStat(state.attacker.baseAtk, state.attacker.spAtk, state.attacker.nature);
@@ -67,6 +124,9 @@ const DamageCalculatorPage: React.FC = () => {
     <DamageCalculatorTemplate
       attackerPanel={
         <AttackerPanel 
+          pokemonList={pokemonList}
+          selectedId={state.attacker.selectedId}
+          onSelectPokemon={(p) => dispatch({ type: 'SELECT_ATTACKER', payload: p })}
           baseAtk={state.attacker.baseAtk}
           onBaseAtkChange={(val) => dispatch({ type: 'SET_ATTACKER', payload: { baseAtk: val } })}
           spAtk={state.attacker.spAtk}
@@ -83,6 +143,9 @@ const DamageCalculatorPage: React.FC = () => {
       }
       defenderPanel={
         <DefenderPanel 
+          pokemonList={pokemonList}
+          selectedId={state.defender.selectedId}
+          onSelectPokemon={(p) => dispatch({ type: 'SELECT_DEFENDER', payload: p })}
           baseHp={state.defender.baseHp}
           onBaseHpChange={(val) => dispatch({ type: 'SET_DEFENDER', payload: { baseHp: val } })}
           spHp={state.defender.spHp}

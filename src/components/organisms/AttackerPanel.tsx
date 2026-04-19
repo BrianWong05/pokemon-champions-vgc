@@ -1,8 +1,13 @@
 import React from 'react';
 import StatControlGroup from '@/components/molecules/StatControlGroup';
 import Typography from '@/components/atoms/Typography';
+import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import PokemonImage from '@/components/atoms/PokemonImage';
 
 interface AttackerPanelProps {
+  pokemonList: PokemonBaseStats[];
+  selectedId: number | null;
+  onSelectPokemon: (p: PokemonBaseStats) => void;
   baseAtk: number;
   onBaseAtkChange: (val: number) => void;
   spAtk: number;
@@ -18,6 +23,7 @@ interface AttackerPanelProps {
 }
 
 const AttackerPanel: React.FC<AttackerPanelProps> = ({
+  pokemonList, selectedId, onSelectPokemon,
   baseAtk, onBaseAtkChange, spAtk, onSpAtkChange, natureAtk, onNatureAtkChange,
   movePower, onMovePowerChange, moveCategory, onMoveCategoryChange, isStab, onStabChange
 }) => {
@@ -27,6 +33,20 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
         <span className="w-2 h-8 bg-blue-600 rounded-full inline-block" />
         Attacker
       </Typography>
+
+      <div className="flex items-end gap-4 p-4 bg-gray-50 rounded-xl">
+        {selectedId ? (
+          <PokemonImage id={selectedId} name="Attacker" className="w-14 h-14" />
+        ) : (
+          <div className="w-14 h-14 bg-gray-200 rounded-lg animate-pulse" />
+        )}
+        <PokemonSearchSelect 
+          label="Select Attacker" 
+          pokemonList={pokemonList} 
+          onSelect={onSelectPokemon}
+          className="flex-1"
+        />
+      </div>
 
       <StatControlGroup 
         label={moveCategory === 'physical' ? 'Attack' : 'Sp. Atk'}
