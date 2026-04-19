@@ -34,13 +34,8 @@ interface SideState {
 interface CalcState {
   attacker: SideState;
   defender: SideState;
-  move: {
-    selectedId: number | null;
-    typeId: number | null;
-    power: number;
-    category: 'physical' | 'special';
-    effectiveness: number;
-  };
+  moves: (MoveData | null)[];
+  activeMoveIndex: number;
 }
 
 type CalcAction = 
@@ -49,7 +44,8 @@ type CalcAction =
   | { type: 'SET_MOVE_POWER', payload: number }
   | { type: 'SET_MOVE_CATEGORY', payload: 'physical' | 'special' }
   | { type: 'SELECT_POKEMON', payload: { side: 'attacker' | 'defender', pokemon: PokemonBaseStats } }
-  | { type: 'SELECT_MOVE', payload: MoveData };
+  | { type: 'SELECT_MOVE_FOR_SLOT', payload: { index: number, move: MoveData } }
+  | { type: 'SET_ACTIVE_MOVE_SLOT', payload: number };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -63,7 +59,8 @@ const initialSide: SideState = {
 const initialState: CalcState = {
   attacker: { ...initialSide, spAtk: 32, spSpa: 32 },
   defender: initialSide,
-  move: { selectedId: null, typeId: null, power: 80, category: 'physical', effectiveness: 1.0 },
+  moves: [null, null, null, null],
+  activeMoveIndex: 0,
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
@@ -74,13 +71,25 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     }
     case 'SET_NATURE':
       return { ...state, [action.payload.side]: { ...state[action.payload.side], nature: action.payload.val } };
-    case 'SET_MOVE_POWER':
-      return { ...state, move: { ...state.move, power: action.payload } };
-    case 'SET_MOVE_CATEGORY':
-      return { ...state, move: { ...state.move, category: action.payload } };
+    case 'SET_MOVE_POWER': {
+      const newMoves = [...state.moves];
+      const activeMove = newMoves[state.activeMoveIndex];
+      if (activeMove) {
+        newMoves[state.activeMoveIndex] = { ...activeMove, power: action.payload };
+      }
+      return { ...state, moves: newMoves };
+    }
+    case 'SET_MOVE_CATEGORY': {
+      const newMoves = [...state.moves];
+      const activeMove = newMoves[state.activeMoveIndex];
+      if (activeMove) {
+        newMoves[state.activeMoveIndex] = { ...activeMove, damageClassId: action.payload === 'physical' ? 2 : 3 };
+      }
+      return { ...state, moves: newMoves };
+    }
     case 'SELECT_POKEMON': {
       const { side, pokemon: p } = action.payload;
-      return {
+      const newState = {
         ...state,
         [side]: {
           ...state[side],
@@ -95,18 +104,18 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           baseSpe: p.baseSpeed,
         }
       };
+      if (side === 'attacker') {
+        newState.moves = [null, null, null, null];
+      }
+      return newState;
     }
-    case 'SELECT_MOVE':
-      return {
-        ...state,
-        move: {
-          ...state.move,
-          selectedId: action.payload.id,
-          typeId: action.payload.typeId,
-          power: action.payload.power || 0,
-          category: action.payload.damageClassId === 2 ? 'physical' : 'special'
-        }
-      };
+    case 'SELECT_MOVE_FOR_SLOT': {
+      const newMoves = [...state.moves];
+      newMoves[action.payload.index] = action.payload.move;
+      return { ...state, moves: newMoves, activeMoveIndex: action.payload.index };
+    }
+    case 'SET_ACTIVE_MOVE_SLOT':
+      return { ...state, activeMoveIndex: action.payload };
     default: return state;
   }
 }
@@ -154,7 +163,12 @@ const DamageCalculatorPage: React.FC = () => {
   }, []);
 
   const results = useMemo(() => {
-    const isPhys = state.move.category === 'physical';
+    const activeMove = state.moves[state.activeMoveIndex];
+    const movePower = activeMove?.power || 0;
+    const moveCategory = activeMove?.damageClassId === 2 ? 'physical' : 'special';
+    const moveTypeId = activeMove?.typeId || 1;
+
+    const isPhys = moveCategory === 'physical';
     
     const atkStatValue = isPhys ? state.attacker.baseAtk : state.attacker.baseSpa;
     const atkSpValue = isPhys ? state.attacker.spAtk : state.attacker.spSpa;
@@ -169,11 +183,10 @@ const DamageCalculatorPage: React.FC = () => {
     // Automated STAB
     const attackerType1Id = state.attacker.type1 ? TYPE_IDS[state.attacker.type1.toLowerCase()] : null;
     const attackerType2Id = state.attacker.type2 ? TYPE_IDS[state.attacker.type2.toLowerCase()] : null;
-    const isStab = state.move.typeId !== null && (state.move.typeId === attackerType1Id || state.move.typeId === attackerType2Id);
+    const isStab = activeMove !== null && (moveTypeId === attackerType1Id || moveTypeId === attackerType2Id);
     const stabMod = isStab ? 1.5 : 1;
 
     // Automated Effectiveness
-    const moveTypeId = state.move.typeId || 1;
     const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
     const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
     
@@ -182,10 +195,11 @@ const DamageCalculatorPage: React.FC = () => {
     const totalMod = stabMod * effectiveness;
 
     return {
-      ...calculateDamage(attackerStat, defenderStat, state.move.power, totalMod, maxHP),
+      ...calculateDamage(attackerStat, defenderStat, movePower, totalMod, maxHP),
       defenderMaxHp: maxHP,
       isStab,
-      effectiveness
+      effectiveness,
+      moveCategory: moveCategory as 'physical' | 'special'
     };
   }, [state, efficacyMap]);
 
@@ -201,11 +215,11 @@ const DamageCalculatorPage: React.FC = () => {
           nature={state.attacker.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'attacker', val } })}
           moveList={moveList}
-          selectedMoveId={state.move.selectedId}
-          onSelectMove={(m) => dispatch({ type: 'SELECT_MOVE', payload: m })}
-          movePower={state.move.power}
+          moves={state.moves}
+          activeMoveIndex={state.activeMoveIndex}
+          onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { index, move: m } })}
+          onSetActiveMove={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: index })}
           onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: val })}
-          moveCategory={state.move.category}
           onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: val })}
         />
       }
@@ -219,7 +233,7 @@ const DamageCalculatorPage: React.FC = () => {
           nature={state.defender.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'defender', val } })}
           effectiveness={results.effectiveness}
-          moveCategory={state.move.category}
+          moveCategory={results.moveCategory}
         />
       }
       resultsPanel={
