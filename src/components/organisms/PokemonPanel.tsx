@@ -18,6 +18,8 @@ interface PokemonPanelProps {
   boostedStat: string | null;
   hinderedStat: string | null;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
+  stages: Record<string, number>;
+  onStageChange: (stat: string, val: number) => void;
   moveList: MoveData[];
   moves: (MoveData | null)[];
   activeMoveIndex: number;
@@ -29,6 +31,7 @@ interface PokemonPanelProps {
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
   title, sideColor, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
+  stages, onStageChange,
   moveList, moves, activeMoveIndex, onSelectMove,
   onMovePowerChange, onMoveCategoryChange
 }) => {
@@ -82,6 +85,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
           boostedStat={boostedStat}
           hinderedStat={hinderedStat}
           onToggleNature={onToggleNature}
+          stages={stages}
+          onStageChange={onStageChange}
           onSpChange={onSpChange}
         />
       </div>

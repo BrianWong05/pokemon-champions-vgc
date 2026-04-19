@@ -29,6 +29,7 @@ interface SideState {
   spSpe: number;
   boostedStat: string | null;
   hinderedStat: string | null;
+  stages: Record<string, number>;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
 }
@@ -41,6 +42,7 @@ interface CalcState {
 type CalcAction = 
   | { type: 'SET_SP', payload: { side: 'p1' | 'p2', key: string, val: number } }
   | { type: 'TOGGLE_NATURE', payload: { side: 'p1' | 'p2', stat: string, mod: '+' | '-' } }
+  | { type: 'SET_STAT_STAGE', payload: { side: 'p1' | 'p2', stat: string, val: number } }
   | { type: 'SET_MOVE_POWER', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'SET_MOVE_CATEGORY', payload: { side: 'p1' | 'p2', val: 'physical' | 'special' } }
   | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
@@ -55,6 +57,7 @@ const initialSide: SideState = {
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   boostedStat: null,
   hinderedStat: null,
+  stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moves: [null, null, null, null],
   activeMoveIndex: 0,
 };
@@ -94,6 +97,17 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
 
       return { ...state, [side]: { ...state[side], boostedStat: newBoosted, hinderedStat: newHindered } };
     }
+    case 'SET_STAT_STAGE': {
+      const { side, stat, val } = action.payload;
+      const clampedVal = Math.min(6, Math.max(-6, val));
+      return {
+        ...state,
+        [side]: {
+          ...state[side],
+          stages: { ...state[side].stages, [stat]: clampedVal }
+        }
+      };
+    }
     case 'SET_MOVE_POWER': {
       const { side, val } = action.payload;
       const newMoves = [...state[side].moves];
@@ -129,6 +143,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           baseSpe: p.baseSpeed,
           boostedStat: null,
           hinderedStat: null,
+          stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
           moves: [null, null, null, null],
           activeMoveIndex: 0
         }
@@ -226,8 +241,8 @@ const DamageCalculatorPage: React.FC = () => {
       const attackerMultiplier = (atkStatKey === attacker.boostedStat) ? 1.1 : (atkStatKey === attacker.hinderedStat) ? 0.9 : 1.0;
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier);
-      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier);
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey]);
+      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey]);
       
       const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
@@ -280,6 +295,8 @@ const DamageCalculatorPage: React.FC = () => {
           boostedStat={state.p1.boostedStat}
           hinderedStat={state.p1.hinderedStat}
           onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p1', stat, mod } })}
+          stages={state.p1.stages}
+          onStageChange={(stat, val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat, val } })}
           moveList={moveList}
           moves={state.p1.moves}
           activeMoveIndex={state.p1.activeMoveIndex}
@@ -300,6 +317,8 @@ const DamageCalculatorPage: React.FC = () => {
           boostedStat={state.p2.boostedStat}
           hinderedStat={state.p2.hinderedStat}
           onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p2', stat, mod } })}
+          stages={state.p2.stages}
+          onStageChange={(stat, val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p2', stat, val } })}
           moveList={moveList}
           moves={state.p2.moves}
           activeMoveIndex={state.p2.activeMoveIndex}

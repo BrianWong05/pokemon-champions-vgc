@@ -6,8 +6,15 @@ export const calculateHP = (base: number, sp: number): number => {
   return base + 75 + sp;
 };
 
-export const calculateStat = (base: number, sp: number, nature: number): number => {
-  return Math.floor((base + 20 + sp) * nature);
+export const calculateStat = (base: number, sp: number, nature: number, stage: number = 0): number => {
+  const raw = Math.floor((base + 20 + sp) * nature);
+  return Math.floor(raw * getStageMultiplier(stage));
+};
+
+export const getStageMultiplier = (stage: number): number => {
+  if (stage > 0) return (2 + stage) / 2;
+  if (stage < 0) return 2 / (2 + Math.abs(stage));
+  return 1;
 };
 
 export interface DamageResult {
