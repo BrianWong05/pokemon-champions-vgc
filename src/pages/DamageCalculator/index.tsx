@@ -47,6 +47,7 @@ type CalcAction =
   | { type: 'SET_MOVE_CATEGORY', payload: { side: 'p1' | 'p2', val: 'physical' | 'special' } }
   | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
   | { type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1' | 'p2', index: number, move: MoveData } }
+  | { type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } };
 
 const initialSide: SideState = {
@@ -159,6 +160,18 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           ...state[side], 
           moves: newMoves, 
           activeMoveIndex: index 
+        } 
+      };
+    }
+    case 'CLEAR_MOVE_SLOT': {
+      const { side, index } = action.payload;
+      const newMoves = [...state[side].moves];
+      newMoves[index] = null;
+      return { 
+        ...state, 
+        [side]: { 
+          ...state[side], 
+          moves: newMoves 
         } 
       };
     }
@@ -301,6 +314,7 @@ const DamageCalculatorPage: React.FC = () => {
           moves={state.p1.moves}
           activeMoveIndex={state.p1.activeMoveIndex}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1', index, move: m } })}
+          onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1', index } })}
           onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p1', val } })}
           onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p1', val } })}
         />
@@ -323,6 +337,7 @@ const DamageCalculatorPage: React.FC = () => {
           moves={state.p2.moves}
           activeMoveIndex={state.p2.activeMoveIndex}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p2', index, move: m } })}
+          onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p2', index } })}
           onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p2', val } })}
           onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p2', val } })}
         />

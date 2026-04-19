@@ -24,6 +24,7 @@ interface PokemonPanelProps {
   moves: (MoveData | null)[];
   activeMoveIndex: number;
   onSelectMove: (index: number, m: MoveData) => void;
+  onClearMove: (index: number) => void;
   onMovePowerChange: (val: number) => void;
   onMoveCategoryChange: (val: 'physical' | 'special') => void;
 }
@@ -32,7 +33,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   title, sideColor, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
-  moveList, moves, activeMoveIndex, onSelectMove,
+  moveList, moves, activeMoveIndex, onSelectMove, onClearMove,
   onMovePowerChange, onMoveCategoryChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
@@ -118,9 +119,23 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-baseline gap-1 pl-2">
-                      <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
-                      <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
+                    <div className="flex items-center gap-2 pl-2">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
+                        <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClearMove(idx);
+                        }}
+                        className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors group/clear"
+                        title="Clear move"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 ) : (
