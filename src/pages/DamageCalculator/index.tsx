@@ -1,7 +1,6 @@
 import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
-import AttackerPanel from '@/components/organisms/AttackerPanel';
-import DefenderPanel from '@/components/organisms/DefenderPanel';
+import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateDamage } from '@/utils/damage';
 import { getDb } from '@/db';
@@ -29,23 +28,23 @@ interface SideState {
   spSpd: number;
   spSpe: number;
   nature: number;
-}
-
-interface CalcState {
-  attacker: SideState;
-  defender: SideState;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
 }
 
+interface CalcState {
+  p1: SideState;
+  p2: SideState;
+}
+
 type CalcAction = 
-  | { type: 'SET_SP', payload: { side: 'attacker' | 'defender', key: string, val: number } }
-  | { type: 'SET_NATURE', payload: { side: 'attacker' | 'defender', val: number } }
-  | { type: 'SET_MOVE_POWER', payload: number }
-  | { type: 'SET_MOVE_CATEGORY', payload: 'physical' | 'special' }
-  | { type: 'SELECT_POKEMON', payload: { side: 'attacker' | 'defender', pokemon: PokemonBaseStats } }
-  | { type: 'SELECT_MOVE_FOR_SLOT', payload: { index: number, move: MoveData } }
-  | { type: 'SET_ACTIVE_MOVE_SLOT', payload: number };
+  | { type: 'SET_SP', payload: { side: 'p1' | 'p2', key: string, val: number } }
+  | { type: 'SET_NATURE', payload: { side: 'p1' | 'p2', val: number } }
+  | { type: 'SET_MOVE_POWER', payload: { side: 'p1' | 'p2', val: number } }
+  | { type: 'SET_MOVE_CATEGORY', payload: { side: 'p1' | 'p2', val: 'physical' | 'special' } }
+  | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
+  | { type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1' | 'p2', index: number, move: MoveData } }
+  | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -53,14 +52,14 @@ const initialSide: SideState = {
   type2: null,
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-  nature: 1.0
+  nature: 1.0,
+  moves: [null, null, null, null],
+  activeMoveIndex: 0,
 };
 
 const initialState: CalcState = {
-  attacker: { ...initialSide, spAtk: 32, spSpa: 32 },
-  defender: initialSide,
-  moves: [null, null, null, null],
-  activeMoveIndex: 0,
+  p1: { ...initialSide, spAtk: 32, spSpa: 32 },
+  p2: initialSide,
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
@@ -72,24 +71,26 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     case 'SET_NATURE':
       return { ...state, [action.payload.side]: { ...state[action.payload.side], nature: action.payload.val } };
     case 'SET_MOVE_POWER': {
-      const newMoves = [...state.moves];
-      const activeMove = newMoves[state.activeMoveIndex];
+      const { side, val } = action.payload;
+      const newMoves = [...state[side].moves];
+      const activeMove = newMoves[state[side].activeMoveIndex];
       if (activeMove) {
-        newMoves[state.activeMoveIndex] = { ...activeMove, power: action.payload };
+        newMoves[state[side].activeMoveIndex] = { ...activeMove, power: val };
       }
-      return { ...state, moves: newMoves };
+      return { ...state, [side]: { ...state[side], moves: newMoves } };
     }
     case 'SET_MOVE_CATEGORY': {
-      const newMoves = [...state.moves];
-      const activeMove = newMoves[state.activeMoveIndex];
+      const { side, val } = action.payload;
+      const newMoves = [...state[side].moves];
+      const activeMove = newMoves[state[side].activeMoveIndex];
       if (activeMove) {
-        newMoves[state.activeMoveIndex] = { ...activeMove, damageClassId: action.payload === 'physical' ? 2 : 3 };
+        newMoves[state[side].activeMoveIndex] = { ...activeMove, damageClassId: val === 'physical' ? 2 : 3 };
       }
-      return { ...state, moves: newMoves };
+      return { ...state, [side]: { ...state[side], moves: newMoves } };
     }
     case 'SELECT_POKEMON': {
       const { side, pokemon: p } = action.payload;
-      const newState = {
+      return {
         ...state,
         [side]: {
           ...state[side],
@@ -102,20 +103,34 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           baseSpa: p.baseSpAtk,
           baseSpd: p.baseSpDef,
           baseSpe: p.baseSpeed,
+          moves: [null, null, null, null],
+          activeMoveIndex: 0
         }
       };
-      if (side === 'attacker') {
-        newState.moves = [null, null, null, null];
-      }
-      return newState;
     }
     case 'SELECT_MOVE_FOR_SLOT': {
-      const newMoves = [...state.moves];
-      newMoves[action.payload.index] = action.payload.move;
-      return { ...state, moves: newMoves, activeMoveIndex: action.payload.index };
+      const { side, index, move } = action.payload;
+      const newMoves = [...state[side].moves];
+      newMoves[index] = move;
+      return { 
+        ...state, 
+        [side]: { 
+          ...state[side], 
+          moves: newMoves, 
+          activeMoveIndex: index 
+        } 
+      };
     }
-    case 'SET_ACTIVE_MOVE_SLOT':
-      return { ...state, activeMoveIndex: action.payload };
+    case 'SET_ACTIVE_MOVE_SLOT': {
+      const { side, index } = action.payload;
+      return { 
+        ...state, 
+        [side]: { 
+          ...state[side], 
+          activeMoveIndex: index 
+        } 
+      };
+    }
     default: return state;
   }
 }
@@ -156,48 +171,43 @@ const DamageCalculatorPage: React.FC = () => {
         setEfficacyMap(efficacyResult);
         setMoveList(moveResult as MoveData[]);
       } catch (error) {
-        console.error('Failed to fetch data:', error);
+        console.error('Failed to fetch initial data:', error);
       }
     };
     fetchData();
   }, []);
 
-  const defenderMaxHp = useMemo(() => calculateHP(state.defender.baseHp, state.defender.spHp), [state.defender]);
+  const p1MaxHp = useMemo(() => calculateHP(state.p1.baseHp, state.p1.spHp), [state.p1]);
+  const p2MaxHp = useMemo(() => calculateHP(state.p2.baseHp, state.p2.spHp), [state.p2]);
 
-  const results = useMemo(() => {
-    return state.moves.map((move) => {
+  const computeResults = (attacker: SideState, defender: SideState, defMaxHp: number) => {
+    return attacker.moves.map((move) => {
       if (!move) return null;
 
       const movePower = move.power || 0;
       const moveCategory = move.damageClassId === 2 ? 'physical' : 'special';
       const moveTypeId = move.typeId || 1;
-
       const isPhys = moveCategory === 'physical';
       
-      const atkStatValue = isPhys ? state.attacker.baseAtk : state.attacker.baseSpa;
-      const atkSpValue = isPhys ? state.attacker.spAtk : state.attacker.spSpa;
-      
-      const defStatValue = isPhys ? state.defender.baseDef : state.defender.baseSpd;
-      const defSpValue = isPhys ? state.defender.spDef : state.defender.spSpd;
+      const atkStatValue = isPhys ? attacker.baseAtk : attacker.baseSpa;
+      const atkSpValue = isPhys ? attacker.spAtk : attacker.spSpa;
+      const defStatValue = isPhys ? defender.baseDef : defender.baseSpd;
+      const defSpValue = isPhys ? defender.spDef : defender.spSpd;
 
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, state.attacker.nature);
-      const defenderStat = calculateStat(defStatValue, defSpValue, state.defender.nature);
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, attacker.nature);
+      const defenderStat = calculateStat(defStatValue, defSpValue, defender.nature);
       
-      // Automated STAB
-      const attackerType1Id = state.attacker.type1 ? TYPE_IDS[state.attacker.type1.toLowerCase()] : null;
-      const attackerType2Id = state.attacker.type2 ? TYPE_IDS[state.attacker.type2.toLowerCase()] : null;
+      const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
+      const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
       const isStab = moveTypeId === attackerType1Id || moveTypeId === attackerType2Id;
       const stabMod = isStab ? 1.5 : 1;
 
-      // Automated Effectiveness
-      const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
-      const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
-      
+      const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
+      const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
       const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
       
       const totalMod = stabMod * effectiveness;
-
-      const damage = calculateDamage(attackerStat, defenderStat, movePower, totalMod, defenderMaxHp);
+      const damage = calculateDamage(attackerStat, defenderStat, movePower, totalMod, defMaxHp);
 
       return {
         ...damage,
@@ -207,50 +217,61 @@ const DamageCalculatorPage: React.FC = () => {
         effectiveness
       } as DamageResult;
     });
-  }, [state, efficacyMap, defenderMaxHp]);
+  };
 
-  const activeResult = results[state.activeMoveIndex];
-  const activeMoveCategory = state.moves[state.activeMoveIndex]?.damageClassId === 2 ? 'physical' : 'special';
+  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap]);
+  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap]);
 
   return (
     <DamageCalculatorTemplate
+      resultsPanel={
+        <ResultsPanel 
+          p1Results={p1Results}
+          p1ActiveIndex={state.p1.activeMoveIndex}
+          onSelectP1Active={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index } })}
+          p2MaxHp={p2MaxHp}
+          p2Results={p2Results}
+          p2ActiveIndex={state.p2.activeMoveIndex}
+          onSelectP2Active={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p2', index } })}
+          p1MaxHp={p1MaxHp}
+        />
+      }
       attackerPanel={
-        <AttackerPanel 
+        <PokemonPanel 
+          title="Attacker Configuration"
+          sideColor="bg-blue-600"
           pokemonList={pokemonList}
-          selectedId={state.attacker.selectedId}
-          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'attacker', pokemon: p } })}
-          stats={state.attacker}
-          onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'attacker', key, val } })}
-          nature={state.attacker.nature}
-          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'attacker', val } })}
+          selectedId={state.p1.selectedId}
+          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p1', pokemon: p } })}
+          stats={state.p1}
+          onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
+          nature={state.p1.nature}
+          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'p1', val } })}
           moveList={moveList}
-          moves={state.moves}
-          activeMoveIndex={state.activeMoveIndex}
-          onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { index, move: m } })}
-          onSetActiveMove={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: index })}
-          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: val })}
-          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: val })}
+          moves={state.p1.moves}
+          activeMoveIndex={state.p1.activeMoveIndex}
+          onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1', index, move: m } })}
+          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p1', val } })}
+          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p1', val } })}
         />
       }
       defenderPanel={
-        <DefenderPanel 
+        <PokemonPanel 
+          title="Pokémon 2"
+          sideColor="bg-red-600"
           pokemonList={pokemonList}
-          selectedId={state.defender.selectedId}
-          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'defender', pokemon: p } })}
-          stats={state.defender}
-          onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'defender', key, val } })}
-          nature={state.defender.nature}
-          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'defender', val } })}
-          effectiveness={activeResult?.effectiveness || 1.0}
-          moveCategory={activeMoveCategory}
-        />
-      }
-      resultsPanel={
-        <ResultsPanel 
-          results={results}
-          activeIndex={state.activeMoveIndex}
-          onSelectActive={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: index })}
-          defenderMaxHp={defenderMaxHp}
+          selectedId={state.p2.selectedId}
+          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p2', pokemon: p } })}
+          stats={state.p2}
+          onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
+          nature={state.p2.nature}
+          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'p2', val } })}
+          moveList={moveList}
+          moves={state.p2.moves}
+          activeMoveIndex={state.p2.activeMoveIndex}
+          onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p2', index, move: m } })}
+          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p2', val } })}
+          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p2', val } })}
         />
       }
     />

@@ -5,9 +5,11 @@ import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { TYPE_COLORS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 
-interface AttackerPanelProps {
+interface PokemonPanelProps {
+  title: string;
+  sideColor: string;
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
@@ -19,13 +21,12 @@ interface AttackerPanelProps {
   moves: (MoveData | null)[];
   activeMoveIndex: number;
   onSelectMove: (index: number, m: MoveData) => void;
-  onSetActiveMove: (index: number) => void;
   onMovePowerChange: (val: number) => void;
   onMoveCategoryChange: (val: 'physical' | 'special') => void;
 }
 
-const AttackerPanel: React.FC<AttackerPanelProps> = ({
-  pokemonList, selectedId, onSelectPokemon,
+const PokemonPanel: React.FC<PokemonPanelProps> = ({
+  title, sideColor, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, nature, onNatureChange,
   moveList, moves, activeMoveIndex, onSelectMove,
   onMovePowerChange, onMoveCategoryChange
@@ -38,22 +39,22 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Typography variant="h2" className="flex items-center gap-2">
-            <span className="w-2 h-8 bg-blue-600 rounded-full inline-block" />
-            Attacker Configuration
+            <span className={`w-2 h-8 ${sideColor} rounded-full inline-block`} />
+            {title}
           </Typography>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
             {selectedId ? (
-              <PokemonImage id={selectedId} name="Attacker" className="w-14 h-14" />
+              <PokemonImage id={selectedId} name={title} className="w-14 h-14" />
             ) : (
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             )}
           </div>
           <div className="flex-1 space-y-2">
             <PokemonSearchSelect 
-              label="Select Attacker" 
+              label={`Select ${title}`} 
               pokemonList={pokemonList} 
               onSelect={onSelectPokemon}
             />
@@ -87,10 +88,10 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
           stats={{
             hp: { base: stats.baseHp, sp: stats.spHp },
             atk: { base: stats.baseAtk, sp: stats.spAtk, nature: nature },
-            def: { base: stats.baseDef, sp: stats.spDef, nature: 1.0 },
+            def: { base: stats.baseDef, sp: stats.spDef, nature: nature },
             spa: { base: stats.baseSpa, sp: stats.spSpa, nature: nature },
-            spd: { base: stats.baseSpd, sp: stats.spSpd, nature: 1.0 },
-            spe: { base: stats.baseSpe, sp: stats.spSpe, nature: 1.0 },
+            spd: { base: stats.baseSpd, sp: stats.spSpd, nature: nature },
+            spe: { base: stats.baseSpe, sp: stats.spSpe, nature: nature },
           }}
           onSpChange={onSpChange}
         />
@@ -146,8 +147,8 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
         <div className="p-4 bg-gray-900 rounded-2xl space-y-3 shadow-xl border border-gray-800">
            <div className="flex justify-between items-center border-b border-gray-800 pb-2">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                <Typography variant="label" className="text-gray-400">Slot {activeMoveIndex + 1} Active Tuning</Typography>
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-50 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <Typography variant="label" className="text-gray-400">Slot {activeMoveIndex + 1} Tuning</Typography>
               </div>
               <select 
                 value={activeMove.damageClassId === 2 ? 'physical' : 'special'} 
@@ -181,4 +182,4 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
   );
 };
 
-export default AttackerPanel;
+export default PokemonPanel;
