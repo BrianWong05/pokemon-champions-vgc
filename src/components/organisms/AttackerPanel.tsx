@@ -27,19 +27,19 @@ interface AttackerPanelProps {
 const AttackerPanel: React.FC<AttackerPanelProps> = ({
   pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, nature, onNatureChange,
-  moveList, moves, activeMoveIndex, onSelectMove, onSetActiveMove,
+  moveList, moves, activeMoveIndex, onSelectMove,
   onMovePowerChange, onMoveCategoryChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
   const activeMove = moves[activeMoveIndex];
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
+    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Typography variant="h2" className="flex items-center gap-2">
             <span className="w-2 h-8 bg-blue-600 rounded-full inline-block" />
-            Pokémon 1
+            Attacker Configuration
           </Typography>
         </div>
 
@@ -69,7 +69,7 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
 
       <div className="space-y-4">
         <div className="flex justify-between items-end border-b border-gray-50 pb-2">
-          <Typography variant="label" className="text-gray-400">Nature & Category</Typography>
+          <Typography variant="label" className="text-gray-400">Nature Settings</Typography>
           <div className="flex gap-2">
             <select 
               value={nature} 
@@ -86,9 +86,9 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
         <StatGrid 
           stats={{
             hp: { base: stats.baseHp, sp: stats.spHp },
-            atk: { base: stats.baseAtk, sp: stats.spAtk, nature: (activeMove?.damageClassId === 2) ? nature : 1.0 },
+            atk: { base: stats.baseAtk, sp: stats.spAtk, nature: nature },
             def: { base: stats.baseDef, sp: stats.spDef, nature: 1.0 },
-            spa: { base: stats.baseSpa, sp: stats.spSpa, nature: (activeMove?.damageClassId === 3) ? nature : 1.0 },
+            spa: { base: stats.baseSpa, sp: stats.spSpa, nature: nature },
             spd: { base: stats.baseSpd, sp: stats.spSpd, nature: 1.0 },
             spe: { base: stats.baseSpe, sp: stats.spSpe, nature: 1.0 },
           }}
@@ -97,36 +97,35 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       </div>
 
       <div className="space-y-3">
-        <Typography variant="label" className="text-gray-400 block mb-1">Move Set (Max 4)</Typography>
+        <Typography variant="label" className="text-gray-400 block mb-1">Move Pool Selection</Typography>
         <div className="grid grid-cols-1 gap-2">
           {moves.map((move, idx) => (
             <div 
               key={idx} 
-              onClick={() => onSetActiveMove(idx)}
               className={`
-                p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center gap-3
-                ${activeMoveIndex === idx ? 'border-blue-500 bg-blue-50/50 shadow-sm' : 'border-gray-100 bg-gray-50/30 hover:border-gray-200'}
+                p-3 rounded-xl border transition-all flex items-center gap-3
+                ${move ? 'border-gray-200 bg-white' : 'border-gray-100 bg-gray-50/30'}
               `}
             >
-              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${activeMoveIndex === idx ? 'border-blue-500' : 'border-gray-300'}`}>
-                {activeMoveIndex === idx && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+              <div className="text-[10px] font-black text-gray-300 w-4">
+                {idx + 1}
               </div>
               
               <div className="flex-1">
                 {move ? (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-blue-900">{move.nameEn}</span>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm font-bold text-blue-900 leading-tight">{move.nameEn}</span>
+                      <div className="flex items-center gap-1.5 mt-1">
                         <TypeBadge type={REVERSE_TYPE_IDS[move.typeId] || 'normal'} size="sm" />
-                        <span className="text-[10px] font-black text-gray-400 uppercase">{move.damageClassId === 2 ? 'Phys' : 'Spec'}</span>
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter bg-gray-50 px-1 rounded border border-gray-100">
+                          {move.damageClassId === 2 ? 'Phys' : 'Spec'}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <span className="text-[10px] font-black text-gray-400 uppercase block leading-none">Power</span>
-                        <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
-                      </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
+                      <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
                     </div>
                   </div>
                 ) : (
@@ -144,13 +143,16 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       </div>
 
       {activeMove && (
-        <div className="p-4 bg-blue-900 rounded-xl space-y-3 shadow-inner">
-           <div className="flex justify-between items-center">
-              <Typography variant="label" className="text-blue-200">Active Move Tuning</Typography>
+        <div className="p-4 bg-gray-900 rounded-2xl space-y-3 shadow-xl border border-gray-800">
+           <div className="flex justify-between items-center border-b border-gray-800 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <Typography variant="label" className="text-gray-400">Slot {activeMoveIndex + 1} Active Tuning</Typography>
+              </div>
               <select 
                 value={activeMove.damageClassId === 2 ? 'physical' : 'special'} 
                 onChange={(e) => onMoveCategoryChange(e.target.value as 'physical' | 'special')}
-                className="px-2 py-0.5 bg-blue-800 border border-blue-700 rounded text-[10px] font-black text-blue-100 uppercase outline-none"
+                className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-[9px] font-black text-blue-400 uppercase outline-none focus:border-blue-500"
               >
                 <option value="physical">Physical</option>
                 <option value="special">Special</option>
@@ -158,16 +160,16 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
            </div>
            <div className="flex items-center gap-4">
               <div className="flex-1">
-                <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest mb-1 block">Override Power</label>
+                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Override Power</label>
                 <input 
                   type="number" 
                   value={activeMove.power || 0} 
                   onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1.5 bg-blue-800 border border-blue-700 rounded font-black text-center text-sm text-white outline-none focus:border-blue-400 transition-colors"
+                  className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded font-black text-center text-sm text-white outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
               <div className="flex flex-col items-center gap-1 min-w-[60px]">
-                <label className="text-[10px] font-black text-blue-300 uppercase tracking-widest block text-center">Type</label>
+                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Type</label>
                 <div className="flex-1 flex items-center justify-center mt-1">
                    <TypeBadge type={REVERSE_TYPE_IDS[activeMove.typeId] || 'normal'} size="sm" />
                 </div>

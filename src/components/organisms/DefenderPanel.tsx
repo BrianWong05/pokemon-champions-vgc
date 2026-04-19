@@ -81,9 +81,9 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
           stats={{
             hp: { base: stats.baseHp, sp: stats.spHp },
             atk: { base: stats.baseAtk, sp: stats.spAtk, nature: 1.0 },
-            def: { base: stats.baseDef, sp: stats.spDef, nature: moveCategory === 'physical' ? nature : 1.0 },
+            def: { base: stats.baseDef, sp: stats.spDef, nature: nature },
             spa: { base: stats.baseSpa, sp: stats.spSpa, nature: 1.0 },
-            spd: { base: stats.baseSpd, sp: stats.spSpd, nature: moveCategory === 'special' ? nature : 1.0 },
+            spd: { base: stats.baseSpd, sp: stats.spSpd, nature: nature },
             spe: { base: stats.baseSpe, sp: stats.spSpe, nature: 1.0 },
           }}
           onSpChange={onSpChange}

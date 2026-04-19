@@ -18,15 +18,24 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
           <Typography variant="body" className="text-gray-500">Custom "SP" Stat System Implementation</Typography>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="lg:col-span-1">{attackerPanel}</div>
-          <div className="lg:col-span-1">{defenderPanel}</div>
-          <div className="lg:col-span-1 space-y-8 sticky top-8">
+        <div className="flex flex-col gap-8">
+          {/* Top Section: Results */}
+          <div className="w-full">
             {resultsPanel}
-            <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-sm text-blue-800">
-              <h4 className="font-bold mb-2">Stat Formulas</h4>
-              <p>HP = Base + 75 + SP</p>
-              <p>Stats = floor((Base + 20 + SP) * Nature)</p>
+          </div>
+
+          {/* Bottom Section: Setup */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div>{attackerPanel}</div>
+            <div className="space-y-8">
+              {defenderPanel}
+              <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 text-sm text-blue-800 shadow-sm">
+                <h4 className="font-bold mb-2 uppercase tracking-widest text-[10px]">Stat Formulas</h4>
+                <div className="space-y-1 font-medium">
+                  <p>HP = Base + 75 + SP</p>
+                  <p>Stats = floor((Base + 20 + SP) * Nature)</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

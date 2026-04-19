@@ -2,11 +2,11 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import AttackerPanel from '@/components/organisms/AttackerPanel';
 import DefenderPanel from '@/components/organisms/DefenderPanel';
-import ResultsPanel from '@/components/organisms/ResultsPanel';
+import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
 import { calculateHP, calculateStat, calculateDamage } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
 import { TYPE_IDS } from '@/utils/pokemon-types';
@@ -162,46 +162,55 @@ const DamageCalculatorPage: React.FC = () => {
     fetchData();
   }, []);
 
+  const defenderMaxHp = useMemo(() => calculateHP(state.defender.baseHp, state.defender.spHp), [state.defender]);
+
   const results = useMemo(() => {
-    const activeMove = state.moves[state.activeMoveIndex];
-    const movePower = activeMove?.power || 0;
-    const moveCategory = activeMove?.damageClassId === 2 ? 'physical' : 'special';
-    const moveTypeId = activeMove?.typeId || 1;
+    return state.moves.map((move) => {
+      if (!move) return null;
 
-    const isPhys = moveCategory === 'physical';
-    
-    const atkStatValue = isPhys ? state.attacker.baseAtk : state.attacker.baseSpa;
-    const atkSpValue = isPhys ? state.attacker.spAtk : state.attacker.spSpa;
-    
-    const defStatValue = isPhys ? state.defender.baseDef : state.defender.baseSpd;
-    const defSpValue = isPhys ? state.defender.spDef : state.defender.spSpd;
+      const movePower = move.power || 0;
+      const moveCategory = move.damageClassId === 2 ? 'physical' : 'special';
+      const moveTypeId = move.typeId || 1;
 
-    const attackerStat = calculateStat(atkStatValue, atkSpValue, state.attacker.nature);
-    const defenderStat = calculateStat(defStatValue, defSpValue, state.defender.nature);
-    const maxHP = calculateHP(state.defender.baseHp, state.defender.spHp);
-    
-    // Automated STAB
-    const attackerType1Id = state.attacker.type1 ? TYPE_IDS[state.attacker.type1.toLowerCase()] : null;
-    const attackerType2Id = state.attacker.type2 ? TYPE_IDS[state.attacker.type2.toLowerCase()] : null;
-    const isStab = activeMove !== null && (moveTypeId === attackerType1Id || moveTypeId === attackerType2Id);
-    const stabMod = isStab ? 1.5 : 1;
+      const isPhys = moveCategory === 'physical';
+      
+      const atkStatValue = isPhys ? state.attacker.baseAtk : state.attacker.baseSpa;
+      const atkSpValue = isPhys ? state.attacker.spAtk : state.attacker.spSpa;
+      
+      const defStatValue = isPhys ? state.defender.baseDef : state.defender.baseSpd;
+      const defSpValue = isPhys ? state.defender.spDef : state.defender.spSpd;
 
-    // Automated Effectiveness
-    const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
-    const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
-    
-    const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
-    
-    const totalMod = stabMod * effectiveness;
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, state.attacker.nature);
+      const defenderStat = calculateStat(defStatValue, defSpValue, state.defender.nature);
+      
+      // Automated STAB
+      const attackerType1Id = state.attacker.type1 ? TYPE_IDS[state.attacker.type1.toLowerCase()] : null;
+      const attackerType2Id = state.attacker.type2 ? TYPE_IDS[state.attacker.type2.toLowerCase()] : null;
+      const isStab = moveTypeId === attackerType1Id || moveTypeId === attackerType2Id;
+      const stabMod = isStab ? 1.5 : 1;
 
-    return {
-      ...calculateDamage(attackerStat, defenderStat, movePower, totalMod, maxHP),
-      defenderMaxHp: maxHP,
-      isStab,
-      effectiveness,
-      moveCategory: moveCategory as 'physical' | 'special'
-    };
-  }, [state, efficacyMap]);
+      // Automated Effectiveness
+      const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
+      const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
+      
+      const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
+      
+      const totalMod = stabMod * effectiveness;
+
+      const damage = calculateDamage(attackerStat, defenderStat, movePower, totalMod, defenderMaxHp);
+
+      return {
+        ...damage,
+        moveName: move.nameEn,
+        moveType: moveTypeId,
+        isStab,
+        effectiveness
+      } as DamageResult;
+    });
+  }, [state, efficacyMap, defenderMaxHp]);
+
+  const activeResult = results[state.activeMoveIndex];
+  const activeMoveCategory = state.moves[state.activeMoveIndex]?.damageClassId === 2 ? 'physical' : 'special';
 
   return (
     <DamageCalculatorTemplate
@@ -232,18 +241,16 @@ const DamageCalculatorPage: React.FC = () => {
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'defender', key, val } })}
           nature={state.defender.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'defender', val } })}
-          effectiveness={results.effectiveness}
-          moveCategory={results.moveCategory}
+          effectiveness={activeResult?.effectiveness || 1.0}
+          moveCategory={activeMoveCategory}
         />
       }
       resultsPanel={
         <ResultsPanel 
-          minDamage={results.minDamage}
-          maxDamage={results.maxDamage}
-          minPercent={results.minPercent}
-          maxPercent={results.maxPercent}
-          defenderMaxHp={results.defenderMaxHp}
-          isStab={results.isStab}
+          results={results}
+          activeIndex={state.activeMoveIndex}
+          onSelectActive={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: index })}
+          defenderMaxHp={defenderMaxHp}
         />
       }
     />

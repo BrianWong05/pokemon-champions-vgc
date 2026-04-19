@@ -13,3 +13,11 @@ The system SHALL allow the user to select one of the 4 move slots as the "active
 #### Scenario: Switching active move
 - **WHEN** a user has 4 moves selected and clicks on the 2nd move slot
 - **THEN** the damage results SHALL update immediately to reflect the 2nd move's power, type, and category.
+## MODIFIED Requirements
+
+### Requirement: Active Move Selection
+The active move selection logic SHALL be moved from the move inputs to the results display.
+
+#### Scenario: Selection source change
+- **WHEN** configuring the move-set in the Attacker panel
+- **THEN** no radio buttons or selection indicators SHALL be present next to the inputs.
