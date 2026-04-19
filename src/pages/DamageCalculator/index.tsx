@@ -27,7 +27,8 @@ interface SideState {
   spSpa: number;
   spSpd: number;
   spSpe: number;
-  nature: number;
+  boostedStat: string | null;
+  hinderedStat: string | null;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
 }
@@ -39,7 +40,7 @@ interface CalcState {
 
 type CalcAction = 
   | { type: 'SET_SP', payload: { side: 'p1' | 'p2', key: string, val: number } }
-  | { type: 'SET_NATURE', payload: { side: 'p1' | 'p2', val: number } }
+  | { type: 'TOGGLE_NATURE', payload: { side: 'p1' | 'p2', stat: string, mod: '+' | '-' } }
   | { type: 'SET_MOVE_POWER', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'SET_MOVE_CATEGORY', payload: { side: 'p1' | 'p2', val: 'physical' | 'special' } }
   | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
@@ -52,7 +53,8 @@ const initialSide: SideState = {
   type2: null,
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
-  nature: 1.0,
+  boostedStat: null,
+  hinderedStat: null,
   moves: [null, null, null, null],
   activeMoveIndex: 0,
 };
@@ -68,8 +70,30 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       const { side, key, val } = action.payload;
       return { ...state, [side]: { ...state[side], [key]: val } };
     }
-    case 'SET_NATURE':
-      return { ...state, [action.payload.side]: { ...state[action.payload.side], nature: action.payload.val } };
+    case 'TOGGLE_NATURE': {
+      const { side, stat, mod } = action.payload;
+      const current = state[side];
+      let newBoosted = current.boostedStat;
+      let newHindered = current.hinderedStat;
+
+      if (mod === '+') {
+        if (newBoosted === stat) {
+          newBoosted = null;
+        } else {
+          newBoosted = stat;
+          if (newHindered === stat) newHindered = null;
+        }
+      } else {
+        if (newHindered === stat) {
+          newHindered = null;
+        } else {
+          newHindered = stat;
+          if (newBoosted === stat) newBoosted = null;
+        }
+      }
+
+      return { ...state, [side]: { ...state[side], boostedStat: newBoosted, hinderedStat: newHindered } };
+    }
     case 'SET_MOVE_POWER': {
       const { side, val } = action.payload;
       const newMoves = [...state[side].moves];
@@ -103,6 +127,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           baseSpa: p.baseSpAtk,
           baseSpd: p.baseSpDef,
           baseSpe: p.baseSpeed,
+          boostedStat: null,
+          hinderedStat: null,
           moves: [null, null, null, null],
           activeMoveIndex: 0
         }
@@ -191,11 +217,17 @@ const DamageCalculatorPage: React.FC = () => {
       
       const atkStatValue = isPhys ? attacker.baseAtk : attacker.baseSpa;
       const atkSpValue = isPhys ? attacker.spAtk : attacker.spSpa;
+      const atkStatKey = isPhys ? 'atk' : 'spa';
+
       const defStatValue = isPhys ? defender.baseDef : defender.baseSpd;
       const defSpValue = isPhys ? defender.spDef : defender.spSpd;
+      const defStatKey = isPhys ? 'def' : 'spd';
 
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, attacker.nature);
-      const defenderStat = calculateStat(defStatValue, defSpValue, defender.nature);
+      const attackerMultiplier = (atkStatKey === attacker.boostedStat) ? 1.1 : (atkStatKey === attacker.hinderedStat) ? 0.9 : 1.0;
+      const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
+
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier);
+      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier);
       
       const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
@@ -238,15 +270,16 @@ const DamageCalculatorPage: React.FC = () => {
       }
       attackerPanel={
         <PokemonPanel 
-          title="Attacker Configuration"
+          title="Pokémon 1"
           sideColor="bg-blue-600"
           pokemonList={pokemonList}
           selectedId={state.p1.selectedId}
           onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p1', pokemon: p } })}
           stats={state.p1}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
-          nature={state.p1.nature}
-          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'p1', val } })}
+          boostedStat={state.p1.boostedStat}
+          hinderedStat={state.p1.hinderedStat}
+          onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p1', stat, mod } })}
           moveList={moveList}
           moves={state.p1.moves}
           activeMoveIndex={state.p1.activeMoveIndex}
@@ -264,8 +297,9 @@ const DamageCalculatorPage: React.FC = () => {
           onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p2', pokemon: p } })}
           stats={state.p2}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
-          nature={state.p2.nature}
-          onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'p2', val } })}
+          boostedStat={state.p2.boostedStat}
+          hinderedStat={state.p2.hinderedStat}
+          onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p2', stat, mod } })}
           moveList={moveList}
           moves={state.p2.moves}
           activeMoveIndex={state.p2.activeMoveIndex}
