@@ -8,6 +8,8 @@ import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
+import { TYPE_IDS } from '@/utils/pokemon-types';
 
 interface SideState {
   selectedId: number | null;
@@ -35,7 +37,6 @@ interface CalcState {
     type: string;
     power: number;
     category: 'physical' | 'special';
-    effectiveness: number;
   };
 }
 
@@ -57,7 +58,7 @@ const initialSide: SideState = {
 const initialState: CalcState = {
   attacker: { ...initialSide, spAtk: 32, spSpa: 32 },
   defender: initialSide,
-  move: { type: 'normal', power: 80, category: 'physical', effectiveness: 1.0 },
+  move: { type: 'normal', power: 80, category: 'physical' },
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
@@ -95,13 +96,14 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
 const DamageCalculatorPage: React.FC = () => {
   const [state, dispatch] = useReducer(calcReducer, initialState);
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
+  const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
 
   useEffect(() => {
-    const fetchPokemon = async () => {
+    const fetchData = async () => {
       try {
         const db = await getDb();
-        const result = await db
-          .select({
+        const [pokeResult, efficacyResult] = await Promise.all([
+          db.select({
             id: pokemon.id,
             nameEn: pokemon.nameEn,
             nameZh: pokemon.nameZh,
@@ -117,14 +119,17 @@ const DamageCalculatorPage: React.FC = () => {
           .from(pokemon)
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, 'Regulation M-A'));
+          .where(eq(formats.name, 'Regulation M-A')),
+          fetchTypeEfficacy()
+        ]);
         
-        setPokemonList(result as PokemonBaseStats[]);
+        setPokemonList(pokeResult as PokemonBaseStats[]);
+        setEfficacyMap(efficacyResult);
       } catch (error) {
-        console.error('Failed to fetch pokemon list:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
-    fetchPokemon();
+    fetchData();
   }, []);
 
   const results = useMemo(() => {
@@ -140,17 +145,27 @@ const DamageCalculatorPage: React.FC = () => {
     const defenderStat = calculateStat(defStatValue, defSpValue, state.defender.nature);
     const maxHP = calculateHP(state.defender.baseHp, state.defender.spHp);
     
+    // Automated STAB
     const moveType = state.move.type.toLowerCase();
     const isStab = state.attacker.type1?.toLowerCase() === moveType || state.attacker.type2?.toLowerCase() === moveType;
     const stabMod = isStab ? 1.5 : 1;
-    const totalMod = stabMod * state.move.effectiveness;
+
+    // Automated Effectiveness
+    const moveTypeId = TYPE_IDS[moveType] || 1;
+    const defType1Id = state.defender.type1 ? TYPE_IDS[state.defender.type1.toLowerCase()] : null;
+    const defType2Id = state.defender.type2 ? TYPE_IDS[state.defender.type2.toLowerCase()] : null;
+    
+    const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
+    
+    const totalMod = stabMod * effectiveness;
 
     return {
       ...calculateDamage(attackerStat, defenderStat, state.move.power, totalMod, maxHP),
       defenderMaxHp: maxHP,
-      isStab
+      isStab,
+      effectiveness
     };
-  }, [state]);
+  }, [state, efficacyMap]);
 
   return (
     <DamageCalculatorTemplate
@@ -180,8 +195,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'defender', key, val } })}
           nature={state.defender.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'defender', val } })}
-          effectiveness={state.move.effectiveness}
-          onEffectivenessChange={(val) => dispatch({ type: 'SET_MOVE', payload: { effectiveness: val } })}
+          effectiveness={results.effectiveness}
           moveCategory={state.move.category}
         />
       }

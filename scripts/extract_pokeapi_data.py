@@ -68,8 +68,7 @@ def localize_form_name(row, lang):
         mapping = FORM_MAPPINGS[suffix]
         return mapping[lang].format(name=base_name)
     
-    # Check for partial matches (e.g., "mega-x" might be split or handled differently)
-    # This covers cases where the identifier might be "name-form-something-else"
+    # Check for partial matches
     for key, mapping in FORM_MAPPINGS.items():
         if identifier.endswith(f"-{key}"):
             return mapping[lang].format(name=base_name)
@@ -90,25 +89,30 @@ def main():
     pokemon_species_names_df = fetch_csv("pokemon_species_names.csv")
     pokemon_types_df = fetch_csv("pokemon_types.csv")
     types_df = fetch_csv("types.csv")
+    type_names_df = fetch_csv("type_names.csv")
+    type_efficacy_df = fetch_csv("type_efficacy.csv")
     pokemon_stats_df = fetch_csv("pokemon_stats.csv")
     pokemon_forms_df = fetch_csv("pokemon_forms.csv")
 
-    # Localized names
-    # local_language_id: 9 (en), 1 (ja-Hrkt), 4 (zh-Hant)
+    # Localized Pokémon names
     names_en = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 9][['pokemon_species_id', 'name']].rename(columns={'name': 'name_en'})
     names_ja = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 1][['pokemon_species_id', 'name']].rename(columns={'name': 'name_ja'})
     names_zh = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 4][['pokemon_species_id', 'name']].rename(columns={'name': 'name_zh'})
 
-    # Merge names together
-    names_df = names_en.merge(names_ja, on='pokemon_species_id', how='left').merge(names_zh, on='pokemon_species_id', how='left')
+    pokemon_names_merged = names_en.merge(names_ja, on='pokemon_species_id', how='left').merge(names_zh, on='pokemon_species_id', how='left')
 
-    # Merge pokemon with species
-    pokemon_merged = pokemon_df.merge(pokemon_species_df[['id', 'identifier']], left_on='species_id', right_on='id', suffixes=('', '_species'), how='left')
+    # Localized Type names
+    type_names_en = type_names_df[type_names_df['local_language_id'] == 9][['type_id', 'name']].rename(columns={'name': 'name_en'})
+    type_names_ja = type_names_df[type_names_df['local_language_id'] == 1][['type_id', 'name']].rename(columns={'name': 'name_ja'})
+    type_names_zh = type_names_df[type_names_df['local_language_id'] == 4][['type_id', 'name']].rename(columns={'name': 'name_zh'})
     
-    # Merge with names
-    pokemon_merged = pokemon_merged.merge(names_df, left_on='species_id', right_on='pokemon_species_id', how='left')
+    type_names_merged = type_names_en.merge(type_names_ja, on='type_id', how='left').merge(type_names_zh, on='type_id', how='left')
+    types_final_df = types_df.merge(type_names_merged, left_on='id', right_on='type_id', how='left').drop(columns=['type_id'])
 
-    # 1.3 & 1.4 Integrate and apply localization function
+    # Merge pokemon with species and localized names
+    pokemon_merged = pokemon_df.merge(pokemon_species_df[['id', 'identifier']], left_on='species_id', right_on='id', suffixes=('', '_species'), how='left')
+    pokemon_merged = pokemon_merged.merge(pokemon_names_merged, left_on='species_id', right_on='pokemon_species_id', how='left')
+
     print("Constructing localized names for alternate forms...")
     pokemon_merged['name_en'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'en'), axis=1)
     pokemon_merged['name_ja'] = pokemon_merged.apply(lambda row: localize_form_name(row, 'ja'), axis=1)
@@ -123,15 +127,15 @@ def main():
     # Merge stats into pokemon
     pokemon_merged = pokemon_merged.merge(stats_pivot, left_on='id', right_on='pokemon_id', how='left')
 
-    # Process types
+    # Process types for pokemon
     pt_merged = pokemon_types_df.merge(types_df[['id', 'identifier']], left_on='type_id', right_on='id', how='left')
-    type1 = pt_merged[pt_merged['slot'] == 1][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type1'})
-    type2 = pt_merged[pt_merged['slot'] == 2][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type2'})
-    types_pivot = type1.merge(type2, on='pokemon_id', how='left')
-    pokemon_merged = pokemon_merged.merge(types_pivot, left_on='id', right_on='pokemon_id', how='left')
+    p_type1 = pt_merged[pt_merged['slot'] == 1][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type1'})
+    p_type2 = pt_merged[pt_merged['slot'] == 2][['pokemon_id', 'identifier']].rename(columns={'identifier': 'type2'})
+    p_types_pivot = p_type1.merge(p_type2, on='pokemon_id', how='left')
+    pokemon_merged = pokemon_merged.merge(p_types_pivot, left_on='id', right_on='pokemon_id', how='left')
     
-    # Final data selection
-    final_df = pokemon_merged[[
+    # Final Pokémon data selection
+    pokemon_final_df = pokemon_merged[[
         'id', 'identifier', 'name_en', 'name_ja', 'name_zh',
         'type1', 'type2',
         'base_hp', 'base_attack', 'base_defense', 'base_sp_atk', 'base_sp_def', 'base_speed',
@@ -146,8 +150,9 @@ def main():
     conn.execute("DROP TABLE IF EXISTS pokemon;")
     conn.execute("DROP TABLE IF EXISTS pokemon_forms;")
     conn.execute("DROP TABLE IF EXISTS types;")
+    conn.execute("DROP TABLE IF EXISTS type_efficacy;")
     
-    create_table_sql = """
+    create_pokemon_table_sql = """
     CREATE TABLE pokemon (
         id INTEGER PRIMARY KEY,
         identifier TEXT NOT NULL,
@@ -169,10 +174,26 @@ def main():
         is_default BOOLEAN
     );
     """
-    conn.execute(create_table_sql)
-    final_df.to_sql('pokemon', conn, if_exists='append', index=False)
+    
+    create_types_table_sql = """
+    CREATE TABLE types (
+        id INTEGER PRIMARY KEY,
+        identifier TEXT NOT NULL,
+        name_en TEXT,
+        name_ja TEXT,
+        name_zh TEXT,
+        generation_id INTEGER NOT NULL,
+        damage_class_id INTEGER
+    );
+    """
+
+    conn.execute(create_pokemon_table_sql)
+    conn.execute(create_types_table_sql)
+    
+    pokemon_final_df.to_sql('pokemon', conn, if_exists='append', index=False)
     pokemon_forms_df.to_sql('pokemon_forms', conn, if_exists='replace', index=False)
-    types_df.to_sql('types', conn, if_exists='replace', index=False)
+    types_final_df.to_sql('types', conn, if_exists='append', index=False)
+    type_efficacy_df.to_sql('type_efficacy', conn, if_exists='replace', index=False)
     
     conn.commit()
     conn.close()

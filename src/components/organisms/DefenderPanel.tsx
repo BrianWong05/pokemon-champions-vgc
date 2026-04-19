@@ -14,16 +14,22 @@ interface DefenderPanelProps {
   nature: number;
   onNatureChange: (val: number) => void;
   effectiveness: number;
-  onEffectivenessChange: (val: number) => void;
   moveCategory: 'physical' | 'special';
 }
 
 const DefenderPanel: React.FC<DefenderPanelProps> = ({
   pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, nature, onNatureChange,
-  effectiveness, onEffectivenessChange, moveCategory
+  effectiveness, moveCategory
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
+
+  const getEffectivenessColor = (val: number) => {
+    if (val > 1) return 'bg-green-100 text-green-700 border-green-200';
+    if (val < 1 && val > 0) return 'bg-red-100 text-red-700 border-red-200';
+    if (val === 0) return 'bg-gray-100 text-gray-700 border-gray-200';
+    return 'bg-blue-50 text-blue-700 border-blue-100';
+  };
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
@@ -34,7 +40,7 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
         </Typography>
 
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
+          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
             {selectedId ? (
               <PokemonImage id={selectedId} name="Defender" className="w-14 h-14" />
             ) : (
@@ -47,6 +53,12 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
               pokemonList={pokemonList} 
               onSelect={onSelectPokemon}
             />
+            {selectedPokemon && (
+              <div className="flex gap-2">
+                <TypeBadge type={selectedPokemon.type1} size="sm" /> 
+                {selectedPokemon.type2 && <TypeBadge type={selectedPokemon.type2} size="sm" />}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -57,7 +69,7 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
           <select 
             value={nature} 
             onChange={(e) => onNatureChange(parseFloat(e.target.value))}
-            className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600"
+            className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600 outline-none focus:border-blue-400 transition-colors"
           >
             <option value={0.9}>- (0.9x)</option>
             <option value={1.0}>Neutral (1.0x)</option>
@@ -78,20 +90,12 @@ const DefenderPanel: React.FC<DefenderPanelProps> = ({
         />
       </div>
 
-      <div className="p-4 bg-red-50 rounded-xl space-y-2">
+      <div className="p-4 bg-gray-50 rounded-xl space-y-2 border border-gray-100">
         <div className="flex justify-between items-center">
-          <Typography variant="label">Effectiveness</Typography>
-          <select 
-            value={effectiveness} 
-            onChange={(e) => onEffectivenessChange(parseFloat(e.target.value))}
-            className="px-2 py-1 bg-white border border-gray-300 rounded font-bold text-xs"
-          >
-            <option value={0.25}>0.25x</option>
-            <option value={0.5}>0.5x</option>
-            <option value={1.0}>1.0x</option>
-            <option value={2.0}>2.0x</option>
-            <option value={4.0}>4.0x</option>
-          </select>
+          <Typography variant="label">Type Effectiveness</Typography>
+          <div className={`px-3 py-1 rounded font-black text-sm border ${getEffectivenessColor(effectiveness)}`}>
+            {effectiveness}x
+          </div>
         </div>
       </div>
     </div>

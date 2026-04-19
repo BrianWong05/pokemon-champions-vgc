@@ -53,12 +53,27 @@ export const pokemonMoves = sqliteTable('pokemon_moves', {
 export const types = sqliteTable('types', {
   id: integer('id').primaryKey(),
   identifier: text('identifier').notNull(),
-  generationId: integer('generation_id'),
+  nameEn: text('name_en'),
+  nameJa: text('name_ja'),
+  nameZh: text('name_zh'),
+  generationId: integer('generation_id').notNull(),
   damageClassId: integer('damage_class_id'),
 });
 
+export const typeEfficacy = sqliteTable('type_efficacy', {
+  damageTypeId: integer('damage_type_id')
+    .notNull()
+    .references(() => types.id, { onDelete: 'cascade' }),
+  targetTypeId: integer('target_type_id')
+    .notNull()
+    .references(() => types.id, { onDelete: 'cascade' }),
+  damageFactor: integer('damage_factor').notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.damageTypeId, t.targetTypeId] }),
+}));
+
 export const formats = sqliteTable('formats', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   description: text('description'),
   isActive: integer('is_active', { mode: 'boolean' }).default(true),
@@ -101,6 +116,24 @@ export const calculatedSpeeds = sqliteTable('calculated_speeds', {
 });
 
 // Relations
+export const typesRelations = relations(types, ({ many }) => ({
+  attackingEfficacy: many(typeEfficacy, { relationName: 'attacker' }),
+  defendingEfficacy: many(typeEfficacy, { relationName: 'defender' }),
+}));
+
+export const typeEfficacyRelations = relations(typeEfficacy, ({ one }) => ({
+  damageType: one(types, {
+    fields: [typeEfficacy.damageTypeId],
+    references: [types.id],
+    relationName: 'attacker',
+  }),
+  targetType: one(types, {
+    fields: [typeEfficacy.targetTypeId],
+    references: [types.id],
+    relationName: 'defender',
+  }),
+}));
+
 export const pokemonRelations = relations(pokemon, ({ many, one }) => ({
   pokemonMoves: many(pokemonMoves),
   forms: many(pokemonForms),
