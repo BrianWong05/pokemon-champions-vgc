@@ -27,9 +27,9 @@ const StatRow: React.FC<StatRowProps> = ({
   const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage);
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-center py-1">
-      {/* 1. Stat Label (2 cols) */}
-      <div className="col-span-2 text-xs font-bold text-gray-500 uppercase">{label}</div>
+    <div className="grid grid-cols-10 gap-2 items-center py-1">
+      {/* 1. Stat Label (1 col) */}
+      <div className="col-span-1 text-xs font-bold text-gray-500 uppercase">{label}</div>
       
       {/* 2. Base (1 col) */}
       <div className="col-span-1 text-center text-sm font-medium text-gray-500">
@@ -103,8 +103,8 @@ const StatRow: React.FC<StatRowProps> = ({
         ) : <div className="h-5" />}
       </div>
 
-      {/* 7. Total (2 cols) */}
-      <div className={`col-span-2 text-right text-sm font-black ${isBoosted ? 'text-red-600' : isHindered ? 'text-blue-600' : 'text-gray-900'}`}>
+      {/* 7. Total (1 col) */}
+      <div className={`col-span-1 text-right text-sm font-black ${isBoosted ? 'text-red-600' : isHindered ? 'text-blue-600' : 'text-gray-900'}`}>
         {total}
       </div>
     </div>
@@ -137,13 +137,13 @@ const StatGrid: React.FC<StatGridProps> = ({
 
   return (
     <div className={`space-y-1 ${className}`}>
-      <div className="grid grid-cols-12 gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest pb-1 border-b border-gray-100 mb-1">
-        <div className="col-span-2 text-left">Stat</div>
+      <div className="grid grid-cols-10 gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest pb-1 border-b border-gray-100 mb-1">
+        <div className="col-span-1 text-left">Stat</div>
         <div className="col-span-1 text-center">Base</div>
         <div className="col-span-4 text-center">SP</div>
         <div className="col-span-2 text-center">Nature</div>
         <div className="col-span-1 text-center">Stage</div>
-        <div className="col-span-2 text-right">Total</div>
+        <div className="col-span-1 text-right">Total</div>
       </div>
       
       <div className="space-y-1">
