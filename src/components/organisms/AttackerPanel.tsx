@@ -1,19 +1,18 @@
 import React from 'react';
-import StatControlGroup from '@/components/molecules/StatControlGroup';
 import Typography from '@/components/atoms/Typography';
 import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import TypeBadge from '@/components/atoms/TypeBadge';
+import StatGrid from '@/components/molecules/StatGrid';
 
 interface AttackerPanelProps {
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
-  baseAtk: number;
-  onBaseAtkChange: (val: number) => void;
-  spAtk: number;
-  onSpAtkChange: (val: number) => void;
-  natureAtk: number;
-  onNatureAtkChange: (val: number) => void;
+  stats: any; // Simplified for the refactor
+  onSpChange: (key: string, val: number) => void;
+  nature: number;
+  onNatureChange: (val: number) => void;
   movePower: number;
   onMovePowerChange: (val: number) => void;
   moveCategory: 'physical' | 'special';
@@ -24,73 +23,108 @@ interface AttackerPanelProps {
 
 const AttackerPanel: React.FC<AttackerPanelProps> = ({
   pokemonList, selectedId, onSelectPokemon,
-  baseAtk, onBaseAtkChange, spAtk, onSpAtkChange, natureAtk, onNatureAtkChange,
+  stats, onSpChange, nature, onNatureChange,
   movePower, onMovePowerChange, moveCategory, onMoveCategoryChange, isStab, onStabChange
 }) => {
+  const selectedPokemon = pokemonList.find(p => p.id === selectedId);
+
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
-      <Typography variant="h2" className="flex items-center gap-2">
-        <span className="w-2 h-8 bg-blue-600 rounded-full inline-block" />
-        Attacker
-      </Typography>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <Typography variant="h2" className="flex items-center gap-2">
+            <span className="w-2 h-8 bg-blue-600 rounded-full inline-block" />
+            Pokémon 1
+          </Typography>
+          <div className="flex gap-1">
+            {selectedPokemon?.nameEn.includes('Mega') && (
+              <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-black uppercase">Mega</span>
+            )}
+          </div>
+        </div>
 
-      <div className="flex items-end gap-4 p-4 bg-gray-50 rounded-xl">
-        {selectedId ? (
-          <PokemonImage id={selectedId} name="Attacker" className="w-14 h-14" />
-        ) : (
-          <div className="w-14 h-14 bg-gray-200 rounded-lg animate-pulse" />
-        )}
-        <PokemonSearchSelect 
-          label="Select Attacker" 
-          pokemonList={pokemonList} 
-          onSelect={onSelectPokemon}
-          className="flex-1"
-        />
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
+            {selectedId ? (
+              <PokemonImage id={selectedId} name="Attacker" className="w-14 h-14" />
+            ) : (
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <PokemonSearchSelect 
+              label="Select Attacker" 
+              pokemonList={pokemonList} 
+              onSelect={onSelectPokemon}
+            />
+            {selectedPokemon && (
+              <div className="flex gap-2">
+                <TypeBadge type={selectedPokemon.nameEn.toLowerCase().includes('fire') ? 'fire' : 'normal'} size="sm" /> 
+                {/* Note: Simplified type logic for UI placeholder, ideally passed from parent */}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <StatControlGroup 
-        label={moveCategory === 'physical' ? 'Attack' : 'Sp. Atk'}
-        baseValue={baseAtk}
-        onBaseChange={onBaseAtkChange}
-        spValue={spAtk}
-        onSpChange={onSpAtkChange}
-        natureValue={natureAtk}
-        onNatureChange={onNatureAtkChange}
-      />
-
-      <div className="p-4 bg-blue-50 rounded-xl space-y-4">
-        <Typography variant="label">Move Details</Typography>
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Power</label>
-            <input 
-              type="number" 
-              value={movePower} 
-              onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Category</label>
+      <div className="space-y-4">
+        <div className="flex justify-between items-end">
+          <Typography variant="label" className="text-gray-400">Nature & Category</Typography>
+          <div className="flex gap-2">
+            <select 
+              value={nature} 
+              onChange={(e) => onNatureChange(parseFloat(e.target.value))}
+              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600"
+            >
+              <option value={0.9}>- (0.9x)</option>
+              <option value={1.0}>Neutral (1.0x)</option>
+              <option value={1.1}>+ (1.1x)</option>
+            </select>
             <select 
               value={moveCategory} 
               onChange={(e) => onMoveCategoryChange(e.target.value as 'physical' | 'special')}
-              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500"
+              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600"
             >
               <option value="physical">Physical</option>
               <option value="special">Special</option>
             </select>
           </div>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer group">
-          <input 
-            type="checkbox" 
-            checked={isStab} 
-            onChange={(e) => onStabChange(e.target.checked)}
-            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <span className="text-sm font-semibold text-gray-700 group-hover:text-blue-600 transition-colors">STAB (1.5x)</span>
-        </label>
+
+        <StatGrid 
+          stats={{
+            hp: { base: stats.baseHp, sp: stats.spHp },
+            atk: { base: stats.baseAtk, sp: stats.spAtk, nature: moveCategory === 'physical' ? nature : 1.0 },
+            def: { base: stats.baseDef, sp: stats.spDef, nature: 1.0 },
+            spa: { base: stats.baseSpa, sp: stats.spSpa, nature: moveCategory === 'special' ? nature : 1.0 },
+            spd: { base: stats.baseSpd, sp: stats.spSpd, nature: 1.0 },
+            spe: { base: stats.baseSpe, sp: stats.spSpe, nature: 1.0 },
+          }}
+          onSpChange={onSpChange}
+        />
+      </div>
+
+      <div className="p-4 bg-blue-50 rounded-xl space-y-4">
+        <div className="flex justify-between items-center">
+          <Typography variant="label">Move Power</Typography>
+          <div className="flex items-center gap-3">
+            <input 
+              type="number" 
+              value={movePower} 
+              onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
+              className="w-16 px-2 py-1 bg-white border border-gray-300 rounded font-bold text-center text-sm"
+            />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={isStab} 
+                onChange={(e) => onStabChange(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+              />
+              <span className="text-xs font-bold text-gray-500 uppercase">STAB</span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   );
