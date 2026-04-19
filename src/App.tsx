@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import SpeedTierList from '@/pages/SpeedTierList'
 import EvSpConverter from '@/pages/EvSpConverter'
+import DamageCalculator from '@/pages/DamageCalculator'
 
 const Home: React.FC = () => (
   <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -25,6 +26,12 @@ const Home: React.FC = () => (
         >
           EV to SP Converter
         </Link>
+        <Link 
+          to="/calc" 
+          className="bg-red-600 text-white px-6 py-2 rounded-full hover:bg-red-700 transition-colors"
+        >
+          Damage Calculator
+        </Link>
       </div>
     </div>
   </div>
@@ -37,6 +44,7 @@ const App: React.FC = () => {
         <Route path="/" element={<Home />} />
         <Route path="/speed-tiers" element={<SpeedTierList />} />
         <Route path="/converter" element={<EvSpConverter />} />
+        <Route path="/calc" element={<DamageCalculator />} />
       </Routes>
     </Router>
   )
