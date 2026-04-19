@@ -312,11 +312,8 @@ const DamageCalculatorPage: React.FC = () => {
           onStageChange={(stat, val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat, val } })}
           moveList={moveList}
           moves={state.p1.moves}
-          activeMoveIndex={state.p1.activeMoveIndex}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1', index, move: m } })}
           onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1', index } })}
-          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p1', val } })}
-          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p1', val } })}
         />
       }
       defenderPanel={
@@ -335,11 +332,8 @@ const DamageCalculatorPage: React.FC = () => {
           onStageChange={(stat, val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p2', stat, val } })}
           moveList={moveList}
           moves={state.p2.moves}
-          activeMoveIndex={state.p2.activeMoveIndex}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p2', index, move: m } })}
           onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p2', index } })}
-          onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE_POWER', payload: { side: 'p2', val } })}
-          onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE_CATEGORY', payload: { side: 'p2', val } })}
         />
       }
     />

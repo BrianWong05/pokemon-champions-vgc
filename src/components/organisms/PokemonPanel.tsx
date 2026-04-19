@@ -22,22 +22,17 @@ interface PokemonPanelProps {
   onStageChange: (stat: string, val: number) => void;
   moveList: MoveData[];
   moves: (MoveData | null)[];
-  activeMoveIndex: number;
   onSelectMove: (index: number, m: MoveData) => void;
   onClearMove: (index: number) => void;
-  onMovePowerChange: (val: number) => void;
-  onMoveCategoryChange: (val: 'physical' | 'special') => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
   title, sideColor, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
-  moveList, moves, activeMoveIndex, onSelectMove, onClearMove,
-  onMovePowerChange, onMoveCategoryChange
+  moveList, moves, onSelectMove, onClearMove
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
-  const activeMove = moves[activeMoveIndex];
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
@@ -151,42 +146,6 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
           ))}
         </div>
       </div>
-
-      {activeMove && (
-        <div className="p-4 bg-gray-900 rounded-2xl space-y-3 shadow-xl border border-gray-800">
-           <div className="flex justify-between items-center border-b border-gray-800 pb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                <Typography variant="label" className="text-gray-400">Slot {activeMoveIndex + 1} Active Tuning</Typography>
-              </div>
-              <select 
-                value={activeMove.damageClassId === 2 ? 'physical' : 'special'} 
-                onChange={(e) => onMoveCategoryChange(e.target.value as 'physical' | 'special')}
-                className="px-2 py-0.5 bg-gray-800 border border-gray-700 rounded text-[9px] font-black text-blue-400 uppercase outline-none focus:border-blue-500"
-              >
-                <option value="physical">Physical</option>
-                <option value="special">Special</option>
-              </select>
-           </div>
-           <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Override Power</label>
-                <input 
-                  type="number" 
-                  value={activeMove.power || 0} 
-                  onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1.5 bg-gray-800 border border-gray-700 rounded font-black text-center text-sm text-white outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-              <div className="flex flex-col items-center gap-1 min-w-[60px]">
-                <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest block text-center">Type</label>
-                <div className="flex-1 flex items-center justify-center mt-1">
-                   <TypeBadge type={REVERSE_TYPE_IDS[activeMove.typeId] || 'normal'} size="sm" />
-                </div>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };
