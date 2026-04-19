@@ -4,29 +4,32 @@ import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/Po
 import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
+import { TYPE_COLORS } from '@/utils/pokemon-types';
 
 interface AttackerPanelProps {
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
-  stats: any; // Simplified for the refactor
+  stats: any;
   onSpChange: (key: string, val: number) => void;
   nature: number;
   onNatureChange: (val: number) => void;
+  moveType: string;
+  onMoveTypeChange: (val: string) => void;
   movePower: number;
   onMovePowerChange: (val: number) => void;
   moveCategory: 'physical' | 'special';
   onMoveCategoryChange: (val: 'physical' | 'special') => void;
-  isStab: boolean;
-  onStabChange: (val: boolean) => void;
 }
 
 const AttackerPanel: React.FC<AttackerPanelProps> = ({
   pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, nature, onNatureChange,
-  movePower, onMovePowerChange, moveCategory, onMoveCategoryChange, isStab, onStabChange
+  moveType, onMoveTypeChange,
+  movePower, onMovePowerChange, moveCategory, onMoveCategoryChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
+  const types = Object.keys(TYPE_COLORS);
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6">
@@ -44,7 +47,7 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100">
+          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
             {selectedId ? (
               <PokemonImage id={selectedId} name="Attacker" className="w-14 h-14" />
             ) : (
@@ -59,8 +62,8 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
             />
             {selectedPokemon && (
               <div className="flex gap-2">
-                <TypeBadge type={selectedPokemon.nameEn.toLowerCase().includes('fire') ? 'fire' : 'normal'} size="sm" /> 
-                {/* Note: Simplified type logic for UI placeholder, ideally passed from parent */}
+                <TypeBadge type={selectedPokemon.type1} size="sm" /> 
+                {selectedPokemon.type2 && <TypeBadge type={selectedPokemon.type2} size="sm" />}
               </div>
             )}
           </div>
@@ -74,7 +77,7 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
             <select 
               value={nature} 
               onChange={(e) => onNatureChange(parseFloat(e.target.value))}
-              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600"
+              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600 outline-none focus:border-blue-400 transition-colors"
             >
               <option value={0.9}>- (0.9x)</option>
               <option value={1.0}>Neutral (1.0x)</option>
@@ -83,7 +86,7 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
             <select 
               value={moveCategory} 
               onChange={(e) => onMoveCategoryChange(e.target.value as 'physical' | 'special')}
-              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600"
+              className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs font-bold text-gray-600 outline-none focus:border-blue-400 transition-colors"
             >
               <option value="physical">Physical</option>
               <option value="special">Special</option>
@@ -105,24 +108,27 @@ const AttackerPanel: React.FC<AttackerPanelProps> = ({
       </div>
 
       <div className="p-4 bg-blue-50 rounded-xl space-y-4">
-        <div className="flex justify-between items-center">
-          <Typography variant="label">Move Power</Typography>
-          <div className="flex items-center gap-3">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">Move Type</label>
+            <select
+              value={moveType}
+              onChange={(e) => onMoveTypeChange(e.target.value)}
+              className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-xs text-blue-900 outline-none focus:border-blue-500 transition-colors appearance-none"
+            >
+              {types.map(t => (
+                <option key={t} value={t}>{t.toUpperCase()}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">Move Power</label>
             <input 
               type="number" 
               value={movePower} 
               onChange={(e) => onMovePowerChange(parseInt(e.target.value, 10) || 0)}
-              className="w-16 px-2 py-1 bg-white border border-gray-300 rounded font-bold text-center text-sm"
+              className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-center text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
             />
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isStab} 
-                onChange={(e) => onStabChange(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded"
-              />
-              <span className="text-xs font-bold text-gray-500 uppercase">STAB</span>
-            </label>
           </div>
         </div>
       </div>

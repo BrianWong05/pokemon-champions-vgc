@@ -11,6 +11,8 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 interface SideState {
   selectedId: number | null;
+  type1: string | null;
+  type2: string | null;
   baseHp: number;
   baseAtk: number;
   baseDef: number;
@@ -30,9 +32,9 @@ interface CalcState {
   attacker: SideState;
   defender: SideState;
   move: {
+    type: string;
     power: number;
     category: 'physical' | 'special';
-    isStab: boolean;
     effectiveness: number;
   };
 }
@@ -45,6 +47,8 @@ type CalcAction =
 
 const initialSide: SideState = {
   selectedId: null,
+  type1: null,
+  type2: null,
   baseHp: 100, baseAtk: 100, baseDef: 100, baseSpa: 100, baseSpd: 100, baseSpe: 100,
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   nature: 1.0
@@ -53,7 +57,7 @@ const initialSide: SideState = {
 const initialState: CalcState = {
   attacker: { ...initialSide, spAtk: 32, spSpa: 32 },
   defender: initialSide,
-  move: { power: 80, category: 'physical', isStab: true, effectiveness: 1.0 },
+  move: { type: 'normal', power: 80, category: 'physical', effectiveness: 1.0 },
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
@@ -73,6 +77,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         [side]: {
           ...state[side],
           selectedId: p.id,
+          type1: p.type1,
+          type2: p.type2,
           baseHp: p.baseHp,
           baseAtk: p.baseAttack,
           baseDef: p.baseDefense,
@@ -99,6 +105,8 @@ const DamageCalculatorPage: React.FC = () => {
             id: pokemon.id,
             nameEn: pokemon.nameEn,
             nameZh: pokemon.nameZh,
+            type1: pokemon.type1,
+            type2: pokemon.type2,
             baseHp: pokemon.baseHp,
             baseAttack: pokemon.baseAttack,
             baseDefense: pokemon.baseDefense,
@@ -132,12 +140,15 @@ const DamageCalculatorPage: React.FC = () => {
     const defenderStat = calculateStat(defStatValue, defSpValue, state.defender.nature);
     const maxHP = calculateHP(state.defender.baseHp, state.defender.spHp);
     
-    const stabMod = state.move.isStab ? 1.5 : 1;
+    const moveType = state.move.type.toLowerCase();
+    const isStab = state.attacker.type1?.toLowerCase() === moveType || state.attacker.type2?.toLowerCase() === moveType;
+    const stabMod = isStab ? 1.5 : 1;
     const totalMod = stabMod * state.move.effectiveness;
 
     return {
       ...calculateDamage(attackerStat, defenderStat, state.move.power, totalMod, maxHP),
-      defenderMaxHp: maxHP
+      defenderMaxHp: maxHP,
+      isStab
     };
   }, [state]);
 
@@ -152,12 +163,12 @@ const DamageCalculatorPage: React.FC = () => {
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'attacker', key, val } })}
           nature={state.attacker.nature}
           onNatureChange={(val) => dispatch({ type: 'SET_NATURE', payload: { side: 'attacker', val } })}
+          moveType={state.move.type}
+          onMoveTypeChange={(val) => dispatch({ type: 'SET_MOVE', payload: { type: val } })}
           movePower={state.move.power}
           onMovePowerChange={(val) => dispatch({ type: 'SET_MOVE', payload: { power: val } })}
           moveCategory={state.move.category}
           onMoveCategoryChange={(val) => dispatch({ type: 'SET_MOVE', payload: { category: val } })}
-          isStab={state.move.isStab}
-          onStabChange={(val) => dispatch({ type: 'SET_MOVE', payload: { isStab: val } })}
         />
       }
       defenderPanel={
@@ -181,6 +192,7 @@ const DamageCalculatorPage: React.FC = () => {
           minPercent={results.minPercent}
           maxPercent={results.maxPercent}
           defenderMaxHp={results.defenderMaxHp}
+          isStab={results.isStab}
         />
       }
     />

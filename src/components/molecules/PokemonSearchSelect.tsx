@@ -5,6 +5,8 @@ export interface PokemonBaseStats {
   id: number;
   nameEn: string;
   nameZh: string | null;
+  type1: string;
+  type2: string | null;
   baseHp: number;
   baseAttack: number;
   baseDefense: number;
