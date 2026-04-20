@@ -39,10 +39,25 @@ export const moves = sqliteTable('moves', {
 });
 
 export const abilities = sqliteTable('abilities', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  description: text('description').notNull(),
+  id: integer('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  nameEn: text('name_en'),
+  nameJa: text('name_ja'),
+  nameZh: text('name_zh'),
 });
+
+export const pokemonAbilities = sqliteTable('pokemon_abilities', {
+  pokemonId: integer('pokemon_id')
+    .notNull()
+    .references(() => pokemon.id, { onDelete: 'cascade' }),
+  abilityId: integer('ability_id')
+    .notNull()
+    .references(() => abilities.id, { onDelete: 'cascade' }),
+  isHidden: integer('is_hidden', { mode: 'boolean' }).notNull(),
+  slot: integer('slot').notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.pokemonId, t.abilityId] }),
+}));
 
 export const pokemonMoves = sqliteTable('pokemon_moves', {
   pokemonId: integer('pokemon_id')
@@ -141,6 +156,7 @@ export const typeEfficacyRelations = relations(typeEfficacy, ({ one }) => ({
 
 export const pokemonRelations = relations(pokemon, ({ many, one }) => ({
   pokemonMoves: many(pokemonMoves),
+  pokemonAbilities: many(pokemonAbilities),
   forms: many(pokemonForms),
   formatLegality: many(formatPokemon),
   calculatedSpeed: one(calculatedSpeeds, {
@@ -190,5 +206,20 @@ export const pokemonMovesRelations = relations(pokemonMoves, ({ one }) => ({
   move: one(moves, {
     fields: [pokemonMoves.moveId],
     references: [moves.id],
+  }),
+}));
+
+export const abilitiesRelations = relations(abilities, ({ many }) => ({
+  pokemonAbilities: many(pokemonAbilities),
+}));
+
+export const pokemonAbilitiesRelations = relations(pokemonAbilities, ({ one }) => ({
+  pokemon: one(pokemon, {
+    fields: [pokemonAbilities.pokemonId],
+    references: [pokemon.id],
+  }),
+  ability: one(abilities, {
+    fields: [pokemonAbilities.abilityId],
+    references: [abilities.id],
   }),
 }));

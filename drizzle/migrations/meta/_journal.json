@@ -57,6 +57,13 @@
       "when": 1776602353961,
       "tag": "0007_light_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1776673160428,
+      "tag": "0008_lovely_excalibur",
+      "breakpoints": true
     }
   ]
 }
