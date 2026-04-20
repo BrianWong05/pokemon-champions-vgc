@@ -24,13 +24,17 @@ interface PokemonPanelProps {
   moves: (MoveData | null)[];
   onSelectMove: (index: number, m: MoveData) => void;
   onClearMove: (index: number) => void;
+  abilities: string[];
+  activeAbility: string | null;
+  onAbilityChange: (ability: string) => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
   title, sideColor, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
-  moveList, moves, onSelectMove, onClearMove
+  moveList, moves, onSelectMove, onClearMove,
+  abilities, activeAbility, onAbilityChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
 
@@ -58,12 +62,25 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
               pokemonList={pokemonList} 
               onSelect={onSelectPokemon}
             />
-            {selectedPokemon && (
-              <div className="flex gap-2">
-                <TypeBadge type={selectedPokemon.type1} size="sm" /> 
-                {selectedPokemon.type2 && <TypeBadge type={selectedPokemon.type2} size="sm" />}
-              </div>
-            )}
+            <div className="flex items-center gap-2 justify-between">
+              {selectedPokemon && (
+                <div className="flex gap-2">
+                  <TypeBadge type={selectedPokemon.type1} size="sm" /> 
+                  {selectedPokemon.type2 && <TypeBadge type={selectedPokemon.type2} size="sm" />}
+                </div>
+              )}
+              {abilities.length > 0 && (
+                <select 
+                  value={activeAbility || ''} 
+                  onChange={(e) => onAbilityChange(e.target.value)}
+                  className="text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-100 rounded px-2 py-1 outline-none focus:border-blue-300"
+                >
+                  {abilities.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
         </div>
       </div>

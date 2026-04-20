@@ -2,13 +2,13 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateDamage } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier } from '@/utils/damage';
 import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
+import { eq, and } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
-import { TYPE_IDS } from '@/utils/pokemon-types';
+import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 
 interface SideState {
@@ -32,6 +32,8 @@ interface SideState {
   stages: Record<string, number>;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
+  abilities: string[];
+  activeAbility: string | null;
 }
 
 interface CalcState {
@@ -48,7 +50,9 @@ type CalcAction =
   | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
   | { type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1' | 'p2', index: number, move: MoveData } }
   | { type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
-  | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } };
+  | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
+  | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
+  | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -61,6 +65,8 @@ const initialSide: SideState = {
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moves: [null, null, null, null],
   activeMoveIndex: 0,
+  abilities: [],
+  activeAbility: null,
 };
 
 const initialState: CalcState = {
@@ -146,7 +152,30 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           hinderedStat: null,
           stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
           moves: [null, null, null, null],
-          activeMoveIndex: 0
+          activeMoveIndex: 0,
+          abilities: [],
+          activeAbility: null
+        }
+      };
+    }
+    case 'SET_ABILITIES': {
+      const { side, abilities } = action.payload;
+      return {
+        ...state,
+        [side]: {
+          ...state[side],
+          abilities,
+          activeAbility: abilities[0] || null
+        }
+      };
+    }
+    case 'SET_ACTIVE_ABILITY': {
+      const { side, ability } = action.payload;
+      return {
+        ...state,
+        [side]: {
+          ...state[side],
+          activeAbility: ability
         }
       };
     }
@@ -195,6 +224,26 @@ const DamageCalculatorPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
 
+  const handleSelectPokemon = async (side: 'p1' | 'p2', p: PokemonBaseStats) => {
+    dispatch({ type: 'SELECT_POKEMON', payload: { side, pokemon: p } });
+    
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({
+        name: abilities.nameEn
+      })
+      .from(pokemonAbilities)
+      .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+      .where(eq(pokemonAbilities.pokemonId, p.id))
+      .orderBy(pokemonAbilities.slot);
+
+      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
+    } catch (error) {
+      console.error('Failed to fetch abilities:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -239,35 +288,48 @@ const DamageCalculatorPage: React.FC = () => {
       if (!move) return null;
 
       const movePower = move.power || 0;
-      const moveCategory = move.damageClassId === 2 ? 'physical' : 'special';
+      const moveCategory = move.damageClassId === 2 ? 'physical' : move.damageClassId === 3 ? 'special' : 'status';
       const moveTypeId = move.typeId || 1;
+      const moveTypeName = REVERSE_TYPE_IDS[moveTypeId] || 'normal';
       const isPhys = moveCategory === 'physical';
       
       const atkStatValue = isPhys ? attacker.baseAtk : attacker.baseSpa;
       const atkSpValue = isPhys ? attacker.spAtk : attacker.spSpa;
-      const atkStatKey = isPhys ? 'atk' : 'spa';
+      const atkStatKey = (isPhys ? 'atk' : 'spa') as 'atk' | 'spa';
 
       const defStatValue = isPhys ? defender.baseDef : defender.baseSpd;
       const defSpValue = isPhys ? defender.spDef : defender.spSpd;
-      const defStatKey = isPhys ? 'def' : 'spd';
+      const defStatKey = (isPhys ? 'def' : 'spd') as 'def' | 'spd';
 
       const attackerMultiplier = (atkStatKey === attacker.boostedStat) ? 1.1 : (atkStatKey === attacker.hinderedStat) ? 0.9 : 1.0;
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey]);
-      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey]);
+      // Pipeline Step 1: Modified Base Power
+      const bpMod = getBasePowerModifier(attacker.activeAbility, moveTypeName, movePower, moveCategory, move.nameEn);
+      const modifiedPower = Math.floor(movePower * bpMod);
+
+      // Pipeline Step 2: Stats with Ability Modifiers
+      const attackerAbilityMod = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker');
+      const defenderAbilityMod = getStatModifier(defender.activeAbility, defStatKey, 'defender');
+
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey], attackerAbilityMod);
+      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey], defenderAbilityMod);
       
       const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
       const isStab = moveTypeId === attackerType1Id || moveTypeId === attackerType2Id;
-      const stabMod = isStab ? 1.5 : 1;
+      
+      const isAdaptability = attacker.activeAbility?.toLowerCase() === 'adaptability';
+      const stabMultiplier = isStab ? (isAdaptability ? 2.0 : 1.5) : 1;
 
       const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
       const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
       const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
       
-      const totalMod = stabMod * effectiveness;
-      const damage = calculateDamage(attackerStat, defenderStat, movePower, totalMod, defMaxHp);
+      // Pipeline Step 4: Final Damage Modifier
+      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, moveTypeName, effectiveness);
+      
+      const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, defMaxHp);
 
       return {
         ...damage,
@@ -302,7 +364,7 @@ const DamageCalculatorPage: React.FC = () => {
           sideColor="bg-blue-600"
           pokemonList={pokemonList}
           selectedId={state.p1.selectedId}
-          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p1', pokemon: p } })}
+          onSelectPokemon={(p) => handleSelectPokemon('p1', p)}
           stats={state.p1}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
           boostedStat={state.p1.boostedStat}
@@ -314,6 +376,9 @@ const DamageCalculatorPage: React.FC = () => {
           moves={state.p1.moves}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1', index, move: m } })}
           onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1', index } })}
+          abilities={state.p1.abilities}
+          activeAbility={state.p1.activeAbility}
+          onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1', ability } })}
         />
       }
       defenderPanel={
@@ -322,7 +387,7 @@ const DamageCalculatorPage: React.FC = () => {
           sideColor="bg-red-600"
           pokemonList={pokemonList}
           selectedId={state.p2.selectedId}
-          onSelectPokemon={(p) => dispatch({ type: 'SELECT_POKEMON', payload: { side: 'p2', pokemon: p } })}
+          onSelectPokemon={(p) => handleSelectPokemon('p2', p)}
           stats={state.p2}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
           boostedStat={state.p2.boostedStat}
@@ -334,6 +399,9 @@ const DamageCalculatorPage: React.FC = () => {
           moves={state.p2.moves}
           onSelectMove={(index, m) => dispatch({ type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p2', index, move: m } })}
           onClearMove={(index) => dispatch({ type: 'CLEAR_MOVE_SLOT', payload: { side: 'p2', index } })}
+          abilities={state.p2.abilities}
+          activeAbility={state.p2.activeAbility}
+          onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p2', ability } })}
         />
       }
     />
