@@ -10,6 +10,7 @@ export interface DamageResult {
   maxPercent: number;
   moveName: string;
   moveType: number;
+  originalType: number;
   isStab: boolean;
   effectiveness: number;
 }
@@ -105,6 +106,11 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                   <div className="flex flex-col flex-1 min-w-0">
                     <div className="font-black text-xs text-gray-400 uppercase tracking-widest leading-none mb-2 group-hover:text-blue-400 transition-colors">
                       {result.moveName}
+                      {result.moveType !== result.originalType && (
+                        <span className="ml-2 text-blue-500 text-[10px]">
+                          ({REVERSE_TYPE_IDS[result.moveType]})
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <TypeBadge type={REVERSE_TYPE_IDS[result.moveType] || 'normal'} size="sm" className="scale-[0.9] origin-left -ml-1" />

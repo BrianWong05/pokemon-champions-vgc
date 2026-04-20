@@ -2,7 +2,7 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -290,7 +290,12 @@ const DamageCalculatorPage: React.FC = () => {
       const movePower = move.power || 0;
       const moveCategory = move.damageClassId === 2 ? 'physical' : move.damageClassId === 3 ? 'special' : 'status';
       const moveTypeId = move.typeId || 1;
-      const moveTypeName = REVERSE_TYPE_IDS[moveTypeId] || 'normal';
+      const originalTypeName = REVERSE_TYPE_IDS[moveTypeId] || 'normal';
+
+      // Pipeline Step 0: Modified Move Type
+      const modifiedTypeName = getModifiedMoveType(originalTypeName, move.nameEn, attacker.activeAbility);
+      const modifiedTypeId = TYPE_IDS[modifiedTypeName.toLowerCase()] || moveTypeId;
+
       const isPhys = moveCategory === 'physical';
       
       const atkStatValue = isPhys ? attacker.baseAtk : attacker.baseSpa;
@@ -305,7 +310,7 @@ const DamageCalculatorPage: React.FC = () => {
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
       // Pipeline Step 1: Modified Base Power
-      const bpMod = getBasePowerModifier(attacker.activeAbility, moveTypeName, movePower, moveCategory, move.nameEn);
+      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName);
       const modifiedPower = Math.floor(movePower * bpMod);
 
       // Pipeline Step 2: Stats with Ability Modifiers
@@ -317,24 +322,25 @@ const DamageCalculatorPage: React.FC = () => {
       
       const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
-      const isStab = moveTypeId === attackerType1Id || moveTypeId === attackerType2Id;
+      const isStab = modifiedTypeId === attackerType1Id || modifiedTypeId === attackerType2Id;
       
       const isAdaptability = attacker.activeAbility?.toLowerCase() === 'adaptability';
       const stabMultiplier = isStab ? (isAdaptability ? 2.0 : 1.5) : 1;
 
       const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
       const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
-      const effectiveness = calculateEffectiveness(efficacyMap, moveTypeId, defType1Id, defType2Id);
+      const effectiveness = calculateEffectiveness(efficacyMap, modifiedTypeId, defType1Id, defType2Id);
       
       // Pipeline Step 4: Final Damage Modifier
-      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, moveTypeName, effectiveness);
+      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness);
       
       const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, defMaxHp);
 
       return {
         ...damage,
         moveName: move.nameEn,
-        moveType: moveTypeId,
+        moveType: modifiedTypeId,
+        originalType: moveTypeId,
         isStab,
         effectiveness
       } as DamageResult;
