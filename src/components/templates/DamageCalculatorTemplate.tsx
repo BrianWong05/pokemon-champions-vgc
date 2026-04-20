@@ -1,15 +1,18 @@
 import React from 'react';
 import Typography from '@/components/atoms/Typography';
-
 interface DamageCalculatorTemplateProps {
   attackerPanel: React.ReactNode;
   defenderPanel: React.ReactNode;
   resultsPanel: React.ReactNode;
+  activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
+  onWeatherChange: (w: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow') => void;
 }
 
 const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
-  attackerPanel, defenderPanel, resultsPanel
+  attackerPanel, defenderPanel, resultsPanel, activeWeather, onWeatherChange
 }) => {
+  const weatherOptions: ('None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow')[] = ['None', 'Sun', 'Rain', 'Sandstorm', 'Snow'];
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
@@ -23,6 +26,31 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
           <div className="w-full">
             {resultsPanel}
           </div>
+
+          {/* Middle Section: Field Conditions */}
+          <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center">
+            <div className="flex items-center gap-6">
+              <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Weather</Typography>
+              <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
+                {weatherOptions.map(w => (
+                  <button
+                    key={w}
+                    onClick={() => onWeatherChange(w)}
+                    className={`
+                      px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                      ${activeWeather === w 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-gray-400 hover:text-gray-600'}
+                    `}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Section: Setup */}
 
           {/* Bottom Section: Setup */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

@@ -21,8 +21,21 @@ export const calculateStat = (
 export const getModifiedMoveType = (
   originalType: string,
   moveName: string,
-  ability: string | null
+  ability: string | null,
+  weather: string = 'None'
 ): string => {
+  const mName = moveName.toLowerCase();
+  
+  // Weather Ball logic: Weather based type changes
+  if (mName === 'weather ball') {
+    switch (weather) {
+      case 'Sun': return 'fire';
+      case 'Rain': return 'water';
+      case 'Sandstorm': return 'rock';
+      case 'Snow': return 'ice';
+    }
+  }
+
   if (!ability) return originalType;
   const name = ability.toLowerCase();
   const type = originalType.toLowerCase();
@@ -54,15 +67,21 @@ export const getBasePowerModifier = (
   basePower: number,
   category: 'physical' | 'special' | 'status',
   moveName: string = '',
-  originalType: string = ''
+  originalType: string = '',
+  weather: string = 'None'
 ): number => {
-  if (!ability) return 1.0;
-  const name = ability.toLowerCase();
+  let modifier = 1.0;
   const mName = moveName.toLowerCase();
+
+  // 0. Weather Ball BP Boost (Double in any weather)
+  if (mName === 'weather ball' && weather !== 'None') {
+    modifier *= 2.0;
+  }
+
+  if (!ability) return modifier;
+  const name = ability.toLowerCase();
   const mType = moveType.toLowerCase();
   const oType = originalType.toLowerCase();
-
-  let modifier = 1.0;
 
   // 1. -ate Ability Power Boost (1.2x)
   // Only applies if the move was originally Normal and changed to something else
@@ -103,22 +122,55 @@ export const getBasePowerModifier = (
 export const getStatModifier = (
   ability: string | null,
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe',
-  role: 'attacker' | 'defender'
+  role: 'attacker' | 'defender',
+  pokemonTypes: string[] = [],
+  weather: string = 'None'
 ): number => {
-  if (!ability) return 1.0;
+  let modifier = 1.0;
+
+  // Gen 9 Weather Stat Buffs
+  if (role === 'defender') {
+    if (weather === 'Sandstorm' && pokemonTypes.includes('rock') && statKey === 'spd') {
+      modifier *= 1.5;
+    }
+    if (weather === 'Snow' && pokemonTypes.includes('ice') && statKey === 'def') {
+      modifier *= 1.5;
+    }
+  }
+
+  if (!ability) return modifier;
   const name = ability.toLowerCase();
 
   switch (name) {
     case 'huge power':
     case 'pure power':
-      return (role === 'attacker' && statKey === 'atk') ? 2.0 : 1.0;
+      if (role === 'attacker' && statKey === 'atk') modifier *= 2.0;
+      break;
     case 'fur coat':
-      return (role === 'defender' && statKey === 'def') ? 2.0 : 1.0;
+      if (role === 'defender' && statKey === 'def') modifier *= 2.0;
+      break;
     case 'guts':
-      return (role === 'attacker' && statKey === 'atk') ? 1.5 : 1.0;
-    default:
-      return 1.0;
+      if (role === 'attacker' && statKey === 'atk') modifier *= 1.5;
+      break;
   }
+
+  return modifier;
+};
+
+export const getWeatherDamageModifier = (
+  weather: string,
+  moveType: string
+): number => {
+  const type = moveType.toLowerCase();
+  if (weather === 'Sun') {
+    if (type === 'fire') return 1.5;
+    if (type === 'water') return 0.5;
+  }
+  if (weather === 'Rain') {
+    if (type === 'water') return 1.5;
+    if (type === 'fire') return 0.5;
+  }
+  return 1.0;
 };
 
 export const getFinalDamageModifier = (
@@ -178,6 +230,11 @@ export interface DamageResult {
   maxDamage: number;
   minPercent: number;
   maxPercent: number;
+  moveName: string;
+  moveType: number;
+  originalType: number;
+  isStab: boolean;
+  effectiveness: number;
 }
 
 export const calculateDamage = (
@@ -195,10 +252,11 @@ export const calculateDamage = (
   const minDamage = Math.floor(baseDamage * stabMultiplier * effectiveness * finalModifier * 0.85);
   const maxDamage = Math.floor(baseDamage * stabMultiplier * effectiveness * finalModifier * 1.00);
 
+  // Partial object, needs other fields mapped in computeResults
   return {
     minDamage,
     maxDamage,
     minPercent: Number(((minDamage / maxHP) * 100).toFixed(1)),
     maxPercent: Number(((maxDamage / maxHP) * 100).toFixed(1)),
-  };
+  } as DamageResult;
 };

@@ -33,3 +33,10 @@ The system SHALL use the modified move type (if any) for STAB calculation and Ty
 #### Scenario: STAB with modified type
 - **WHEN** a Sylveon (Fairy-type) with "Pixilate" uses "Hyper Voice" (Normal -> Fairy)
 - **THEN** the system SHALL apply the 1.5x STAB multiplier because the modified type (Fairy) matches Sylveon's type.
+
+### Requirement: Weather Integration in Pipeline
+The damage calculation pipeline SHALL integrate weather modifiers at appropriate stages: Move Type (Step 0), Base Power (Step 1), Stats (Step 2), and Damage (Step 3).
+
+#### Scenario: Weather damage modifier order
+- **WHEN** calculating damage in Sun
+- **THEN** the system SHALL apply the 1.5x Fire-type boost after Base Damage calculation but before STAB/Effectiveness.

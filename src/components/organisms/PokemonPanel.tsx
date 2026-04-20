@@ -10,6 +10,7 @@ import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 interface PokemonPanelProps {
   title: string;
   sideColor: string;
+  side: 'p1' | 'p2';
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
@@ -27,16 +28,18 @@ interface PokemonPanelProps {
   abilities: string[];
   activeAbility: string | null;
   onAbilityChange: (ability: string) => void;
+  activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
-  title, sideColor, pokemonList, selectedId, onSelectPokemon,
+  title, sideColor, side, pokemonList, selectedId, onSelectPokemon,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
   moveList, moves, onSelectMove, onClearMove,
-  abilities, activeAbility, onAbilityChange
+  abilities, activeAbility, onAbilityChange, activeWeather
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
+  const pokemonTypes = selectedPokemon ? [selectedPokemon.type1, selectedPokemon.type2].filter((t): t is string => !!t).map(t => t.toLowerCase()) : [];
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
@@ -101,6 +104,10 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
           stages={stages}
           onStageChange={onStageChange}
           onSpChange={onSpChange}
+          ability={activeAbility}
+          weather={activeWeather}
+          pokemonTypes={pokemonTypes}
+          role={side === 'p1' ? 'attacker' : 'defender'}
         />
       </div>
 

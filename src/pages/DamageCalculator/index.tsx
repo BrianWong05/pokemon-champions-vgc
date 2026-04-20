@@ -2,7 +2,7 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType, getWeatherDamageModifier } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -39,6 +39,7 @@ interface SideState {
 interface CalcState {
   p1: SideState;
   p2: SideState;
+  weather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
 }
 
 type CalcAction = 
@@ -52,7 +53,8 @@ type CalcAction =
   | { type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
-  | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } };
+  | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
+  | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -72,10 +74,13 @@ const initialSide: SideState = {
 const initialState: CalcState = {
   p1: { ...initialSide, spAtk: 32, spSpa: 32 },
   p2: initialSide,
+  weather: 'None',
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
   switch (action.type) {
+    case 'SET_WEATHER':
+      return { ...state, weather: action.payload };
     case 'SET_SP': {
       const { side, key, val } = action.payload;
       return { ...state, [side]: { ...state[side], [key]: val } };
@@ -292,8 +297,8 @@ const DamageCalculatorPage: React.FC = () => {
       const moveTypeId = move.typeId || 1;
       const originalTypeName = REVERSE_TYPE_IDS[moveTypeId] || 'normal';
 
-      // Pipeline Step 0: Modified Move Type
-      const modifiedTypeName = getModifiedMoveType(originalTypeName, move.nameEn, attacker.activeAbility);
+      // Pipeline Step 0: Modified Move Type (including Weather Ball)
+      const modifiedTypeName = getModifiedMoveType(originalTypeName, move.nameEn, attacker.activeAbility, state.weather);
       const modifiedTypeId = TYPE_IDS[modifiedTypeName.toLowerCase()] || moveTypeId;
 
       const isPhys = moveCategory === 'physical';
@@ -309,13 +314,16 @@ const DamageCalculatorPage: React.FC = () => {
       const attackerMultiplier = (atkStatKey === attacker.boostedStat) ? 1.1 : (atkStatKey === attacker.hinderedStat) ? 0.9 : 1.0;
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
-      // Pipeline Step 1: Modified Base Power
-      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName);
+      // Pipeline Step 1: Modified Base Power (including Weather Ball)
+      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather);
       const modifiedPower = Math.floor(movePower * bpMod);
 
-      // Pipeline Step 2: Stats with Ability Modifiers
-      const attackerAbilityMod = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker');
-      const defenderAbilityMod = getStatModifier(defender.activeAbility, defStatKey, 'defender');
+      // Pipeline Step 2: Stats with Ability & Weather Modifiers
+      const attackerTypes = [attacker.type1, attacker.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
+      const defenderTypes = [defender.type1, defender.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
+      
+      const attackerAbilityMod = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker', attackerTypes, state.weather);
+      const defenderAbilityMod = getStatModifier(defender.activeAbility, defStatKey, 'defender', defenderTypes, state.weather);
 
       const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey], attackerAbilityMod);
       const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey], defenderAbilityMod);
@@ -331,8 +339,11 @@ const DamageCalculatorPage: React.FC = () => {
       const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
       const effectiveness = calculateEffectiveness(efficacyMap, modifiedTypeId, defType1Id, defType2Id);
       
+      // Pipeline Step 3: Weather Damage Modifiers
+      const weatherMod = getWeatherDamageModifier(state.weather, modifiedTypeName);
+
       // Pipeline Step 4: Final Damage Modifier
-      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness);
+      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness) * weatherMod;
       
       const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, defMaxHp);
 
@@ -347,11 +358,13 @@ const DamageCalculatorPage: React.FC = () => {
     });
   };
 
-  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap]);
-  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap]);
+  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap, state.weather]);
+  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap, state.weather]);
 
   return (
     <DamageCalculatorTemplate
+      activeWeather={state.weather}
+      onWeatherChange={(w) => dispatch({ type: 'SET_WEATHER', payload: w })}
       resultsPanel={
         <ResultsPanel 
           p1Results={p1Results}
@@ -368,6 +381,7 @@ const DamageCalculatorPage: React.FC = () => {
         <PokemonPanel 
           title="Pokémon 1"
           sideColor="bg-blue-600"
+          side="p1"
           pokemonList={pokemonList}
           selectedId={state.p1.selectedId}
           onSelectPokemon={(p) => handleSelectPokemon('p1', p)}
@@ -385,12 +399,14 @@ const DamageCalculatorPage: React.FC = () => {
           abilities={state.p1.abilities}
           activeAbility={state.p1.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1', ability } })}
+          activeWeather={state.weather}
         />
       }
       defenderPanel={
         <PokemonPanel 
           title="Pokémon 2"
           sideColor="bg-red-600"
+          side="p2"
           pokemonList={pokemonList}
           selectedId={state.p2.selectedId}
           onSelectPokemon={(p) => handleSelectPokemon('p2', p)}
@@ -408,6 +424,7 @@ const DamageCalculatorPage: React.FC = () => {
           abilities={state.p2.abilities}
           activeAbility={state.p2.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p2', ability } })}
+          activeWeather={state.weather}
         />
       }
     />

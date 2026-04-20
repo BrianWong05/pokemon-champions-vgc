@@ -1,8 +1,8 @@
 import React from 'react';
-import { calculateHP, calculateStat } from '@/utils/damage';
+import { calculateHP, calculateStat, getStatModifier } from '@/utils/damage';
 
 interface StatRowProps {
-  statKey: string;
+  statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe';
   label: string;
   base: number;
   sp: number;
@@ -13,18 +13,24 @@ interface StatRowProps {
   onToggleNature?: (stat: string, mod: '+' | '-') => void;
   stage?: number;
   onStageChange?: (stat: string, val: number) => void;
+  ability?: string | null;
+  weather?: string;
+  pokemonTypes?: string[];
+  role?: 'attacker' | 'defender';
 }
 
 const StatRow: React.FC<StatRowProps> = ({ 
   statKey, label, base, sp, onSpChange, 
   isHp = false, boostedStat, hinderedStat, onToggleNature,
-  stage = 0, onStageChange
+  stage = 0, onStageChange,
+  ability = null, weather = 'None', pokemonTypes = [], role = 'attacker'
 }) => {
   const isBoosted = boostedStat === statKey;
   const isHindered = hinderedStat === statKey;
   const multiplier = isBoosted ? 1.1 : isHindered ? 0.9 : 1.0;
   
-  const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage);
+  const abilityMod = isHp ? 1.0 : getStatModifier(ability, statKey, role, pokemonTypes, weather);
+  const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityMod);
 
   return (
     <div className="grid grid-cols-10 gap-2 items-center py-1">
@@ -126,14 +132,24 @@ interface StatGridProps {
   onSpChange: (key: string, val: number) => void;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
   onStageChange: (stat: string, val: number) => void;
+  ability?: string | null;
+  weather?: string;
+  pokemonTypes?: string[];
+  role?: 'attacker' | 'defender';
   className?: string;
 }
 
 const StatGrid: React.FC<StatGridProps> = ({ 
-  stats, boostedStat, hinderedStat, stages, onSpChange, onToggleNature, onStageChange, className = '' 
+  stats, boostedStat, hinderedStat, stages, onSpChange, onToggleNature, onStageChange, 
+  ability, weather, pokemonTypes, role, className = '' 
 }) => {
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
   const isOverLimit = totalSp > 66;
+
+  const rowBaseProps = {
+    boostedStat, hinderedStat, onToggleNature, onStageChange,
+    ability, weather, pokemonTypes, role
+  };
 
   return (
     <div className={`space-y-1 ${className}`}>
@@ -147,12 +163,12 @@ const StatGrid: React.FC<StatGridProps> = ({
       </div>
       
       <div className="space-y-1">
-        <StatRow statKey="hp" label="HP" base={stats.hp.base} sp={stats.hp.sp} onSpChange={(val) => onSpChange('spHp', val)} isHp />
-        <StatRow statKey="atk" label="Atk" base={stats.atk.base} sp={stats.atk.sp} boostedStat={boostedStat} hinderedStat={hinderedStat} onToggleNature={onToggleNature} stage={stages.atk} onStageChange={onStageChange} onSpChange={(val) => onSpChange('spAtk', val)} />
-        <StatRow statKey="def" label="Def" base={stats.def.base} sp={stats.def.sp} boostedStat={boostedStat} hinderedStat={hinderedStat} onToggleNature={onToggleNature} stage={stages.def} onStageChange={onStageChange} onSpChange={(val) => onSpChange('spDef', val)} />
-        <StatRow statKey="spa" label="SpA" base={stats.spa.base} sp={stats.spa.sp} boostedStat={boostedStat} hinderedStat={hinderedStat} onToggleNature={onToggleNature} stage={stages.spa} onStageChange={onStageChange} onSpChange={(val) => onSpChange('spSpa', val)} />
-        <StatRow statKey="spd" label="SpD" base={stats.spd.base} sp={stats.spd.sp} boostedStat={boostedStat} hinderedStat={hinderedStat} onToggleNature={onToggleNature} stage={stages.spd} onStageChange={onStageChange} onSpChange={(val) => onSpChange('spSpd', val)} />
-        <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} boostedStat={boostedStat} hinderedStat={hinderedStat} onToggleNature={onToggleNature} stage={stages.spe} onStageChange={onStageChange} onSpChange={(val) => onSpChange('spSpe', val)} />
+        <StatRow statKey="hp" label="HP" base={stats.hp.base} sp={stats.hp.sp} onSpChange={(val) => onSpChange('spHp', val)} isHp {...rowBaseProps} />
+        <StatRow statKey="atk" label="Atk" base={stats.atk.base} sp={stats.atk.sp} stage={stages.atk} onSpChange={(val) => onSpChange('spAtk', val)} {...rowBaseProps} />
+        <StatRow statKey="def" label="Def" base={stats.def.base} sp={stats.def.sp} stage={stages.def} onSpChange={(val) => onSpChange('spDef', val)} {...rowBaseProps} />
+        <StatRow statKey="spa" label="SpA" base={stats.spa.base} sp={stats.spa.sp} stage={stages.spa} onSpChange={(val) => onSpChange('spSpa', val)} {...rowBaseProps} />
+        <StatRow statKey="spd" label="SpD" base={stats.spd.base} sp={stats.spd.sp} stage={stages.spd} onSpChange={(val) => onSpChange('spSpd', val)} {...rowBaseProps} />
+        <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} stage={stages.spe} onSpChange={(val) => onSpChange('spSpe', val)} {...rowBaseProps} />
       </div>
 
       <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
