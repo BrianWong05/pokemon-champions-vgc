@@ -2,7 +2,7 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType, getWeatherDamageModifier } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType, getWeatherDamageModifier, getSpreadModifier } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -40,6 +40,7 @@ interface CalcState {
   p1: SideState;
   p2: SideState;
   weather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
+  isSpreadTarget: boolean;
 }
 
 type CalcAction = 
@@ -54,7 +55,8 @@ type CalcAction =
   | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
-  | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' };
+  | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
+  | { type: 'SET_SPREAD_TARGET', payload: boolean };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -75,12 +77,15 @@ const initialState: CalcState = {
   p1: { ...initialSide, spAtk: 32, spSpa: 32 },
   p2: initialSide,
   weather: 'None',
+  isSpreadTarget: false,
 };
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
   switch (action.type) {
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
+    case 'SET_SPREAD_TARGET':
+      return { ...state, isSpreadTarget: action.payload };
     case 'SET_SP': {
       const { side, key, val } = action.payload;
       return { ...state, [side]: { ...state[side], [key]: val } };
@@ -343,9 +348,10 @@ const DamageCalculatorPage: React.FC = () => {
       const weatherMod = getWeatherDamageModifier(state.weather, modifiedTypeName);
 
       // Pipeline Step 4: Final Damage Modifier
+      const spreadMod = getSpreadModifier(state.isSpreadTarget);
       const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness) * weatherMod;
       
-      const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, defMaxHp);
+      const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, spreadMod, defMaxHp);
 
       return {
         ...damage,
@@ -358,13 +364,15 @@ const DamageCalculatorPage: React.FC = () => {
     });
   };
 
-  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap, state.weather]);
-  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap, state.weather]);
+  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap, state.weather, state.isSpreadTarget]);
+  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap, state.weather, state.isSpreadTarget]);
 
   return (
     <DamageCalculatorTemplate
       activeWeather={state.weather}
       onWeatherChange={(w) => dispatch({ type: 'SET_WEATHER', payload: w })}
+      isSpreadTarget={state.isSpreadTarget}
+      onSpreadTargetChange={(isSpread) => dispatch({ type: 'SET_SPREAD_TARGET', payload: isSpread })}
       resultsPanel={
         <ResultsPanel 
           p1Results={p1Results}

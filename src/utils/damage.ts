@@ -237,6 +237,10 @@ export interface DamageResult {
   effectiveness: number;
 }
 
+export const getSpreadModifier = (isSpreadTarget: boolean): number => {
+  return isSpreadTarget ? 0.75 : 1.0;
+};
+
 export const calculateDamage = (
   attackerStat: number,
   defenderStat: number,
@@ -244,13 +248,16 @@ export const calculateDamage = (
   stabMultiplier: number,
   effectiveness: number,
   finalModifier: number,
+  spreadModifier: number,
   maxHP: number
 ): DamageResult => {
   // BaseDamage = Math.floor(Math.floor((22 * MovePower * Attack / Defense) / 50) + 2)
   const baseDamage = Math.floor(Math.floor((22 * movePower * attackerStat / defenderStat) / 50) + 2);
   
-  const minDamage = Math.floor(baseDamage * stabMultiplier * effectiveness * finalModifier * 0.85);
-  const maxDamage = Math.floor(baseDamage * stabMultiplier * effectiveness * finalModifier * 1.00);
+  const modifiedBase = Math.floor(baseDamage * spreadModifier);
+
+  const minDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 0.85);
+  const maxDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 1.00);
 
   // Partial object, needs other fields mapped in computeResults
   return {

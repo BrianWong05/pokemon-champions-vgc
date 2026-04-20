@@ -40,3 +40,10 @@ The damage calculation pipeline SHALL integrate weather modifiers at appropriate
 #### Scenario: Weather damage modifier order
 - **WHEN** calculating damage in Sun
 - **THEN** the system SHALL apply the 1.5x Fire-type boost after Base Damage calculation but before STAB/Effectiveness.
+
+### Requirement: Spread Modifier Pipeline Integration
+The system SHALL integrate the spread damage modifier (0.75x) into the calculation pipeline immediately after Base Damage calculation and before weather/STAB.
+
+#### Scenario: Multi-modifier calculation
+- **WHEN** calculating damage for a move
+- **THEN** the system SHALL multiply the base damage by 0.75 if `isSpreadTarget` is true.
