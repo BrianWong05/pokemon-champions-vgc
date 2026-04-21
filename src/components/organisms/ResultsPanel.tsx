@@ -13,6 +13,7 @@ export interface DamageResult {
   originalType: number;
   isStab: boolean;
   effectiveness: number;
+  triggeredAbilities?: string[];
 }
 
 interface MoveColProps {
@@ -130,11 +131,16 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <TypeBadge type={REVERSE_TYPE_IDS[result.moveType] || 'normal'} size="sm" className="scale-[0.9] origin-left -ml-1" />
                       {result.isStab && (
                         <span className="text-[9px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20 uppercase tracking-tighter">STAB</span>
                       )}
+                      {result.triggeredAbilities?.map(ability => (
+                        <span key={ability} className="text-[9px] font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20 uppercase tracking-tighter">
+                          {ability} Active!
+                        </span>
+                      ))}
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end justify-center">

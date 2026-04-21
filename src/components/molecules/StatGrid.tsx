@@ -17,20 +17,22 @@ interface StatRowProps {
   weather?: string;
   pokemonTypes?: string[];
   role?: 'attacker' | 'defender';
+  hpPercent?: number;
 }
 
 const StatRow: React.FC<StatRowProps> = ({ 
   statKey, label, base, sp, onSpChange, 
   isHp = false, boostedStat, hinderedStat, onToggleNature,
   stage = 0, onStageChange,
-  ability = null, weather = 'None', pokemonTypes = [], role = 'attacker'
+  ability = null, weather = 'None', pokemonTypes = [], role = 'attacker',
+  hpPercent = 100
 }) => {
   const isBoosted = boostedStat === statKey;
   const isHindered = hinderedStat === statKey;
   const multiplier = isBoosted ? 1.1 : isHindered ? 0.9 : 1.0;
   
-  const abilityMod = isHp ? 1.0 : getStatModifier(ability, statKey, role, pokemonTypes, weather);
-  const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityMod);
+  const abilityResult = isHp ? { modifier: 1.0, triggered: false } : getStatModifier(ability, statKey, role, pokemonTypes, weather, hpPercent);
+  const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityResult.modifier);
 
   return (
     <div className="grid grid-cols-10 gap-2 items-center py-1">
@@ -136,19 +138,20 @@ interface StatGridProps {
   weather?: string;
   pokemonTypes?: string[];
   role?: 'attacker' | 'defender';
+  hpPercent?: number;
   className?: string;
 }
 
 const StatGrid: React.FC<StatGridProps> = ({ 
   stats, boostedStat, hinderedStat, stages, onSpChange, onToggleNature, onStageChange, 
-  ability, weather, pokemonTypes, role, className = '' 
+  ability, weather, pokemonTypes, role, hpPercent, className = '' 
 }) => {
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
   const isOverLimit = totalSp > 66;
 
   const rowBaseProps = {
     boostedStat, hinderedStat, onToggleNature, onStageChange,
-    ability, weather, pokemonTypes, role
+    ability, weather, pokemonTypes, role, hpPercent
   };
 
   return (

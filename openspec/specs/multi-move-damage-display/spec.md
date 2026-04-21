@@ -28,3 +28,10 @@ The system SHALL update the visual HP bar in the dashboard to represent damage r
 - **WHEN** the Defender's current HP is 50%
 - **THEN** the visual HP bar SHALL start at the 50% mark
 - **AND** subtracted damage SHALL animate from that starting point.
+
+### Requirement: Triggered Ability Feedback
+The system SHALL provide visual feedback in the results section when an HP-relative ability has successfully triggered and modified the calculation.
+
+#### Scenario: Visual indicator for Multiscale
+- **WHEN** "Multiscale" triggers during calculation
+- **THEN** the system SHALL display a visual indicator (e.g., "Multiscale Active!") next to the damage results.

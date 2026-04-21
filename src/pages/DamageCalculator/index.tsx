@@ -328,18 +328,18 @@ const DamageCalculatorPage: React.FC = () => {
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
       // Pipeline Step 1: Modified Base Power (including Weather Ball)
-      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather, attacker.hpPercent);
-      const modifiedPower = Math.floor(movePower * bpMod);
+      const bpResult = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather, attacker.hpPercent);
+      const modifiedPower = Math.floor(movePower * bpResult.modifier);
 
       // Pipeline Step 2: Stats with Ability & Weather Modifiers
       const attackerTypes = [attacker.type1, attacker.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
       const defenderTypes = [defender.type1, defender.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
       
-      const attackerAbilityMod = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker', attackerTypes, state.weather);
-      const defenderAbilityMod = getStatModifier(defender.activeAbility, defStatKey, 'defender', defenderTypes, state.weather);
+      const atkAbilityResult = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker', attackerTypes, state.weather, attacker.hpPercent);
+      const defAbilityResult = getStatModifier(defender.activeAbility, defStatKey, 'defender', defenderTypes, state.weather, defender.hpPercent);
 
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey], attackerAbilityMod);
-      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey], defenderAbilityMod);
+      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey], atkAbilityResult.modifier);
+      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey], defAbilityResult.modifier);
       
       const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
@@ -357,9 +357,15 @@ const DamageCalculatorPage: React.FC = () => {
 
       // Pipeline Step 4: Final Damage Modifier
       const spreadMod = getSpreadModifier(state.isSpreadTarget);
-      const finalModifier = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness) * weatherMod;
+      const finalResult = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness, defender.hpPercent);
+      const finalModifier = finalResult.modifier * weatherMod;
       
       const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, spreadMod, defMaxHp);
+
+      const triggeredAbilities: string[] = [];
+      if (bpResult.triggered && attacker.activeAbility) triggeredAbilities.push(attacker.activeAbility);
+      if (atkAbilityResult.triggered && attacker.activeAbility && !triggeredAbilities.includes(attacker.activeAbility)) triggeredAbilities.push(attacker.activeAbility);
+      if (finalResult.triggered && defender.activeAbility) triggeredAbilities.push(defender.activeAbility);
 
       return {
         ...damage,
@@ -367,7 +373,8 @@ const DamageCalculatorPage: React.FC = () => {
         moveType: modifiedTypeId,
         originalType: moveTypeId,
         isStab,
-        effectiveness
+        effectiveness,
+        triggeredAbilities
       } as DamageResult;
     });
   };

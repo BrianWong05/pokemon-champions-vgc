@@ -70,30 +70,43 @@ export const getBasePowerModifier = (
   originalType: string = '',
   weather: string = 'None',
   attackerHpPercent: number = 100
-): number => {
+): { modifier: number; triggered: boolean } => {
   let modifier = 1.0;
+  let triggered = false;
   const mName = moveName.toLowerCase();
+  const mType = moveType.toLowerCase();
 
   // 0. Weather Ball BP Boost (Double in any weather)
   if (mName === 'weather ball' && weather !== 'None') {
     modifier *= 2.0;
   }
 
-  if (!ability) return modifier;
+  if (!ability) return { modifier, triggered };
   const name = ability.toLowerCase();
-  const mType = moveType.toLowerCase();
   const oType = originalType.toLowerCase();
 
   // 1. -ate Ability Power Boost (1.2x)
-  // Only applies if the move was originally Normal and changed to something else
-  if (oType === 'normal' && mType !== 'normal') {
+  if (oType === 'normal' && moveType.toLowerCase() !== 'normal') {
     const ateAbilities = ['pixilate', 'refrigerate', 'aerilate', 'galvanize'];
     if (ateAbilities.includes(name)) {
       modifier *= 1.2;
     }
   }
 
-  // 2. Existing BP Modifiers
+  // 2. HP-based Attacker Boosts (Starter Abilities)
+  if (attackerHpPercent <= 33.34) {
+    if (
+      (name === 'blaze' && mType === 'fire') ||
+      (name === 'torrent' && mType === 'water') ||
+      (name === 'overgrow' && mType === 'grass') ||
+      (name === 'swarm' && mType === 'bug')
+    ) {
+      modifier *= 1.5;
+      triggered = true;
+    }
+  }
+
+  // 3. Existing BP Modifiers
   switch (name) {
     case 'technician':
       if (basePower <= 60) modifier *= 1.5;
@@ -117,7 +130,7 @@ export const getBasePowerModifier = (
       break;
   }
 
-  return modifier;
+  return { modifier, triggered };
 };
 
 export const getStatModifier = (
@@ -125,9 +138,11 @@ export const getStatModifier = (
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe',
   role: 'attacker' | 'defender',
   pokemonTypes: string[] = [],
-  weather: string = 'None'
-): number => {
+  weather: string = 'None',
+  hpPercent: number = 100
+): { modifier: number; triggered: boolean } => {
   let modifier = 1.0;
+  let triggered = false;
 
   // Gen 9 Weather Stat Buffs
   if (role === 'defender') {
@@ -139,8 +154,16 @@ export const getStatModifier = (
     }
   }
 
-  if (!ability) return modifier;
+  if (!ability) return { modifier, triggered };
   const name = ability.toLowerCase();
+
+  // HP-based Stat Penalties
+  if (role === 'attacker' && name === 'defeatist' && hpPercent <= 50) {
+    if (statKey === 'atk' || statKey === 'spa') {
+      modifier *= 0.5;
+      triggered = true;
+    }
+  }
 
   switch (name) {
     case 'huge power':
@@ -155,7 +178,7 @@ export const getStatModifier = (
       break;
   }
 
-  return modifier;
+  return { modifier, triggered };
 };
 
 export const getWeatherDamageModifier = (
@@ -178,12 +201,21 @@ export const getFinalDamageModifier = (
   defenderAbility: string | null,
   attackerAbility: string | null,
   moveType: string,
-  effectiveness: number
-): number => {
+  effectiveness: number,
+  defenderHpPercent: number = 100
+): { modifier: number; triggered: boolean } => {
   let modifier = 1.0;
+  let triggered = false;
 
   if (defenderAbility) {
     const defName = defenderAbility.toLowerCase();
+    
+    // HP-based Defender Thresholds
+    if ((defName === 'multiscale' || defName === 'shadow shield') && defenderHpPercent === 100) {
+      modifier *= 0.5;
+      triggered = true;
+    }
+
     switch (defName) {
       case 'thick fat':
         if (moveType.toLowerCase() === 'fire' || moveType.toLowerCase() === 'ice') {
@@ -196,11 +228,6 @@ export const getFinalDamageModifier = (
         if (effectiveness > 1) {
           modifier *= 0.75;
         }
-        break;
-      case 'fluffy':
-        // Simplified: assuming physical moves make contact
-        // modifier *= 0.5; // for contact moves
-        // modifier *= 2.0; // for fire moves
         break;
       case 'water bubble':
         if (moveType.toLowerCase() === 'fire') {
@@ -217,7 +244,7 @@ export const getFinalDamageModifier = (
     }
   }
 
-  return modifier;
+  return { modifier, triggered };
 };
 
 export const getStageMultiplier = (stage: number): number => {
@@ -236,6 +263,7 @@ export interface DamageResult {
   originalType: number;
   isStab: boolean;
   effectiveness: number;
+  triggeredAbilities?: string[];
 }
 
 export const getSpreadModifier = (isSpreadTarget: boolean): number => {
@@ -251,7 +279,7 @@ export const calculateDamage = (
   finalModifier: number,
   spreadModifier: number,
   maxHP: number
-): DamageResult => {
+): { minDamage: number; maxDamage: number; minPercent: number; maxPercent: number } => {
   // BaseDamage = Math.floor(Math.floor((22 * MovePower * Attack / Defense) / 50) + 2)
   const baseDamage = Math.floor(Math.floor((22 * movePower * attackerStat / defenderStat) / 50) + 2);
   
@@ -260,11 +288,10 @@ export const calculateDamage = (
   const minDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 0.85);
   const maxDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 1.00);
 
-  // Partial object, needs other fields mapped in computeResults
   return {
     minDamage,
     maxDamage,
     minPercent: Number(((minDamage / maxHP) * 100).toFixed(1)),
     maxPercent: Number(((maxDamage / maxHP) * 100).toFixed(1)),
-  } as DamageResult;
+  };
 };
