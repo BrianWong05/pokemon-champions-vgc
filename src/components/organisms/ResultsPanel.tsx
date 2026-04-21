@@ -22,7 +22,7 @@ interface MoveColProps {
   onSelectActive: (index: number) => void;
   
   impactResult: DamageResult | null;
-  hpRemaining: number;
+  currentHpPercent: number;
   sideMaxHp: number;
   
   themeColor: string;
@@ -31,11 +31,23 @@ interface MoveColProps {
 
 const MoveResultColumn: React.FC<MoveColProps> = ({ 
   label, moveResults, moveActiveIndex, onSelectActive, 
-  impactResult, hpRemaining, sideMaxHp,
+  impactResult, currentHpPercent, sideMaxHp,
   themeColor, className = '' 
 }) => {
-  const isKo = impactResult ? impactResult.maxPercent >= 100 : false;
-  const barColor = hpRemaining > 50 ? 'bg-green-500' : hpRemaining > 20 ? 'bg-yellow-500' : 'bg-red-500';
+  const currentHpValue = Math.floor(sideMaxHp * (currentHpPercent / 100));
+  
+  // KO Logic: Compare damage against CURRENT HP, not Max HP
+  const minDamage = impactResult ? impactResult.minDamage : 0;
+  const maxDamage = impactResult ? impactResult.maxDamage : 0;
+
+  const isGuaranteedKO = minDamage >= currentHpValue;
+  const isPossibleKO = maxDamage >= currentHpValue && !isGuaranteedKO;
+
+  const hpRemainingPercent = impactResult 
+    ? Math.max(0, currentHpPercent - impactResult.maxPercent) 
+    : currentHpPercent;
+
+  const barColor = hpRemainingPercent > 50 ? 'bg-green-500' : hpRemainingPercent > 20 ? 'bg-yellow-500' : 'bg-red-500';
 
   return (
     <div className={`flex flex-col space-y-4 ${className}`}>
@@ -50,12 +62,18 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
           <div className="space-y-3">
             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-500">
               <span>Pokémon Health Status</span>
-              <span className={barColor.replace('bg-', 'text-')}>{hpRemaining.toFixed(1)}%</span>
+              <span className={barColor.replace('bg-', 'text-')}>{hpRemainingPercent.toFixed(1)}%</span>
             </div>
-            <div className="h-3 w-full bg-gray-900 rounded-full overflow-hidden border-2 border-gray-800 p-0.5">
+            <div className="h-3 w-full bg-gray-900 rounded-full overflow-hidden border-2 border-gray-800 p-0.5 relative">
+              {/* Background showing current health starting point */}
               <div 
-                className={`h-full rounded-full transition-all duration-1000 ease-out ${barColor}`}
-                style={{ width: `${hpRemaining}%` }}
+                className="absolute inset-0.5 bg-gray-800/50 rounded-full"
+                style={{ width: `${currentHpPercent}%` }}
+              />
+              {/* Foreground showing remaining health after impact */}
+              <div 
+                className={`absolute inset-0.5 rounded-full transition-all duration-1000 ease-out ${barColor}`}
+                style={{ width: `${hpRemainingPercent}%` }}
               />
             </div>
           </div>
@@ -69,8 +87,8 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                   Incoming Impact Range
                </span>
             </div>
-            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isKo ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
-              {isKo ? 'OHKO' : 'Survival'}
+            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isGuaranteedKO ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPossibleKO ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
+              {isGuaranteedKO ? 'Guaranteed KO' : isPossibleKO ? 'Possible KO' : 'Survival'}
             </div>
           </div>
         </div>
@@ -144,17 +162,18 @@ interface ResultsPanelProps {
   p2ActiveIndex: number;
   onSelectP2Active: (index: number) => void;
   p1MaxHp: number;
+
+  p1HpPercent: number;
+  p2HpPercent: number;
 }
 
 const ResultsPanel: React.FC<ResultsPanelProps> = ({
   p1Results, p1ActiveIndex, onSelectP1Active, p2MaxHp,
-  p2Results, p2ActiveIndex, onSelectP2Active, p1MaxHp
+  p2Results, p2ActiveIndex, onSelectP2Active, p1MaxHp,
+  p1HpPercent, p2HpPercent
 }) => {
   const p1Impact = p2Results[p2ActiveIndex];
-  const p1HpRemaining = p1Impact ? Math.max(0, 100 - p1Impact.maxPercent) : 100;
-
   const p2Impact = p1Results[p1ActiveIndex];
-  const p2HpRemaining = p2Impact ? Math.max(0, 100 - p2Impact.maxPercent) : 100;
 
   return (
     <div className="bg-gray-900 p-6 rounded-3xl shadow-2xl text-white space-y-6 border border-gray-800 h-full">
@@ -178,7 +197,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           moveActiveIndex={p1ActiveIndex}
           onSelectActive={onSelectP1Active}
           impactResult={p1Impact}
-          hpRemaining={p1HpRemaining}
+          currentHpPercent={p1HpPercent}
           sideMaxHp={p1MaxHp}
           themeColor="bg-blue-600"
         />
@@ -189,7 +208,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
           moveActiveIndex={p2ActiveIndex}
           onSelectActive={onSelectP2Active}
           impactResult={p2Impact}
-          hpRemaining={p2HpRemaining}
+          currentHpPercent={p2HpPercent}
           sideMaxHp={p2MaxHp}
           themeColor="bg-red-600"
         />

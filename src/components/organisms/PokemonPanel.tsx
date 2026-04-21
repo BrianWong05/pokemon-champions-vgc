@@ -6,6 +6,7 @@ import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import { calculateHP } from '@/utils/damage';
 
 interface PokemonPanelProps {
   title: string;
@@ -29,6 +30,8 @@ interface PokemonPanelProps {
   activeAbility: string | null;
   onAbilityChange: (ability: string) => void;
   activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
+  hpPercent: number;
+  onHpPercentChange: (val: number) => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
@@ -36,10 +39,14 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
   moveList, moves, onSelectMove, onClearMove,
-  abilities, activeAbility, onAbilityChange, activeWeather
+  abilities, activeAbility, onAbilityChange, activeWeather,
+  hpPercent, onHpPercentChange
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
   const pokemonTypes = selectedPokemon ? [selectedPokemon.type1, selectedPokemon.type2].filter((t): t is string => !!t).map(t => t.toLowerCase()) : [];
+
+  const maxHp = calculateHP(stats.baseHp, stats.spHp);
+  const currentHp = Math.floor(maxHp * (hpPercent / 100));
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
@@ -109,6 +116,33 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
           pokemonTypes={pokemonTypes}
           role={side === 'p1' ? 'attacker' : 'defender'}
         />
+      </div>
+
+      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
+        <div className="flex justify-between items-center">
+          <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Current HP %</Typography>
+          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+            {currentHp} / {maxHp} HP
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <input 
+            type="range" 
+            min="1" 
+            max="100" 
+            value={hpPercent} 
+            onChange={(e) => onHpPercentChange(parseInt(e.target.value, 10))}
+            className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+          <input 
+            type="number" 
+            min="1" 
+            max="100" 
+            value={hpPercent} 
+            onChange={(e) => onHpPercentChange(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+            className="w-12 bg-white border border-gray-200 text-center text-[10px] font-black text-indigo-600 rounded p-1 outline-none focus:border-indigo-400 transition-colors"
+          />
+        </div>
       </div>
 
       <div className="space-y-3">

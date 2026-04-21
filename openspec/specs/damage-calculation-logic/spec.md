@@ -47,3 +47,10 @@ The system SHALL integrate the spread damage modifier (0.75x) into the calculati
 #### Scenario: Multi-modifier calculation
 - **WHEN** calculating damage for a move
 - **THEN** the system SHALL multiply the base damage by 0.75 if `isSpreadTarget` is true.
+
+### Requirement: HP-Based Pipeline Integration
+The system SHALL integrate the Attacker's current HP percentage into the damage calculation pipeline.
+
+#### Scenario: HP percentage data passing
+- **WHEN** calculating damage
+- **THEN** the system SHALL pass the attacker's current HP percentage to the Base Power modifier function.

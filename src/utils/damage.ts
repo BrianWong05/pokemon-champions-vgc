@@ -68,7 +68,8 @@ export const getBasePowerModifier = (
   category: 'physical' | 'special' | 'status',
   moveName: string = '',
   originalType: string = '',
-  weather: string = 'None'
+  weather: string = 'None',
+  attackerHpPercent: number = 100
 ): number => {
   let modifier = 1.0;
   const mName = moveName.toLowerCase();

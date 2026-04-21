@@ -34,6 +34,7 @@ interface SideState {
   activeMoveIndex: number;
   abilities: string[];
   activeAbility: string | null;
+  hpPercent: number;
 }
 
 interface CalcState {
@@ -56,7 +57,8 @@ type CalcAction =
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
-  | { type: 'SET_SPREAD_TARGET', payload: boolean };
+  | { type: 'SET_SPREAD_TARGET', payload: boolean }
+  | { type: 'SET_HP_PERCENT', payload: { side: 'p1' | 'p2', val: number } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -71,6 +73,7 @@ const initialSide: SideState = {
   activeMoveIndex: 0,
   abilities: [],
   activeAbility: null,
+  hpPercent: 100,
 };
 
 const initialState: CalcState = {
@@ -86,6 +89,10 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       return { ...state, weather: action.payload };
     case 'SET_SPREAD_TARGET':
       return { ...state, isSpreadTarget: action.payload };
+    case 'SET_HP_PERCENT': {
+      const { side, val } = action.payload;
+      return { ...state, [side]: { ...state[side], hpPercent: val } };
+    }
     case 'SET_SP': {
       const { side, key, val } = action.payload;
       return { ...state, [side]: { ...state[side], [key]: val } };
@@ -164,7 +171,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           moves: [null, null, null, null],
           activeMoveIndex: 0,
           abilities: [],
-          activeAbility: null
+          activeAbility: null,
+          hpPercent: 100
         }
       };
     }
@@ -320,7 +328,7 @@ const DamageCalculatorPage: React.FC = () => {
       const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
 
       // Pipeline Step 1: Modified Base Power (including Weather Ball)
-      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather);
+      const bpMod = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather, attacker.hpPercent);
       const modifiedPower = Math.floor(movePower * bpMod);
 
       // Pipeline Step 2: Stats with Ability & Weather Modifiers
@@ -383,6 +391,8 @@ const DamageCalculatorPage: React.FC = () => {
           p2ActiveIndex={state.p2.activeMoveIndex}
           onSelectP2Active={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p2', index } })}
           p1MaxHp={p1MaxHp}
+          p1HpPercent={state.p1.hpPercent}
+          p2HpPercent={state.p2.hpPercent}
         />
       }
       attackerPanel={
@@ -408,6 +418,8 @@ const DamageCalculatorPage: React.FC = () => {
           activeAbility={state.p1.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1', ability } })}
           activeWeather={state.weather}
+          hpPercent={state.p1.hpPercent}
+          onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val } })}
         />
       }
       defenderPanel={
@@ -433,6 +445,8 @@ const DamageCalculatorPage: React.FC = () => {
           activeAbility={state.p2.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p2', ability } })}
           activeWeather={state.weather}
+          hpPercent={state.p2.hpPercent}
+          onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val } })}
         />
       }
     />
