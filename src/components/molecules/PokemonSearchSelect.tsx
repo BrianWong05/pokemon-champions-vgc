@@ -3,6 +3,7 @@ import PokemonImage from '@/components/atoms/PokemonImage';
 
 export interface PokemonBaseStats {
   id: number;
+  identifier: string;
   nameEn: string;
   nameZh: string | null;
   type1: string;
@@ -37,7 +38,8 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
     return pokemonList
       .filter(p => 
         p.nameEn.toLowerCase().includes(term) || 
-        (p.nameZh && p.nameZh.includes(term))
+        (p.nameZh && p.nameZh.includes(term)) ||
+        p.identifier.toLowerCase().includes(term)
       )
       .slice(0, 10);
   }, [searchTerm, pokemonList]);

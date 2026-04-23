@@ -7,73 +7,62 @@ import re
 
 BASE_URL = "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/"
 
+# VGC Competitive Form Keywords
+FORM_WHITELIST = [
+    'wash', 'heat', 'frost', 'fan', 'mow', # Rotom
+    'therian', # Landorus, Thundurus, Tornadus, Enamorus
+    'rapid-strike', 'single-strike', # Urshifu
+    'hearthflame', 'wellspring', 'cornerstone', # Ogerpon
+    'crowned', # Zacian, Zamazenta
+    'mega', 'mega-x', 'mega-y',
+    'alola', 'galar', 'hisui', 'paldea',
+    'dusk', 'midnight', 'dusk-mane', 'dawn-wings', # Lycanroc, Necrozma
+    'bloodmoon', # Ursaluna
+    'hero', # Palafin
+    'roaming', # Gimmighoul
+]
+
 # 1.1 Form Localization Mapping
 FORM_MAPPINGS = {
-    "mega": {
-        "en": "Mega {name}",
-        "ja": "メガ{name}",
-        "zh": "超級{name}"
-    },
-    "alola": {
-        "en": "Alolan {name}",
-        "ja": "アローラ{name}",
-        "zh": "阿羅拉的樣子 {name}"
-    },
-    "galar": {
-        "en": "Galarian {name}",
-        "ja": "ガラル{name}",
-        "zh": "伽勒爾的樣子 {name}"
-    },
-    "hisui": {
-        "en": "Hisuian {name}",
-        "ja": "ヒスイ{name}",
-        "zh": "洗翠的樣子 {name}"
-    },
-    "paldea": {
-        "en": "Paldean {name}",
-        "ja": "パルデア{name}",
-        "zh": "帕底亞的樣子 {name}"
-    },
-    "mega-x": {
-        "en": "Mega {name} X",
-        "ja": "メガ{name}X",
-        "zh": "超級{name}X"
-    },
-    "mega-y": {
-        "en": "Mega {name} Y",
-        "ja": "メガ{name}Y",
-        "zh": "超級{name}Y"
-    }
+    "mega": {"en": "Mega {name}", "ja": "メガ{name}", "zh": "超級{name}"},
+    "alola": {"en": "Alolan {name}", "ja": "アローラ{name}", "zh": "阿羅拉的樣子 {name}"},
+    "galar": {"en": "Galarian {name}", "ja": "ガラル{name}", "zh": "伽勒爾的樣子 {name}"},
+    "hisui": {"en": "Hisuian {name}", "ja": "ヒスイ{name}", "zh": "洗翠的樣子 {name}"},
+    "paldea": {"en": "Paldean {name}", "ja": "パルデア{name}", "zh": "帕底亞的樣子 {name}"},
+    "mega-x": {"en": "Mega {name} X", "ja": "メガ{name}X", "zh": "超級{name}X"},
+    "mega-y": {"en": "Mega {name} Y", "ja": "メガ{name}Y", "zh": "超級{name}Y"},
 }
 
-# 1.2 Implement localize_form_name function
+def format_alternate_name(identifier, base_name, lang):
+    """Formats identifier like rotom-wash to 'Rotom (Wash)'"""
+    parts = identifier.split('-')
+    if len(parts) < 2:
+        return base_name
+    
+    form_part = " ".join(parts[1:]).title()
+    
+    # Check for special Mappings (Mega, Alola, etc.)
+    suffix = "-".join(parts[1:])
+    if suffix in FORM_MAPPINGS:
+        return FORM_MAPPINGS[suffix][lang].format(name=base_name)
+    
+    # Default format: Base (Form)
+    if lang == 'en':
+        return f"{base_name} ({form_part})"
+    elif lang == 'zh':
+        return f"{base_name} ({form_part})" # Simplified for now, could add map
+    else:
+        return f"{base_name} ({form_part})"
+
 def localize_form_name(row, lang):
     identifier = row['identifier']
     base_name = row[f'name_{lang}']
     is_default = row['is_default']
     
-    # If it's a default form and doesn't have a known suffix, return base name
     if is_default and '-' not in identifier:
         return base_name
 
-    # Extract suffix (e.g., charizard-mega-x -> mega-x)
-    parts = identifier.split('-', 1)
-    if len(parts) < 2:
-        return base_name
-        
-    suffix = parts[1]
-    
-    # Check for direct mapping
-    if suffix in FORM_MAPPINGS:
-        mapping = FORM_MAPPINGS[suffix]
-        return mapping[lang].format(name=base_name)
-    
-    # Check for partial matches
-    for key, mapping in FORM_MAPPINGS.items():
-        if identifier.endswith(f"-{key}"):
-            return mapping[lang].format(name=base_name)
-
-    return base_name
+    return format_alternate_name(identifier, base_name, lang)
 
 def fetch_csv(filename):
     print(f"Fetching {filename}...")
@@ -90,24 +79,34 @@ def main():
     pokemon_types_df = fetch_csv("pokemon_types.csv")
     types_df = fetch_csv("types.csv")
     type_names_df = fetch_csv("type_names.csv")
-    type_efficacy_df = fetch_csv("type_efficacy.csv")
     pokemon_stats_df = fetch_csv("pokemon_stats.csv")
     pokemon_forms_df = fetch_csv("pokemon_forms.csv")
+    type_efficacy_df = fetch_csv("type_efficacy.csv")
 
     # Localized Pokémon names
     names_en = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 9][['pokemon_species_id', 'name']].rename(columns={'name': 'name_en'})
-    names_ja = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 1][['pokemon_species_id', 'name']].rename(columns={'name': 'name_ja'})
+    names_ja = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 11][['pokemon_species_id', 'name']].rename(columns={'name': 'name_ja'})
     names_zh = pokemon_species_names_df[pokemon_species_names_df['local_language_id'] == 4][['pokemon_species_id', 'name']].rename(columns={'name': 'name_zh'})
 
     pokemon_names_merged = names_en.merge(names_ja, on='pokemon_species_id', how='left').merge(names_zh, on='pokemon_species_id', how='left')
 
     # Localized Type names
     type_names_en = type_names_df[type_names_df['local_language_id'] == 9][['type_id', 'name']].rename(columns={'name': 'name_en'})
-    type_names_ja = type_names_df[type_names_df['local_language_id'] == 1][['type_id', 'name']].rename(columns={'name': 'name_ja'})
+    type_names_ja = type_names_df[type_names_df['local_language_id'] == 11][['type_id', 'name']].rename(columns={'name': 'name_ja'})
     type_names_zh = type_names_df[type_names_df['local_language_id'] == 4][['type_id', 'name']].rename(columns={'name': 'name_zh'})
     
     type_names_merged = type_names_en.merge(type_names_ja, on='type_id', how='left').merge(type_names_zh, on='type_id', how='left')
     types_final_df = types_df.merge(type_names_merged, left_on='id', right_on='type_id', how='left').drop(columns=['type_id'])
+
+    # Filtering Logic: Keep defaults OR whitelisted forms
+    def is_competitive(row):
+        if row['is_default']:
+            return True
+        identifier = row['identifier']
+        return any(f"-{word}" in identifier or identifier.endswith(f"-{word}") for word in FORM_WHITELIST)
+
+    pokemon_df = pokemon_df[pokemon_df.apply(is_competitive, axis=1)]
+    print(f"Filtered to {len(pokemon_df)} competitive Pokémon/Forms.")
 
     # Merge pokemon with species and localized names
     pokemon_merged = pokemon_df.merge(pokemon_species_df[['id', 'identifier']], left_on='species_id', right_on='id', suffixes=('', '_species'), how='left')
@@ -148,9 +147,7 @@ def main():
     
     print(f"Writing to SQLite database {db_path}...")
     conn.execute("DROP TABLE IF EXISTS pokemon;")
-    conn.execute("DROP TABLE IF EXISTS pokemon_forms;")
     conn.execute("DROP TABLE IF EXISTS types;")
-    conn.execute("DROP TABLE IF EXISTS type_efficacy;")
     
     create_pokemon_table_sql = """
     CREATE TABLE pokemon (

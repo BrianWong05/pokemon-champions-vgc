@@ -269,6 +269,7 @@ const DamageCalculatorPage: React.FC = () => {
         const [pokeResult, efficacyResult, moveResult] = await Promise.all([
           db.select({
             id: pokemon.id,
+            identifier: pokemon.identifier,
             nameEn: pokemon.nameEn,
             nameZh: pokemon.nameZh,
             type1: pokemon.type1,

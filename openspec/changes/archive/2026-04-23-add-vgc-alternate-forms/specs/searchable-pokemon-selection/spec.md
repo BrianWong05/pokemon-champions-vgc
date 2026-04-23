@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Searchable Pokémon Filter
 The system SHALL provide a search field that filters the list of available Pokémon based on English name, Chinese name, or alternate form identifiers.
@@ -6,10 +6,3 @@ The system SHALL provide a search field that filters the list of available Poké
 #### Scenario: Filtering by form name
 - **WHEN** the user types "Wash" into the search field
 - **THEN** Pokémon with "Wash" in their name or form identifier (e.g., Rotom (Wash)) SHALL be displayed in the dropdown.
-
-### Requirement: Auto-populate Base Stats
-The system SHALL automatically update the base stat fields for the respective side (Attacker or Defender) when a Pokémon is selected.
-
-#### Scenario: Selecting a Pokémon
-- **WHEN** the user selects "Incineroar" from the dropdown
-- **THEN** the base HP, Atk, Def, SpA, SpD, and Spe inputs SHALL be updated with Incineroar's database values.
