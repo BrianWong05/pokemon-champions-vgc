@@ -44,9 +44,10 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
   const isGuaranteedKO = minDamage >= currentHpValue;
   const isPossibleKO = maxDamage >= currentHpValue && !isGuaranteedKO;
 
-  const hpRemainingPercent = impactResult 
-    ? Math.max(0, currentHpPercent - impactResult.maxPercent) 
-    : currentHpPercent;
+  const safeCurrentHpPercent = isNaN(currentHpPercent) ? 100 : currentHpPercent;
+  const safeMaxPercent = (impactResult && !isNaN(impactResult.maxPercent)) ? impactResult.maxPercent : 0;
+
+  const hpRemainingPercent = Math.max(0, safeCurrentHpPercent - safeMaxPercent);
 
   const barColor = hpRemainingPercent > 50 ? 'bg-green-500' : hpRemainingPercent > 20 ? 'bg-yellow-500' : 'bg-red-500';
 
@@ -82,7 +83,7 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
           <div className="flex justify-between items-center bg-gray-900/50 p-4 rounded-2xl border border-gray-800/50">
             <div className="flex flex-col">
                <span className="text-3xl font-black text-white leading-none tracking-tighter">
-                  {impactResult ? `${impactResult.minPercent}% - ${impactResult.maxPercent}%` : '--'}
+                  {impactResult ? `${isNaN(impactResult.minPercent) ? '0.0' : impactResult.minPercent}% - ${isNaN(impactResult.maxPercent) ? '0.0' : impactResult.maxPercent}%` : '--'}
                </span>
                <span className="text-[10px] font-bold text-gray-500 mt-2 uppercase tracking-widest">
                   Incoming Impact Range
@@ -145,7 +146,7 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                   </div>
                   <div className="text-right flex flex-col items-end justify-center">
                     <span className="text-2xl font-black text-white whitespace-nowrap leading-none tracking-tighter">
-                      {result.minPercent}% - {result.maxPercent}%
+                      {isNaN(result.minPercent) ? '0.0' : result.minPercent}% - {isNaN(result.maxPercent) ? '0.0' : result.maxPercent}%
                     </span>
                   </div>
                 </div>

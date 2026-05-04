@@ -135,8 +135,9 @@ export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon
   const gen = Generations.get(9);
   
   // Convert current HP percentage to actual HP value
+  const safeHpPercent = isNaN(stateSide.hpPercent) ? 100 : stateSide.hpPercent;
   const maxHp = calculateHP(stateSide.baseHp, stateSide.spHp);
-  const currentHp = Math.floor(maxHp * (stateSide.hpPercent / 100));
+  const currentHp = Math.floor(maxHp * (safeHpPercent / 100));
 
   const evs = {
     hp: spToEv(stateSide.spHp),
@@ -155,7 +156,9 @@ export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon
     spe: stateSide.stages.spe || 0,
   };
 
-  const types = [stateSide.type1, stateSide.type2].filter(Boolean);
+  const types = [stateSide.type1, stateSide.type2]
+    .filter(Boolean)
+    .map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
 
   return new Pokemon(gen, pokemonName, {
     level: 50,

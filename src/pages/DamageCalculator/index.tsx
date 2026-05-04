@@ -318,18 +318,39 @@ const DamageCalculatorPage: React.FC = () => {
       const move = mapToSmogonMove(moveData.nameEn);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
+      
+      console.log(`[DEBUG Calc] ${attackerPokemon.name} vs ${defenderPokemon.name} with ${move.name}`, {
+        resultDamage: result.damage,
+        attackerStats: attackerPokemon.stats,
+        defenderStats: defenderPokemon.stats,
+        move: move.name,
+        field: field.weather
+      });
 
-      const damageArr = Array.isArray(result.damage) ? result.damage : [0];
+      const damageArr = Array.isArray(result.damage) ? result.damage : [result.damage || 0];
+      
       // smogon/calc returns damage as an array of possible rolls or a single number (0) for immunity
-      const minDamage = damageArr.length > 0 ? (typeof damageArr[0] === 'number' ? damageArr[0] : 0) : 0;
-      const maxDamage = damageArr.length > 0 ? (typeof damageArr[damageArr.length - 1] === 'number' ? damageArr[damageArr.length - 1] : 0) : 0;
+      // We need to handle multi-hit moves which return an array of arrays
+      const flattenDamage = (arr: any[]): number[] => {
+        if (arr.length === 0) return [0];
+        if (Array.isArray(arr[0])) {
+          // For multi-hit, sum up the first and last elements of each sub-array
+          // Actually, smogon provides a way to get the total range, but we'll do it manually for simplicity
+          const min = arr.reduce((acc, sub) => acc + (typeof sub[0] === 'number' ? sub[0] : 0), 0);
+          const max = arr.reduce((acc, sub) => acc + (typeof sub[sub.length - 1] === 'number' ? sub[sub.length - 1] : 0), 0);
+          return [min, max];
+        }
+        return arr.filter(d => typeof d === 'number');
+      };
+
+      const cleanDamage = flattenDamage(damageArr);
+      const minDamage = cleanDamage.length > 0 ? cleanDamage[0] : 0;
+      const maxDamage = cleanDamage.length > 0 ? cleanDamage[cleanDamage.length - 1] : 0;
 
       // Extract effectiveness dynamically
       let effectiveness = 1;
       const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
       const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
-      // We still use our own effectiveness calculation for UI consistency,
-      // though smogon does this internally. We use result.move.type which might be modified (e.g. Weather Ball).
       const calcMoveTypeId = TYPE_IDS[result.move.type.toLowerCase()] || moveData.typeId;
       effectiveness = calculateEffectiveness(efficacyMap, calcMoveTypeId, defType1Id, defType2Id);
 
@@ -337,7 +358,7 @@ const DamageCalculatorPage: React.FC = () => {
       const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
       const isStab = calcMoveTypeId === attackerType1Id || calcMoveTypeId === attackerType2Id;
 
-      const isImmune = result.damage === 0;
+      const isImmune = result.damage === 0 || maxDamage === 0;
 
       const triggeredAbilities: string[] = [];
       if (!isImmune) {
@@ -350,18 +371,19 @@ const DamageCalculatorPage: React.FC = () => {
             triggeredAbilities.push(result.defender.ability);
           }
         } catch (e) {
-          // Ignore desc() errors for KO chance calculations
+          // Ignore desc() errors
         }
       }
 
-      const minDamageNum = Number(minDamage);
-      const maxDamageNum = Number(maxDamage);
+      const minDamageNum = isNaN(minDamage) ? 0 : Number(minDamage);
+      const maxDamageNum = isNaN(maxDamage) ? 0 : Number(maxDamage);
+      const safeDefMaxHp = (defMaxHp && defMaxHp > 0) ? defMaxHp : 1;
 
       return {
         minDamage: minDamageNum,
         maxDamage: maxDamageNum,
-        minPercent: Number(((minDamageNum / defMaxHp) * 100).toFixed(1)),
-        maxPercent: Number(((maxDamageNum / defMaxHp) * 100).toFixed(1)),
+        minPercent: Number(((minDamageNum / safeDefMaxHp) * 100).toFixed(1)) || 0,
+        maxPercent: Number(((maxDamageNum / safeDefMaxHp) * 100).toFixed(1)) || 0,
         moveName: moveData.nameEn,
         moveType: calcMoveTypeId,
         originalType: moveData.typeId,
