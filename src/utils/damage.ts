@@ -1,3 +1,5 @@
+import { calculate, Pokemon, Move, Field, Generations, Result } from '@smogon/calc';
+
 /**
  * Pokémon Champions Stat and Damage Formulas (Level 50 VGC)
  */
@@ -61,77 +63,25 @@ export const getModifiedMoveType = (
   return originalType;
 };
 
-export const getBasePowerModifier = (
-  ability: string | null,
-  moveType: string,
-  basePower: number,
-  category: 'physical' | 'special' | 'status',
-  moveName: string = '',
-  originalType: string = '',
-  weather: string = 'None',
-  attackerHpPercent: number = 100
-): { modifier: number; triggered: boolean } => {
-  let modifier = 1.0;
-  let triggered = false;
-  const mName = moveName.toLowerCase();
-  const mType = moveType.toLowerCase();
-
-  // 0. Weather Ball BP Boost (Double in any weather)
-  if (mName === 'weather ball' && weather !== 'None') {
-    modifier *= 2.0;
-  }
-
-  if (!ability) return { modifier, triggered };
-  const name = ability.toLowerCase();
-  const oType = originalType.toLowerCase();
-
-  // 1. -ate Ability Power Boost (1.2x)
-  if (oType === 'normal' && moveType.toLowerCase() !== 'normal') {
-    const ateAbilities = ['pixilate', 'refrigerate', 'aerilate', 'galvanize'];
-    if (ateAbilities.includes(name)) {
-      modifier *= 1.2;
-    }
-  }
-
-  // 2. HP-based Attacker Boosts (Starter Abilities)
-  if (attackerHpPercent <= 33.34) {
-    if (
-      (name === 'blaze' && mType === 'fire') ||
-      (name === 'torrent' && mType === 'water') ||
-      (name === 'overgrow' && mType === 'grass') ||
-      (name === 'swarm' && mType === 'bug')
-    ) {
-      modifier *= 1.5;
-      triggered = true;
-    }
-  }
-
-  // 3. Existing BP Modifiers
-  switch (name) {
-    case 'technician':
-      if (basePower <= 60) modifier *= 1.5;
-      break;
-    case 'fairy aura':
-      if (mType === 'fairy') modifier *= 1.33;
-      break;
-    case 'dark aura':
-      if (mType === 'dark') modifier *= 1.33;
-      break;
-    case 'strong jaw':
-      const bitingMoves = ['bite', 'crunch', 'fire fang', 'ice fang', 'thunder fang', 'poison fang', 'psychic fangs', 'hyper fang', 'jaw lock', 'fishious rendition'];
-      if (bitingMoves.includes(mName)) modifier *= 1.5;
-      break;
-    case 'sharpness':
-      const slicingMoves = ['air cutter', 'air slash', 'aqua cutter', 'aerial ace', 'behemoth blade', 'ceaseless edge', 'cross poison', 'cut', 'fury cutter', 'kowtow cleave', 'leaf blade', 'night slash', 'psyblade', 'psychic cut', 'razor leaf', 'razor shell', 'sacred sword', 'slash', 'solar blade', 'stone axe', 'x-scissor'];
-      if (slicingMoves.includes(mName)) modifier *= 1.5;
-      break;
-    case 'tough claws':
-      if (category === 'physical') modifier *= 1.3;
-      break;
-  }
-
-  return { modifier, triggered };
+export const getNatureName = (boosted: string | null, hindered: string | null): string => {
+  if (!boosted || !hindered || boosted === hindered) return 'Serious';
+  
+  const natures: Record<string, Record<string, string>> = {
+    atk: { def: 'Lonely', spa: 'Adamant', spd: 'Naughty', spe: 'Brave' },
+    def: { atk: 'Bold', spa: 'Impish', spd: 'Lax', spe: 'Relaxed' },
+    spa: { atk: 'Modest', def: 'Mild', spd: 'Rash', spe: 'Quiet' },
+    spd: { atk: 'Calm', def: 'Gentle', spa: 'Careful', spe: 'Sassy' },
+    spe: { atk: 'Timid', def: 'Hasty', spa: 'Jolly', spd: 'Naive' }
+  };
+  
+  return natures[boosted]?.[hindered] || 'Serious';
 };
+
+export const spToEv = (sp: number): number => {
+  if (sp === 0) return 0;
+  return Math.min(252, sp * 8 - 4);
+};
+
 
 export const getStatModifier = (
   ability: string | null,
@@ -181,70 +131,73 @@ export const getStatModifier = (
   return { modifier, triggered };
 };
 
-export const getWeatherDamageModifier = (
-  weather: string,
-  moveType: string
-): number => {
-  const type = moveType.toLowerCase();
-  if (weather === 'Sun') {
-    if (type === 'fire') return 1.5;
-    if (type === 'water') return 0.5;
-  }
-  if (weather === 'Rain') {
-    if (type === 'water') return 1.5;
-    if (type === 'fire') return 0.5;
-  }
-  return 1.0;
+export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon => {
+  const gen = Generations.get(9);
+  
+  // Convert current HP percentage to actual HP value
+  const maxHp = calculateHP(stateSide.baseHp, stateSide.spHp);
+  const currentHp = Math.floor(maxHp * (stateSide.hpPercent / 100));
+
+  const evs = {
+    hp: spToEv(stateSide.spHp),
+    atk: spToEv(stateSide.spAtk),
+    def: spToEv(stateSide.spDef),
+    spa: spToEv(stateSide.spSpa),
+    spd: spToEv(stateSide.spSpd),
+    spe: spToEv(stateSide.spSpe),
+  };
+
+  const boosts = {
+    atk: stateSide.stages.atk || 0,
+    def: stateSide.stages.def || 0,
+    spa: stateSide.stages.spa || 0,
+    spd: stateSide.stages.spd || 0,
+    spe: stateSide.stages.spe || 0,
+  };
+
+  const types = [stateSide.type1, stateSide.type2].filter(Boolean);
+
+  return new Pokemon(gen, pokemonName, {
+    level: 50,
+    ability: stateSide.activeAbility || undefined,
+    nature: getNatureName(stateSide.boostedStat, stateSide.hinderedStat) as any,
+    evs,
+    ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 }, // Assume max IVs for Level 50 calc mapping
+    boosts,
+    curHP: currentHp,
+    overrides: {
+      types: types as any,
+      weightkg: 100, // Fallback weight to prevent NaN for moves like Grass Knot if species is unrecognized
+      baseStats: {
+        hp: stateSide.baseHp,
+        atk: stateSide.baseAtk,
+        def: stateSide.baseDef,
+        spa: stateSide.baseSpa,
+        spd: stateSide.baseSpd,
+        spe: stateSide.baseSpe,
+      }
+    }
+  });
 };
 
-export const getFinalDamageModifier = (
-  defenderAbility: string | null,
-  attackerAbility: string | null,
-  moveType: string,
-  effectiveness: number,
-  defenderHpPercent: number = 100
-): { modifier: number; triggered: boolean } => {
-  let modifier = 1.0;
-  let triggered = false;
+export const mapToSmogonField = (weather: string, isSpreadTarget: boolean): Field => {
+  const weatherMap: Record<string, string> = {
+    'Sun': 'Sun',
+    'Rain': 'Rain',
+    'Sandstorm': 'Sand',
+    'Snow': 'Snow',
+    'None': ''
+  };
 
-  if (defenderAbility) {
-    const defName = defenderAbility.toLowerCase();
-    
-    // HP-based Defender Thresholds
-    if ((defName === 'multiscale' || defName === 'shadow shield') && defenderHpPercent === 100) {
-      modifier *= 0.5;
-      triggered = true;
-    }
+  return new Field({
+    weather: weatherMap[weather] as any,
+    gameType: isSpreadTarget ? 'Doubles' : 'Singles',
+  });
+};
 
-    switch (defName) {
-      case 'thick fat':
-        if (moveType.toLowerCase() === 'fire' || moveType.toLowerCase() === 'ice') {
-          modifier *= 0.5;
-        }
-        break;
-      case 'solid rock':
-      case 'filter':
-      case 'prism armor':
-        if (effectiveness > 1) {
-          modifier *= 0.75;
-        }
-        break;
-      case 'water bubble':
-        if (moveType.toLowerCase() === 'fire') {
-          modifier *= 0.5;
-        }
-        break;
-    }
-  }
-
-  if (attackerAbility) {
-    const atkName = attackerAbility.toLowerCase();
-    if (atkName === 'water bubble' && moveType.toLowerCase() === 'water') {
-      modifier *= 2.0;
-    }
-  }
-
-  return { modifier, triggered };
+export const mapToSmogonMove = (moveName: string): Move => {
+  const gen = Generations.get(9);
+  return new Move(gen, moveName);
 };
 
 export const getStageMultiplier = (stage: number): number => {
@@ -266,32 +219,12 @@ export interface DamageResult {
   triggeredAbilities?: string[];
 }
 
-export const getSpreadModifier = (isSpreadTarget: boolean): number => {
-  return isSpreadTarget ? 0.75 : 1.0;
-};
-
-export const calculateDamage = (
-  attackerStat: number,
-  defenderStat: number,
-  movePower: number,
-  stabMultiplier: number,
-  effectiveness: number,
-  finalModifier: number,
-  spreadModifier: number,
-  maxHP: number
-): { minDamage: number; maxDamage: number; minPercent: number; maxPercent: number } => {
-  // BaseDamage = Math.floor(Math.floor((22 * MovePower * Attack / Defense) / 50) + 2)
-  const baseDamage = Math.floor(Math.floor((22 * movePower * attackerStat / defenderStat) / 50) + 2);
-  
-  const modifiedBase = Math.floor(baseDamage * spreadModifier);
-
-  const minDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 0.85);
-  const maxDamage = Math.floor(modifiedBase * stabMultiplier * effectiveness * finalModifier * 1.00);
-
-  return {
-    minDamage,
-    maxDamage,
-    minPercent: Number(((minDamage / maxHP) * 100).toFixed(1)),
-    maxPercent: Number(((maxDamage / maxHP) * 100).toFixed(1)),
-  };
+export const calculateSmogonDamage = (
+  attacker: Pokemon,
+  defender: Pokemon,
+  move: Move,
+  field: Field
+): Result => {
+  const gen = Generations.get(9);
+  return calculate(gen, attacker, defender, move, field);
 };

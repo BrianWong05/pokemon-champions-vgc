@@ -2,7 +2,7 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateDamage, getBasePowerModifier, getStatModifier, getFinalDamageModifier, getModifiedMoveType, getWeatherDamageModifier, getSpreadModifier } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -303,76 +303,68 @@ const DamageCalculatorPage: React.FC = () => {
   const p2MaxHp = useMemo(() => calculateHP(state.p2.baseHp, state.p2.spHp), [state.p2]);
 
   const computeResults = (attacker: SideState, defender: SideState, defMaxHp: number) => {
-    return attacker.moves.map((move) => {
-      if (!move) return null;
+    return attacker.moves.map((moveData) => {
+      if (!moveData) return null;
 
-      const movePower = move.power || 0;
-      const moveCategory = move.damageClassId === 2 ? 'physical' : move.damageClassId === 3 ? 'special' : 'status';
-      const moveTypeId = move.typeId || 1;
-      const originalTypeName = REVERSE_TYPE_IDS[moveTypeId] || 'normal';
-
-      // Pipeline Step 0: Modified Move Type (including Weather Ball)
-      const modifiedTypeName = getModifiedMoveType(originalTypeName, move.nameEn, attacker.activeAbility, state.weather);
-      const modifiedTypeId = TYPE_IDS[modifiedTypeName.toLowerCase()] || moveTypeId;
-
-      const isPhys = moveCategory === 'physical';
+      const atkBase = pokemonList.find(p => p.id === attacker.selectedId);
+      const defBase = pokemonList.find(p => p.id === defender.selectedId);
       
-      const atkStatValue = isPhys ? attacker.baseAtk : attacker.baseSpa;
-      const atkSpValue = isPhys ? attacker.spAtk : attacker.spSpa;
-      const atkStatKey = (isPhys ? 'atk' : 'spa') as 'atk' | 'spa';
+      // If pokemon aren't selected yet, we can't calculate properly
+      if (!atkBase || !defBase) return null;
 
-      const defStatValue = isPhys ? defender.baseDef : defender.baseSpd;
-      const defSpValue = isPhys ? defender.spDef : defender.spSpd;
-      const defStatKey = (isPhys ? 'def' : 'spd') as 'def' | 'spd';
+      const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn);
+      const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn);
+      const field = mapToSmogonField(state.weather, state.isSpreadTarget);
+      const move = mapToSmogonMove(moveData.nameEn);
 
-      const attackerMultiplier = (atkStatKey === attacker.boostedStat) ? 1.1 : (atkStatKey === attacker.hinderedStat) ? 0.9 : 1.0;
-      const defenderMultiplier = (defStatKey === defender.boostedStat) ? 1.1 : (defStatKey === defender.hinderedStat) ? 0.9 : 1.0;
+      const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
 
-      // Pipeline Step 1: Modified Base Power (including Weather Ball)
-      const bpResult = getBasePowerModifier(attacker.activeAbility, modifiedTypeName, movePower, moveCategory, move.nameEn, originalTypeName, state.weather, attacker.hpPercent);
-      const modifiedPower = Math.floor(movePower * bpResult.modifier);
+      const damageArr = Array.isArray(result.damage) ? result.damage : [0];
+      // smogon/calc returns damage as an array of possible rolls or a single number (0) for immunity
+      const minDamage = damageArr.length > 0 ? (typeof damageArr[0] === 'number' ? damageArr[0] : 0) : 0;
+      const maxDamage = damageArr.length > 0 ? (typeof damageArr[damageArr.length - 1] === 'number' ? damageArr[damageArr.length - 1] : 0) : 0;
 
-      // Pipeline Step 2: Stats with Ability & Weather Modifiers
-      const attackerTypes = [attacker.type1, attacker.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
-      const defenderTypes = [defender.type1, defender.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
-      
-      const atkAbilityResult = getStatModifier(attacker.activeAbility, atkStatKey, 'attacker', attackerTypes, state.weather, attacker.hpPercent);
-      const defAbilityResult = getStatModifier(defender.activeAbility, defStatKey, 'defender', defenderTypes, state.weather, defender.hpPercent);
-
-      const attackerStat = calculateStat(atkStatValue, atkSpValue, attackerMultiplier, attacker.stages[atkStatKey], atkAbilityResult.modifier);
-      const defenderStat = calculateStat(defStatValue, defSpValue, defenderMultiplier, defender.stages[defStatKey], defAbilityResult.modifier);
-      
-      const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
-      const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
-      const isStab = modifiedTypeId === attackerType1Id || modifiedTypeId === attackerType2Id;
-      
-      const isAdaptability = attacker.activeAbility?.toLowerCase() === 'adaptability';
-      const stabMultiplier = isStab ? (isAdaptability ? 2.0 : 1.5) : 1;
-
+      // Extract effectiveness dynamically
+      let effectiveness = 1;
       const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
       const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
-      const effectiveness = calculateEffectiveness(efficacyMap, modifiedTypeId, defType1Id, defType2Id);
-      
-      // Pipeline Step 3: Weather Damage Modifiers
-      const weatherMod = getWeatherDamageModifier(state.weather, modifiedTypeName);
+      // We still use our own effectiveness calculation for UI consistency,
+      // though smogon does this internally. We use result.move.type which might be modified (e.g. Weather Ball).
+      const calcMoveTypeId = TYPE_IDS[result.move.type.toLowerCase()] || moveData.typeId;
+      effectiveness = calculateEffectiveness(efficacyMap, calcMoveTypeId, defType1Id, defType2Id);
 
-      // Pipeline Step 4: Final Damage Modifier
-      const spreadMod = getSpreadModifier(state.isSpreadTarget);
-      const finalResult = getFinalDamageModifier(defender.activeAbility, attacker.activeAbility, modifiedTypeName, effectiveness, defender.hpPercent);
-      const finalModifier = finalResult.modifier * weatherMod;
-      
-      const damage = calculateDamage(attackerStat, defenderStat, modifiedPower, stabMultiplier, effectiveness, finalModifier, spreadMod, defMaxHp);
+      const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
+      const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
+      const isStab = calcMoveTypeId === attackerType1Id || calcMoveTypeId === attackerType2Id;
+
+      const isImmune = result.damage === 0;
 
       const triggeredAbilities: string[] = [];
-      if (bpResult.triggered && attacker.activeAbility) triggeredAbilities.push(attacker.activeAbility);
-      if (atkAbilityResult.triggered && attacker.activeAbility && !triggeredAbilities.includes(attacker.activeAbility)) triggeredAbilities.push(attacker.activeAbility);
-      if (finalResult.triggered && defender.activeAbility) triggeredAbilities.push(defender.activeAbility);
+      if (!isImmune) {
+        try {
+          const descStr = result.desc();
+          if (result.attacker.ability && descStr.includes(result.attacker.ability)) {
+            triggeredAbilities.push(result.attacker.ability);
+          }
+          if (result.defender.ability && descStr.includes(result.defender.ability)) {
+            triggeredAbilities.push(result.defender.ability);
+          }
+        } catch (e) {
+          // Ignore desc() errors for KO chance calculations
+        }
+      }
+
+      const minDamageNum = Number(minDamage);
+      const maxDamageNum = Number(maxDamage);
 
       return {
-        ...damage,
-        moveName: move.nameEn,
-        moveType: modifiedTypeId,
-        originalType: moveTypeId,
+        minDamage: minDamageNum,
+        maxDamage: maxDamageNum,
+        minPercent: Number(((minDamageNum / defMaxHp) * 100).toFixed(1)),
+        maxPercent: Number(((maxDamageNum / defMaxHp) * 100).toFixed(1)),
+        moveName: moveData.nameEn,
+        moveType: calcMoveTypeId,
+        originalType: moveData.typeId,
         isStab,
         effectiveness,
         triggeredAbilities
