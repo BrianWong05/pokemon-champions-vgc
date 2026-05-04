@@ -12,14 +12,18 @@ interface DamageCalculatorTemplateProps {
   isDarkAura: boolean;
   isAuraBreak: boolean;
   onToggleFieldAura: (aura: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak') => void;
+  activeTerrain: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic';
+  onTerrainChange: (t: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic') => void;
 }
 
 const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
   attackerPanel, defenderPanel, resultsPanel, activeWeather, onWeatherChange,
   isSpreadTarget, onSpreadTargetChange,
-  isFairyAura, isDarkAura, isAuraBreak, onToggleFieldAura
+  isFairyAura, isDarkAura, isAuraBreak, onToggleFieldAura,
+  activeTerrain, onTerrainChange
 }) => {
   const weatherOptions: ('None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow')[] = ['None', 'Sun', 'Rain', 'Sandstorm', 'Snow'];
+  const terrainOptions: ('None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic')[] = ['None', 'Electric', 'Grassy', 'Misty', 'Psychic'];
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -36,7 +40,7 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
           </div>
 
           {/* Middle Section: Field Conditions */}
-          <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center justify-center gap-8 overflow-x-auto">
+          <div className="w-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
             <div className="flex items-center gap-6">
               <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Weather</Typography>
               <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
@@ -57,7 +61,7 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-6 border-l border-gray-100 pl-8 h-8">
+            <div className="flex items-center gap-6">
               <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Target Mode</Typography>
               <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
                 <button
@@ -85,7 +89,7 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-6 border-l border-gray-100 pl-8 h-8">
+            <div className="flex items-center gap-6">
               <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Auras</Typography>
               <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
                 <button
@@ -121,6 +125,30 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
                 >
                   Break
                 </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Terrain</Typography>
+              <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
+                {terrainOptions.map(t => (
+                  <button
+                    key={t}
+                    onClick={() => onTerrainChange(t)}
+                    className={`
+                      px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                      ${activeTerrain === t 
+                        ? t === 'Electric' ? 'bg-yellow-400 text-yellow-900 shadow-md' :
+                          t === 'Grassy' ? 'bg-green-500 text-white shadow-md' :
+                          t === 'Misty' ? 'bg-pink-400 text-white shadow-md' :
+                          t === 'Psychic' ? 'bg-purple-500 text-white shadow-md' :
+                          'bg-gray-400 text-white shadow-md'
+                        : 'text-gray-400 hover:text-gray-600'}
+                    `}
+                  >
+                    {t}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

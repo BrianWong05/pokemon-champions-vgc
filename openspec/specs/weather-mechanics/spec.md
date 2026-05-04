@@ -42,3 +42,10 @@ The system SHALL provide UI controls to toggle field-wide auras (Fairy Aura, Dar
 #### Scenario: Toggling Fairy Aura
 - **WHEN** the user selects the "Fairy Aura" toggle in the field options
 - **THEN** the system SHALL update the state to reflect `isFairyAura: true` and trigger a recalculation.
+
+### Requirement: Field Terrain Toggles
+The system SHALL provide UI controls to select the active field terrain (Electric, Grassy, Misty, Psychic, None) independently of the weather selection.
+
+#### Scenario: Selecting Electric Terrain
+- **WHEN** the user clicks the "Electric" terrain button
+- **THEN** the system SHALL update the state to reflect `terrain: 'Electric'` and trigger a recalculation.

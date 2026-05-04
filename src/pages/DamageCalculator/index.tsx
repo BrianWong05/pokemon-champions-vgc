@@ -41,6 +41,7 @@ interface CalcState {
   p1: SideState;
   p2: SideState;
   weather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
+  terrain: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic';
   isSpreadTarget: boolean;
   isFairyAura: boolean;
   isDarkAura: boolean;
@@ -60,6 +61,7 @@ type CalcAction =
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
+  | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
   | { type: 'SET_HP_PERCENT', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' };
@@ -84,6 +86,7 @@ const initialState: CalcState = {
   p1: { ...initialSide, spAtk: 32, spSpa: 32 },
   p2: initialSide,
   weather: 'None',
+  terrain: 'None',
   isSpreadTarget: false,
   isFairyAura: false,
   isDarkAura: false,
@@ -94,6 +97,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
   switch (action.type) {
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
+    case 'SET_TERRAIN':
+      return { ...state, terrain: action.payload };
     case 'SET_SPREAD_TARGET':
       return { ...state, isSpreadTarget: action.payload };
     case 'TOGGLE_FIELD_AURA':
@@ -323,7 +328,7 @@ const DamageCalculatorPage: React.FC = () => {
 
       const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn);
       const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn);
-      const field = mapToSmogonField(state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak);
+      const field = mapToSmogonField(state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak, state.terrain);
       const move = mapToSmogonMove(moveData.nameEn);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
@@ -418,13 +423,15 @@ const DamageCalculatorPage: React.FC = () => {
     });
   };
 
-  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap, state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak]);
-  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap, state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak]);
+  const p1Results = useMemo(() => computeResults(state.p1, state.p2, p2MaxHp), [state.p1, state.p2, p2MaxHp, efficacyMap, state.weather, state.terrain, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak]);
+  const p2Results = useMemo(() => computeResults(state.p2, state.p1, p1MaxHp), [state.p2, state.p1, p1MaxHp, efficacyMap, state.weather, state.terrain, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak]);
 
   return (
     <DamageCalculatorTemplate
       activeWeather={state.weather}
       onWeatherChange={(w) => dispatch({ type: 'SET_WEATHER', payload: w })}
+      activeTerrain={state.terrain}
+      onTerrainChange={(t) => dispatch({ type: 'SET_TERRAIN', payload: t })}
       isSpreadTarget={state.isSpreadTarget}
       onSpreadTargetChange={(isSpread) => dispatch({ type: 'SET_SPREAD_TARGET', payload: isSpread })}
       isFairyAura={state.isFairyAura}

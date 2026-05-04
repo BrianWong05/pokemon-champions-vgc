@@ -188,7 +188,8 @@ export const mapToSmogonField = (
   isSpreadTarget: boolean,
   isFairyAura: boolean = false,
   isDarkAura: boolean = false,
-  isAuraBreak: boolean = false
+  isAuraBreak: boolean = false,
+  terrain: string = 'None'
 ): Field => {
   const weatherMap: Record<string, string> = {
     'Sun': 'Sun',
@@ -203,7 +204,8 @@ export const mapToSmogonField = (
     gameType: isSpreadTarget ? 'Doubles' : 'Singles',
     isFairyAura,
     isDarkAura,
-    isAuraBreak
+    isAuraBreak,
+    terrain: terrain === 'None' ? undefined : terrain as any
   });
 };
 

@@ -19,3 +19,10 @@ The system SHALL map the `isFairyAura`, `isDarkAura`, and `isAuraBreak` state va
 #### Scenario: Passing aura flags to Smogon Field
 - **WHEN** `isFairyAura` is true in the application state
 - **THEN** the `Field` object passed to Smogon's `calculate` function SHALL have `isFairyAura: true`.
+
+### Requirement: Field Terrain Mapping to Smogon Calc
+The system SHALL map the `terrain` state variable to the `terrain` property in the `@smogon/calc` `Field` object.
+
+#### Scenario: Passing terrain to Smogon Field
+- **WHEN** the application state has `terrain: 'Electric'`
+- **THEN** the `Field` object passed to Smogon's `calculate` function SHALL have `terrain: 'Electric'`.
