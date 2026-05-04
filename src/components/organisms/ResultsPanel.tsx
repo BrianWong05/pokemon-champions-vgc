@@ -14,6 +14,7 @@ export interface DamageResult {
   isStab: boolean;
   effectiveness: number;
   triggeredAbilities?: string[];
+  koChanceText?: string;
 }
 
 interface MoveColProps {
@@ -37,12 +38,21 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
 }) => {
   const currentHpValue = Math.floor(sideMaxHp * (currentHpPercent / 100));
   
-  // KO Logic: Compare damage against CURRENT HP, not Max HP
-  const minDamage = impactResult ? impactResult.minDamage : 0;
-  const maxDamage = impactResult ? impactResult.maxDamage : 0;
+  // KO Logic: Use native koChanceText from Smogon
+  const getKoStatus = (koText?: string) => {
+    if (!koText || koText === '--') return { text: 'Survival', colorClass: 'bg-green-500/10 border-green-500/20 text-green-400' };
+    
+    const lower = koText.toLowerCase();
+    if (lower.includes('guaranteed') && lower.includes('ohko')) {
+      return { text: koText, colorClass: 'bg-red-500/10 border-red-500/20 text-red-400' };
+    }
+    if (lower.includes('possible') || lower.includes('ohko')) {
+      return { text: koText, colorClass: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' };
+    }
+    return { text: koText, colorClass: 'bg-green-500/10 border-green-500/20 text-green-400' };
+  };
 
-  const isGuaranteedKO = minDamage >= currentHpValue;
-  const isPossibleKO = maxDamage >= currentHpValue && !isGuaranteedKO;
+  const impactKoStatus = getKoStatus(impactResult?.koChanceText);
 
   const safeCurrentHpPercent = isNaN(currentHpPercent) ? 100 : currentHpPercent;
   const safeMaxPercent = (impactResult && !isNaN(impactResult.maxPercent)) ? impactResult.maxPercent : 0;
@@ -89,9 +99,10 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                   Incoming Impact Range
                </span>
             </div>
-            <div className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border ${isGuaranteedKO ? 'bg-red-500/10 border-red-500/20 text-red-400' : isPossibleKO ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' : 'bg-green-500/10 border-green-500/20 text-green-400'}`}>
-              {isGuaranteedKO ? 'Guaranteed KO' : isPossibleKO ? 'Possible KO' : 'Survival'}
+            <div className={`text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full border ${impactKoStatus.colorClass}`}>
+              {impactKoStatus.text}
             </div>
+
           </div>
         </div>
 

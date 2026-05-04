@@ -361,6 +361,8 @@ const DamageCalculatorPage: React.FC = () => {
       const isImmune = result.damage === 0 || maxDamage === 0;
 
       const triggeredAbilities: string[] = [];
+      let koChanceText = 'Survival';
+
       if (!isImmune) {
         try {
           const descStr = result.desc();
@@ -369,6 +371,18 @@ const DamageCalculatorPage: React.FC = () => {
           }
           if (result.defender.ability && descStr.includes(result.defender.ability)) {
             triggeredAbilities.push(result.defender.ability);
+          }
+          
+          // Use kochance() to get the precise string if available
+          const koObj = result.kochance();
+          if (koObj && koObj.text) {
+            koChanceText = koObj.text;
+          } else {
+             // Fallback to substring from desc if kochance() is empty
+             const parts = descStr.split(' -- ');
+             if (parts.length > 1) {
+               koChanceText = parts[parts.length - 1];
+             }
           }
         } catch (e) {
           // Ignore desc() errors
@@ -389,7 +403,8 @@ const DamageCalculatorPage: React.FC = () => {
         originalType: moveData.typeId,
         isStab,
         effectiveness,
-        triggeredAbilities
+        triggeredAbilities,
+        koChanceText
       } as DamageResult;
     });
   };
