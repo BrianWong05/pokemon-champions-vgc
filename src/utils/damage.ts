@@ -189,7 +189,8 @@ export const mapToSmogonField = (
   isFairyAura: boolean = false,
   isDarkAura: boolean = false,
   isAuraBreak: boolean = false,
-  terrain: string = 'None'
+  terrain: string = 'None',
+  isGravity: boolean = false
 ): Field => {
   const weatherMap: Record<string, string> = {
     'Sun': 'Sun',
@@ -205,7 +206,8 @@ export const mapToSmogonField = (
     isFairyAura,
     isDarkAura,
     isAuraBreak,
-    terrain: terrain === 'None' ? undefined : terrain as any
+    terrain: terrain === 'None' ? undefined : terrain as any,
+    isGravity
   });
 };
 

@@ -14,13 +14,16 @@ interface DamageCalculatorTemplateProps {
   onToggleFieldAura: (aura: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak') => void;
   activeTerrain: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic';
   onTerrainChange: (t: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic') => void;
+  isGravity: boolean;
+  onToggleGravity: () => void;
 }
 
 const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
   attackerPanel, defenderPanel, resultsPanel, activeWeather, onWeatherChange,
   isSpreadTarget, onSpreadTargetChange,
   isFairyAura, isDarkAura, isAuraBreak, onToggleFieldAura,
-  activeTerrain, onTerrainChange
+  activeTerrain, onTerrainChange,
+  isGravity, onToggleGravity
 }) => {
   const weatherOptions: ('None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow')[] = ['None', 'Sun', 'Rain', 'Sandstorm', 'Snow'];
   const terrainOptions: ('None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic')[] = ['None', 'Electric', 'Grassy', 'Misty', 'Psychic'];
@@ -149,6 +152,23 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
                     {t}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Gravity</Typography>
+              <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
+                <button
+                  onClick={onToggleGravity}
+                  className={`
+                    px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                    ${isGravity 
+                      ? 'bg-indigo-700 text-white shadow-md' 
+                      : 'text-gray-400 hover:text-gray-600'}
+                  `}
+                >
+                  Active
+                </button>
               </div>
             </div>
           </div>
