@@ -183,7 +183,13 @@ export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon
   });
 };
 
-export const mapToSmogonField = (weather: string, isSpreadTarget: boolean): Field => {
+export const mapToSmogonField = (
+  weather: string, 
+  isSpreadTarget: boolean,
+  isFairyAura: boolean = false,
+  isDarkAura: boolean = false,
+  isAuraBreak: boolean = false
+): Field => {
   const weatherMap: Record<string, string> = {
     'Sun': 'Sun',
     'Rain': 'Rain',
@@ -195,6 +201,9 @@ export const mapToSmogonField = (weather: string, isSpreadTarget: boolean): Fiel
   return new Field({
     weather: weatherMap[weather] as any,
     gameType: isSpreadTarget ? 'Doubles' : 'Singles',
+    isFairyAura,
+    isDarkAura,
+    isAuraBreak
   });
 };
 

@@ -35,3 +35,10 @@ The system SHALL apply damage multipliers for specific move types in certain wea
 #### Scenario: Fire move in Sun
 - **WHEN** the active weather is "Sun" and the move type is Fire
 - **THEN** the system SHALL apply a 1.5x multiplier to the damage.
+
+### Requirement: Field Aura Toggles
+The system SHALL provide UI controls to toggle field-wide auras (Fairy Aura, Dark Aura, Aura Break) independently of the weather selection.
+
+#### Scenario: Toggling Fairy Aura
+- **WHEN** the user selects the "Fairy Aura" toggle in the field options
+- **THEN** the system SHALL update the state to reflect `isFairyAura: true` and trigger a recalculation.

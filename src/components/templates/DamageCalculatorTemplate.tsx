@@ -8,11 +8,16 @@ interface DamageCalculatorTemplateProps {
   onWeatherChange: (w: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow') => void;
   isSpreadTarget: boolean;
   onSpreadTargetChange: (isSpread: boolean) => void;
+  isFairyAura: boolean;
+  isDarkAura: boolean;
+  isAuraBreak: boolean;
+  onToggleFieldAura: (aura: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak') => void;
 }
 
 const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
   attackerPanel, defenderPanel, resultsPanel, activeWeather, onWeatherChange,
-  isSpreadTarget, onSpreadTargetChange
+  isSpreadTarget, onSpreadTargetChange,
+  isFairyAura, isDarkAura, isAuraBreak, onToggleFieldAura
 }) => {
   const weatherOptions: ('None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow')[] = ['None', 'Sun', 'Rain', 'Sandstorm', 'Snow'];
 
@@ -31,7 +36,7 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
           </div>
 
           {/* Middle Section: Field Conditions */}
-          <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-center gap-8">
+          <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:flex-row items-center justify-center gap-8 overflow-x-auto">
             <div className="flex items-center gap-6">
               <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Weather</Typography>
               <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
@@ -76,6 +81,45 @@ const DamageCalculatorTemplate: React.FC<DamageCalculatorTemplateProps> = ({
                   `}
                 >
                   Spread
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 border-l border-gray-100 pl-8 h-8">
+              <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Field Auras</Typography>
+              <div className="flex bg-gray-50 p-1 rounded-xl gap-1 border border-gray-100">
+                <button
+                  onClick={() => onToggleFieldAura('isFairyAura')}
+                  className={`
+                    px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                    ${isFairyAura 
+                      ? 'bg-pink-600 text-white shadow-md' 
+                      : 'text-gray-400 hover:text-gray-600'}
+                  `}
+                >
+                  Fairy
+                </button>
+                <button
+                  onClick={() => onToggleFieldAura('isDarkAura')}
+                  className={`
+                    px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                    ${isDarkAura 
+                      ? 'bg-gray-700 text-white shadow-md' 
+                      : 'text-gray-400 hover:text-gray-600'}
+                  `}
+                >
+                  Dark
+                </button>
+                <button
+                  onClick={() => onToggleFieldAura('isAuraBreak')}
+                  className={`
+                    px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all
+                    ${isAuraBreak 
+                      ? 'bg-green-700 text-white shadow-md' 
+                      : 'text-gray-400 hover:text-gray-600'}
+                  `}
+                >
+                  Break
                 </button>
               </div>
             </div>
