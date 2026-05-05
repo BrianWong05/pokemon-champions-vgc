@@ -3,6 +3,7 @@ import Typography from '@/components/atoms/Typography';
 import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import ItemImage from '@/components/atoms/ItemImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
@@ -101,12 +102,15 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                   onSelect={onSelectPokemon}
                 />
               </div>
-              <div className="flex-1">
-                <ItemSearchSelect
-                  label="Hold Item"
-                  selectedItem={item}
-                  onSelect={onItemChange}
-                />
+              <div className="flex-1 flex items-end gap-1.5">
+                <ItemImage name={item} className="w-9 h-9 shrink-0" />
+                <div className="flex-1">
+                  <ItemSearchSelect
+                    label="Hold Item"
+                    selectedItem={item}
+                    onSelect={onItemChange}
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 justify-between">
