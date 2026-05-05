@@ -435,13 +435,13 @@ const DamageCalculatorPage: React.FC = () => {
 
       const minDamageNum = isNaN(minDamage) ? 0 : Number(minDamage);
       const maxDamageNum = isNaN(maxDamage) ? 0 : Number(maxDamage);
-      const safeDefMaxHp = (defMaxHp && defMaxHp > 0) ? defMaxHp : 1;
+      const smogonDefMaxHp = defenderPokemon.maxHP();
 
       return {
         minDamage: minDamageNum,
         maxDamage: maxDamageNum,
-        minPercent: Number(((minDamageNum / safeDefMaxHp) * 100).toFixed(1)) || 0,
-        maxPercent: Number(((maxDamageNum / safeDefMaxHp) * 100).toFixed(1)) || 0,
+        minPercent: Math.floor((minDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
+        maxPercent: Math.floor((maxDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
         moveName: moveData.nameEn,
         moveType: calcMoveTypeId,
         originalType: moveData.typeId,

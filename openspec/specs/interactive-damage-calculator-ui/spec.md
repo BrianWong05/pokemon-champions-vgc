@@ -46,3 +46,10 @@ The UI SHALL update the damage results immediately upon any stat change, includi
 #### Scenario: Changing hold item
 - **WHEN** the user changes the hold item for either the Attacker or Defender
 - **THEN** the damage percentage results SHALL recalculate immediately to reflect the new item modifier.
+
+### Requirement: Native Impact Range Display
+The UI SHALL display the incoming impact range using the exact minimum and maximum percentage bounds extracted from the `@smogon/calc` engine, rather than performing independent damage boundary calculations.
+
+#### Scenario: Displaying calculated bounds
+- **WHEN** the Results Panel renders a damage calculation
+- **THEN** it SHALL format and display the minimum and maximum percentage bounds exactly as provided by the damage utility wrapper (derived from Smogon).
