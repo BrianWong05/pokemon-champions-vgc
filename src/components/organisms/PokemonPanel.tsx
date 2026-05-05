@@ -40,6 +40,13 @@ interface PokemonPanelProps {
   onTypeChange: (slot: 1 | 2, type: string | null) => void;
   isTypeOverridden: boolean;
   onToggleTypeOverride: () => void;
+  isReflect: boolean;
+  isLightScreen: boolean;
+  isAuroraVeil: boolean;
+  isHelpingHand: boolean;
+  isFriendGuard: boolean;
+  isTailwind: boolean;
+  onToggleSideEffect: (effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind') => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
@@ -52,7 +59,9 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   activeWeather,
   hpPercent, onHpPercentChange,
   type1, type2, onTypeChange,
-  isTypeOverridden, onToggleTypeOverride
+  isTypeOverridden, onToggleTypeOverride,
+  isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
+  onToggleSideEffect
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
   const pokemonTypes = [type1, type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
@@ -278,6 +287,32 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                 )}
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2 border-t border-gray-50">
+        <Typography variant="label" className="text-gray-400 block mb-1 uppercase tracking-widest text-[10px] font-black">Support & Field Effects</Typography>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+          {[
+            { id: 'isReflect', label: 'Reflect', value: isReflect },
+            { id: 'isLightScreen', label: 'Light Screen', value: isLightScreen },
+            { id: 'isAuroraVeil', label: 'Aurora Veil', value: isAuroraVeil },
+            { id: 'isHelpingHand', label: 'Helping Hand', value: isHelpingHand },
+            { id: 'isFriendGuard', label: 'Friend Guard', value: isFriendGuard },
+            { id: 'isTailwind', label: 'Tailwind', value: isTailwind },
+          ].map((effect) => (
+            <label key={effect.id} className="flex items-center gap-2 cursor-pointer group">
+              <input 
+                type="checkbox" 
+                checked={effect.value} 
+                onChange={() => onToggleSideEffect(effect.id as any)}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+              <span className="text-[10px] font-bold text-gray-600 group-hover:text-gray-900 transition-colors uppercase tracking-tight">
+                {effect.label}
+              </span>
+            </label>
           ))}
         </div>
       </div>

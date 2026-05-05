@@ -37,6 +37,12 @@ interface SideState {
   hpPercent: number;
   isTypeOverridden: boolean;
   item: string | null;
+  isReflect: boolean;
+  isLightScreen: boolean;
+  isAuroraVeil: boolean;
+  isHelpingHand: boolean;
+  isFriendGuard: boolean;
+  isTailwind: boolean;
 }
 
 interface CalcState {
@@ -64,6 +70,7 @@ type CalcAction =
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
   | { type: 'SET_ITEM', payload: { side: 'p1' | 'p2', item: string | null } }
+  | { type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1' | 'p2', effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind' } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
@@ -89,6 +96,12 @@ const initialSide: SideState = {
   hpPercent: 100,
   isTypeOverridden: false,
   item: null,
+  isReflect: false,
+  isLightScreen: false,
+  isAuroraVeil: false,
+  isHelpingHand: false,
+  isFriendGuard: false,
+  isTailwind: false,
 };
 
 const initialState: CalcState = {
@@ -108,6 +121,10 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     case 'SET_ITEM': {
       const { side, item } = action.payload;
       return { ...state, [side]: { ...state[side], item } };
+    }
+    case 'TOGGLE_SIDE_EFFECT': {
+      const { side, effect } = action.payload;
+      return { ...state, [side]: { ...state[side], [effect]: !state[side][effect] } };
     }
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
@@ -353,7 +370,17 @@ const DamageCalculatorPage: React.FC = () => {
 
       const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn, atkBase.type1, atkBase.type2);
       const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn, defBase.type1, defBase.type2);
-      const field = mapToSmogonField(state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak, state.terrain, state.isGravity);
+      const field = mapToSmogonField(
+        state.weather, 
+        state.isSpreadTarget, 
+        state.isFairyAura, 
+        state.isDarkAura, 
+        state.isAuraBreak, 
+        state.terrain, 
+        state.isGravity,
+        attacker,
+        defender
+      );
       const move = mapToSmogonMove(moveData.nameEn);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
@@ -517,6 +544,12 @@ const DamageCalculatorPage: React.FC = () => {
           onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p1', slot, type } })}
           isTypeOverridden={state.p1.isTypeOverridden}
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' } })}
+          isReflect={state.p1.isReflect}
+          isLightScreen={state.p1.isLightScreen}
+          isHelpingHand={state.p1.isHelpingHand}
+          isFriendGuard={state.p1.isFriendGuard}
+          isTailwind={state.p1.isTailwind}
+          onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1', effect } })}
         />
       }
       defenderPanel={
@@ -551,6 +584,12 @@ const DamageCalculatorPage: React.FC = () => {
           onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p2', slot, type } })}
           isTypeOverridden={state.p2.isTypeOverridden}
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p2' } })}
+          isReflect={state.p2.isReflect}
+          isLightScreen={state.p2.isLightScreen}
+          isHelpingHand={state.p2.isHelpingHand}
+          isFriendGuard={state.p2.isFriendGuard}
+          isTailwind={state.p2.isTailwind}
+          onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p2', effect } })}
         />
       }
     />

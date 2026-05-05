@@ -217,7 +217,9 @@ export const mapToSmogonField = (
   isDarkAura: boolean = false,
   isAuraBreak: boolean = false,
   terrain: string = 'None',
-  isGravity: boolean = false
+  isGravity: boolean = false,
+  attackerSide: any = {},
+  defenderSide: any = {}
 ): Field => {
   const weatherMap: Record<string, string> = {
     'Sun': 'Sun',
@@ -234,7 +236,23 @@ export const mapToSmogonField = (
     isDarkAura,
     isAuraBreak,
     terrain: terrain === 'None' ? undefined : terrain as any,
-    isGravity
+    isGravity,
+    attackerSide: {
+      isReflect: attackerSide.isReflect,
+      isLightScreen: attackerSide.isLightScreen,
+      isAuroraVeil: attackerSide.isAuroraVeil,
+      isHelpingHand: attackerSide.isHelpingHand,
+      isFriendGuard: attackerSide.isFriendGuard,
+      isTailwind: attackerSide.isTailwind,
+    },
+    defenderSide: {
+      isReflect: defenderSide.isReflect,
+      isLightScreen: defenderSide.isLightScreen,
+      isAuroraVeil: defenderSide.isAuroraVeil,
+      isHelpingHand: defenderSide.isHelpingHand,
+      isFriendGuard: defenderSide.isFriendGuard,
+      isTailwind: defenderSide.isTailwind,
+    }
   });
 };
 
