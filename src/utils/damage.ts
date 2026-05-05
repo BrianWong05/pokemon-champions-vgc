@@ -173,6 +173,7 @@ export const mapToSmogonPokemon = (
   const p = new Pokemon(gen, effectiveName, {
     level: 50,
     ability: stateSide.activeAbility || undefined,
+    item: stateSide.item || undefined,
     nature: getNatureName(stateSide.boostedStat, stateSide.hinderedStat) as any,
     evs,
     ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },

@@ -36,6 +36,7 @@ interface SideState {
   activeAbility: string | null;
   hpPercent: number;
   isTypeOverridden: boolean;
+  item: string | null;
 }
 
 interface CalcState {
@@ -62,6 +63,7 @@ type CalcAction =
   | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ABILITIES', payload: { side: 'p1' | 'p2', abilities: string[] } }
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
+  | { type: 'SET_ITEM', payload: { side: 'p1' | 'p2', item: string | null } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
@@ -86,6 +88,7 @@ const initialSide: SideState = {
   activeAbility: null,
   hpPercent: 100,
   isTypeOverridden: false,
+  item: null,
 };
 
 const initialState: CalcState = {
@@ -102,6 +105,10 @@ const initialState: CalcState = {
 
 function calcReducer(state: CalcState, action: CalcAction): CalcState {
   switch (action.type) {
+    case 'SET_ITEM': {
+      const { side, item } = action.payload;
+      return { ...state, [side]: { ...state[side], item } };
+    }
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
     case 'SET_TERRAIN':
@@ -499,6 +506,8 @@ const DamageCalculatorPage: React.FC = () => {
           abilities={state.p1.abilities}
           activeAbility={state.p1.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1', ability } })}
+          item={state.p1.item}
+          onItemChange={(item) => dispatch({ type: 'SET_ITEM', payload: { side: 'p1', item } })}
           activeWeather={state.weather}
           hpPercent={state.p1.hpPercent}
           onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val } })}
@@ -531,6 +540,8 @@ const DamageCalculatorPage: React.FC = () => {
           abilities={state.p2.abilities}
           activeAbility={state.p2.activeAbility}
           onAbilityChange={(ability) => dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: 'p2', ability } })}
+          item={state.p2.item}
+          onItemChange={(item) => dispatch({ type: 'SET_ITEM', payload: { side: 'p2', item } })}
           activeWeather={state.weather}
           hpPercent={state.p2.hpPercent}
           onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val } })}

@@ -1,6 +1,7 @@
 import React from 'react';
 import Typography from '@/components/atoms/Typography';
 import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
@@ -29,6 +30,8 @@ interface PokemonPanelProps {
   abilities: string[];
   activeAbility: string | null;
   onAbilityChange: (ability: string) => void;
+  item: string | null;
+  onItemChange: (item: string | null) => void;
   activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
   hpPercent: number;
   onHpPercentChange: (val: number) => void;
@@ -44,7 +47,9 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
   moveList, moves, onSelectMove, onClearMove,
-  abilities, activeAbility, onAbilityChange, activeWeather,
+  abilities, activeAbility, onAbilityChange,
+  item, onItemChange,
+  activeWeather,
   hpPercent, onHpPercentChange,
   type1, type2, onTypeChange,
   isTypeOverridden, onToggleTypeOverride
@@ -81,16 +86,21 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
               pokemonList={pokemonList} 
               onSelect={onSelectPokemon}
             />
+            <ItemSearchSelect
+              label="Hold Item"
+              selectedItem={item}
+              onSelect={onItemChange}
+            />
             <div className="flex items-center gap-2 justify-between">
               {selectedPokemon && (
                 <div className="flex gap-2">
                   <TypeBadge 
-                    type={isTypeOverridden ? type1 : selectedPokemon.type1} 
+                    type={(isTypeOverridden ? type1 : selectedPokemon.type1) || 'normal'} 
                     size="sm" 
                   /> 
                   {(isTypeOverridden ? type2 : selectedPokemon.type2) && (
                     <TypeBadge 
-                      type={isTypeOverridden ? type2 : selectedPokemon.type2} 
+                      type={(isTypeOverridden ? type2 : selectedPokemon.type2) || 'normal'} 
                       size="sm" 
                     />
                   )}
