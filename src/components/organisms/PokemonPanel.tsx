@@ -47,6 +47,8 @@ interface PokemonPanelProps {
   isFriendGuard: boolean;
   isTailwind: boolean;
   onToggleSideEffect: (effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind') => void;
+  movesForceCrit: boolean[];
+  onToggleMoveCrit: (index: number) => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
@@ -61,7 +63,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   type1, type2, onTypeChange,
   isTypeOverridden, onToggleTypeOverride,
   isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
-  onToggleSideEffect
+  onToggleSideEffect,
+  movesForceCrit, onToggleMoveCrit
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
   const pokemonTypes = [type1, type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
@@ -259,6 +262,21 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pl-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleMoveCrit(idx);
+                        }}
+                        className={`
+                          px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest transition-all border
+                          ${movesForceCrit[idx] 
+                            ? 'bg-red-500 border-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
+                            : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400'}
+                        `}
+                        title="Force Critical Hit"
+                      >
+                        Crit
+                      </button>
                       <div className="flex items-baseline gap-1">
                         <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
                         <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>

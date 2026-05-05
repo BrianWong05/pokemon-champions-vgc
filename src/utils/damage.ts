@@ -256,9 +256,9 @@ export const mapToSmogonField = (
   });
 };
 
-export const mapToSmogonMove = (moveName: string): Move => {
+export const mapToSmogonMove = (moveName: string, isCrit: boolean = false): Move => {
   const gen = Generations.get(9);
-  return new Move(gen, moveName);
+  return new Move(gen, moveName, { isCrit });
 };
 
 export const getStageMultiplier = (stage: number): number => {

@@ -43,6 +43,7 @@ interface SideState {
   isHelpingHand: boolean;
   isFriendGuard: boolean;
   isTailwind: boolean;
+  movesForceCrit: boolean[];
 }
 
 interface CalcState {
@@ -71,6 +72,7 @@ type CalcAction =
   | { type: 'SET_ACTIVE_ABILITY', payload: { side: 'p1' | 'p2', ability: string } }
   | { type: 'SET_ITEM', payload: { side: 'p1' | 'p2', item: string | null } }
   | { type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1' | 'p2', effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind' } }
+  | { type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
@@ -102,6 +104,7 @@ const initialSide: SideState = {
   isHelpingHand: false,
   isFriendGuard: false,
   isTailwind: false,
+  movesForceCrit: [false, false, false, false],
 };
 
 const initialState: CalcState = {
@@ -125,6 +128,13 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     case 'TOGGLE_SIDE_EFFECT': {
       const { side, effect } = action.payload;
       return { ...state, [side]: { ...state[side], [effect]: !state[side][effect] } };
+    }
+    case 'TOGGLE_MOVE_CRIT': {
+      const { side, index } = action.payload;
+      const current = state[side];
+      const newMovesForceCrit = [...current.movesForceCrit];
+      newMovesForceCrit[index] = !newMovesForceCrit[index];
+      return { ...state, [side]: { ...current, movesForceCrit: newMovesForceCrit } };
     }
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
@@ -359,7 +369,7 @@ const DamageCalculatorPage: React.FC = () => {
   const p2MaxHp = useMemo(() => calculateHP(state.p2.baseHp, state.p2.spHp), [state.p2]);
 
   const computeResults = (attacker: SideState, defender: SideState, defMaxHp: number) => {
-    return attacker.moves.map((moveData) => {
+    return attacker.moves.map((moveData, moveIdx) => {
       if (!moveData) return null;
 
       const atkBase = pokemonList.find(p => p.id === attacker.selectedId);
@@ -381,7 +391,8 @@ const DamageCalculatorPage: React.FC = () => {
         attacker,
         defender
       );
-      const move = mapToSmogonMove(moveData.nameEn);
+      const isCrit = attacker.movesForceCrit[moveIdx];
+      const move = mapToSmogonMove(moveData.nameEn, isCrit);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
       
@@ -550,6 +561,8 @@ const DamageCalculatorPage: React.FC = () => {
           isFriendGuard={state.p1.isFriendGuard}
           isTailwind={state.p1.isTailwind}
           onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1', effect } })}
+          movesForceCrit={state.p1.movesForceCrit}
+          onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p1', index } })}
         />
       }
       defenderPanel={
@@ -590,6 +603,8 @@ const DamageCalculatorPage: React.FC = () => {
           isFriendGuard={state.p2.isFriendGuard}
           isTailwind={state.p2.isTailwind}
           onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p2', effect } })}
+          movesForceCrit={state.p2.movesForceCrit}
+          onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p2', index } })}
         />
       }
     />
