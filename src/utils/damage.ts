@@ -255,6 +255,7 @@ export interface DamageResult {
   minPercent: number;
   maxPercent: number;
   moveName: string;
+  moveNameZh: string | null;
   moveType: number;
   originalType: number;
   isStab: boolean;

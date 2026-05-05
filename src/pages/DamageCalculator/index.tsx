@@ -443,6 +443,7 @@ const DamageCalculatorPage: React.FC = () => {
         minPercent: Math.floor((minDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
         maxPercent: Math.floor((maxDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
         moveName: moveData.nameEn,
+        moveNameZh: moveData.nameZh,
         moveType: calcMoveTypeId,
         originalType: moveData.typeId,
         isStab,

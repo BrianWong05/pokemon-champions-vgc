@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Layout Structure
 The UI SHALL use a top-down structure where results are at the top and configuration panels are at the bottom.
@@ -53,3 +53,16 @@ The UI SHALL display the incoming impact range using the exact minimum and maxim
 #### Scenario: Displaying calculated bounds
 - **WHEN** the Results Panel renders a damage calculation
 - **THEN** it SHALL format and display the minimum and maximum percentage bounds exactly as provided by the damage utility wrapper (derived from Smogon).
+
+## ADDED Requirements
+
+### Requirement: Multilingual Move Search
+The move selection interface SHALL support searching by both English and Chinese names and SHALL display both in the results list.
+
+#### Scenario: Searching for move in Chinese
+- **WHEN** the user types "十萬伏特" in the move search field
+- **THEN** the system SHALL display "Thunderbolt" (十萬伏特) in the search results.
+
+#### Scenario: Displaying Chinese name in Assessment
+- **WHEN** a move is selected and damage is calculated
+- **THEN** the damage assessment list in the Results Panel SHALL display the move's Chinese name alongside its English name.

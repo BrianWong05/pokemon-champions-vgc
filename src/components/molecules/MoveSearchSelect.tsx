@@ -72,7 +72,8 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
               >
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-gray-900">{m.nameEn}</span>
-                  <span className="text-[10px] text-gray-500 uppercase font-black">{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
+                  {m.nameZh && <span className="text-[10px] text-gray-500 font-medium">{m.nameZh}</span>}
+                  <span className="text-[10px] text-gray-400 uppercase font-black">{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                    <span className="text-xs font-bold text-gray-400">Pwr: {m.power || '--'}</span>

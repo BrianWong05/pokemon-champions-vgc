@@ -238,7 +238,10 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                 {move ? (
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col min-w-0">
-                      <span className="text-sm font-bold text-blue-900 leading-tight truncate">{move.nameEn}</span>
+                      <div className="flex items-baseline gap-2 overflow-hidden">
+                        <span className="text-sm font-bold text-blue-900 leading-tight truncate">{move.nameEn}</span>
+                        {move.nameZh && <span className="text-[10px] font-medium text-blue-900/60 truncate">{move.nameZh}</span>}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <TypeBadge type={REVERSE_TYPE_IDS[move.typeId] || 'normal'} size="sm" className="scale-[0.8] origin-left" />
                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter bg-gray-50 px-1 rounded border border-gray-100">

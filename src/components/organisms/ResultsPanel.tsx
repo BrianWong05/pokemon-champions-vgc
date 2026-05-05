@@ -9,6 +9,7 @@ export interface DamageResult {
   minPercent: number;
   maxPercent: number;
   moveName: string;
+  moveNameZh: string | null;
   moveType: number;
   originalType: number;
   isStab: boolean;
@@ -135,10 +136,11 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-col flex-1 min-w-0">
-                    <div className="font-black text-xs text-gray-400 uppercase tracking-widest leading-none mb-2 group-hover:text-blue-400 transition-colors">
-                      {result.moveName}
+                    <div className="font-black text-xs text-gray-400 uppercase tracking-widest leading-none mb-2 group-hover:text-blue-400 transition-colors flex items-baseline gap-2">
+                      <span className="truncate">{result.moveName}</span>
+                      {result.moveNameZh && <span className="text-[10px] font-medium text-gray-500 truncate">{result.moveNameZh}</span>}
                       {result.moveType !== result.originalType && (
-                        <span className="ml-2 text-blue-500 text-[10px]">
+                        <span className="ml-auto text-blue-500 text-[10px]">
                           ({REVERSE_TYPE_IDS[result.moveType]})
                         </span>
                       )}
