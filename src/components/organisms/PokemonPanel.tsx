@@ -75,8 +75,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   const allTypes = Object.keys(TYPE_IDS);
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
-      <div className="space-y-4">
+    <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 space-y-4 h-full">
+      <div className="space-y-3">
         <div className="flex justify-between items-center">
           <Typography variant="h2" className="flex items-center gap-2">
             <span className={`w-2 h-8 ${sideColor} rounded-full inline-block`} />
@@ -84,25 +84,31 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
           </Typography>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden shrink-0">
             {selectedId ? (
               <PokemonImage id={selectedId} name={title} className="w-14 h-14" />
             ) : (
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
             )}
           </div>
-          <div className="flex-1 space-y-2">
-            <PokemonSearchSelect 
-              label={`Select ${title}`} 
-              pokemonList={pokemonList} 
-              onSelect={onSelectPokemon}
-            />
-            <ItemSearchSelect
-              label="Hold Item"
-              selectedItem={item}
-              onSelect={onItemChange}
-            />
+          <div className="flex-1 space-y-1.5">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <PokemonSearchSelect 
+                  label={`Select ${title}`} 
+                  pokemonList={pokemonList} 
+                  onSelect={onSelectPokemon}
+                />
+              </div>
+              <div className="flex-1">
+                <ItemSearchSelect
+                  label="Hold Item"
+                  selectedItem={item}
+                  onSelect={onItemChange}
+                />
+              </div>
+            </div>
             <div className="flex items-center gap-2 justify-between">
               {selectedPokemon && (
                 <div className="flex gap-2">
@@ -134,7 +140,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
         </div>
 
         {selectedId && (
-          <div className={`p-3 rounded-xl border transition-all space-y-2 ${isTypeOverridden ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+          <div className={`p-2 rounded-xl border transition-all space-y-1.5 ${isTypeOverridden ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
             <div className="flex justify-between items-center">
               <label className="flex items-center gap-2 cursor-pointer group">
                 <input 
@@ -181,7 +187,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
         )}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         <StatGrid 
           stats={{
             hp: { base: stats.baseHp, sp: stats.spHp },
@@ -204,41 +210,55 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
         />
       </div>
 
-      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 space-y-3">
-        <div className="flex justify-between items-center">
-          <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[9px] font-black">Current HP %</Typography>
-          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+      <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100 flex items-center gap-3">
+        <div className="flex flex-col min-w-[70px]">
+          <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[8px] font-black leading-tight mb-0.5">Current HP</Typography>
+          <span className="text-[9px] font-black text-indigo-600">
             {currentHp} / {maxHp} HP
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <input 
-            type="range" 
-            min="1" 
-            max="100" 
-            value={hpPercent} 
-            onChange={(e) => onHpPercentChange(parseInt(e.target.value, 10))}
-            className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-          />
+        <input 
+          type="range" 
+          min="0" 
+          max="100" 
+          value={Math.round(hpPercent)} 
+          onChange={(e) => onHpPercentChange(parseInt(e.target.value, 10))}
+          className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+        />
+        <div className="flex items-center gap-1">
           <input 
             type="number" 
-            min="1" 
-            max="100" 
-            value={hpPercent} 
-            onChange={(e) => onHpPercentChange(Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
-            className="w-12 bg-white border border-gray-200 text-center text-[10px] font-black text-indigo-600 rounded p-1 outline-none focus:border-indigo-400 transition-colors"
+            min="0" 
+            max={maxHp} 
+            value={currentHp} 
+            onChange={(e) => {
+              const targetHp = Math.min(maxHp, Math.max(0, parseInt(e.target.value, 10) || 0));
+              onHpPercentChange((targetHp / maxHp) * 100);
+            }}
+            className="w-10 bg-white border border-gray-200 text-center text-[10px] font-black text-indigo-600 rounded py-0.5 px-0.5 outline-none focus:border-indigo-400 transition-colors"
           />
+          <span className="text-[9px] font-black text-gray-400 mr-1">/ {maxHp}</span>
+          
+          <input 
+            type="number" 
+            min="0" 
+            max="100" 
+            value={Math.round(hpPercent)} 
+            onChange={(e) => onHpPercentChange(Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+            className="w-9 bg-white border border-gray-200 text-center text-[10px] font-black text-indigo-600 rounded py-0.5 px-0.5 outline-none focus:border-indigo-400 transition-colors"
+          />
+          <span className="text-[9px] font-black text-gray-400">%</span>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <Typography variant="label" className="text-gray-400 block mb-1 uppercase tracking-widest text-[10px] font-black">Move Pool Selection</Typography>
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 gap-1.5">
           {moves.map((move, idx) => (
             <div 
               key={idx} 
               className={`
-                p-3 rounded-xl border transition-all flex items-center gap-3
+                p-2 rounded-xl border transition-all flex items-center gap-2
                 ${move ? 'border-gray-200 bg-white shadow-sm' : 'border-gray-100 bg-gray-50/30'}
               `}
             >
@@ -309,9 +329,9 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
         </div>
       </div>
 
-      <div className="space-y-3 pt-2 border-t border-gray-50">
+      <div className="space-y-2 pt-2 border-t border-gray-50">
         <Typography variant="label" className="text-gray-400 block mb-1 uppercase tracking-widest text-[10px] font-black">Support & Field Effects</Typography>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
           {[
             { id: 'isReflect', label: 'Reflect', value: isReflect },
             { id: 'isLightScreen', label: 'Light Screen', value: isLightScreen },

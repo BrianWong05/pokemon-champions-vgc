@@ -35,7 +35,7 @@ const StatRow: React.FC<StatRowProps> = ({
   const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityResult.modifier);
 
   return (
-    <div className="grid grid-cols-10 gap-2 items-center py-1">
+    <div className="grid grid-cols-10 gap-2 items-center py-0.5">
       {/* 1. Stat Label (1 col) */}
       <div className="col-span-1 text-xs font-bold text-gray-500 uppercase">{label}</div>
       
@@ -68,47 +68,45 @@ const StatRow: React.FC<StatRowProps> = ({
         />
       </div>
 
-      {/* 5. Nature (2 cols) */}
       <div className="col-span-2 flex justify-center">
         {!isHp && onToggleNature ? (
           <div className="flex gap-1">
             <button
               onClick={() => onToggleNature(statKey, '+')}
-              className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-black transition-colors ${isBoosted ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+              className={`w-4 h-4 flex items-center justify-center rounded text-[9px] font-black transition-colors ${isBoosted ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
             >
               +
             </button>
             <button
               onClick={() => onToggleNature(statKey, '-')}
-              className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-black transition-colors ${isHindered ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+              className={`w-4 h-4 flex items-center justify-center rounded text-[9px] font-black transition-colors ${isHindered ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
             >
               -
             </button>
           </div>
-        ) : <div className="h-5" />}
+        ) : <div className="h-4" />}
       </div>
 
-      {/* 6. Stage (1 col) */}
       <div className="col-span-1 flex justify-center">
         {!isHp && onStageChange ? (
-          <div className="flex items-center bg-gray-100 rounded px-1 py-0.5">
+          <div className="flex items-center bg-gray-100 rounded px-0.5 py-px">
             <button 
               onClick={() => onStageChange(statKey, stage - 1)}
-              className="text-[10px] font-black text-gray-400 hover:text-blue-500 px-0.5"
+              className="text-[9px] font-black text-gray-400 hover:text-blue-500 px-0.5"
             >
               «
             </button>
-            <span className={`text-[9px] font-black min-w-[18px] text-center ${stage > 0 ? 'text-green-500' : stage < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+            <span className={`text-[8px] font-black min-w-[16px] text-center ${stage > 0 ? 'text-green-500' : stage < 0 ? 'text-red-500' : 'text-gray-400'}`}>
               {stage > 0 ? `+${stage}` : stage}
             </span>
             <button 
               onClick={() => onStageChange(statKey, stage + 1)}
-              className="text-[10px] font-black text-gray-400 hover:text-green-500 px-0.5"
+              className="text-[9px] font-black text-gray-400 hover:text-green-500 px-0.5"
             >
               »
             </button>
           </div>
-        ) : <div className="h-5" />}
+        ) : <div className="h-4" />}
       </div>
 
       {/* 7. Total (1 col) */}
@@ -174,7 +172,7 @@ const StatGrid: React.FC<StatGridProps> = ({
         <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} stage={stages.spe} onSpChange={(val) => onSpChange('spSpe', val)} {...rowBaseProps} />
       </div>
 
-      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
+      <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-1">
         <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Total SP Used (Max 66)</span>
         <span className={`text-sm font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
           {totalSp} / 66
