@@ -35,6 +35,7 @@ interface SideState {
   abilities: string[];
   activeAbility: string | null;
   hpPercent: number;
+  isTypeOverridden: boolean;
 }
 
 interface CalcState {
@@ -66,7 +67,9 @@ type CalcAction =
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
   | { type: 'SET_HP_PERCENT', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
-  | { type: 'TOGGLE_GRAVITY' };
+  | { type: 'TOGGLE_GRAVITY' }
+  | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
+  | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -82,6 +85,7 @@ const initialSide: SideState = {
   abilities: [],
   activeAbility: null,
   hpPercent: 100,
+  isTypeOverridden: false,
 };
 
 const initialState: CalcState = {
@@ -108,6 +112,15 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       return { ...state, [action.payload]: !state[action.payload] };
     case 'TOGGLE_GRAVITY':
       return { ...state, isGravity: !state.isGravity };
+    case 'SET_TYPE': {
+      const { side, slot, type } = action.payload;
+      const typeKey = slot === 1 ? 'type1' : 'type2';
+      return { ...state, [side]: { ...state[side], [typeKey]: type } };
+    }
+    case 'TOGGLE_TYPE_OVERRIDE': {
+      const { side } = action.payload;
+      return { ...state, [side]: { ...state[side], isTypeOverridden: !state[side].isTypeOverridden } };
+    }
     case 'SET_HP_PERCENT': {
       const { side, val } = action.payload;
       return { ...state, [side]: { ...state[side], hpPercent: val } };
@@ -331,8 +344,8 @@ const DamageCalculatorPage: React.FC = () => {
       // If pokemon aren't selected yet, we can't calculate properly
       if (!atkBase || !defBase) return null;
 
-      const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn);
-      const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn);
+      const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn, atkBase.type1, atkBase.type2);
+      const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn, defBase.type1, defBase.type2);
       const field = mapToSmogonField(state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura, state.isAuraBreak, state.terrain, state.isGravity);
       const move = mapToSmogonMove(moveData.nameEn);
 
@@ -368,13 +381,18 @@ const DamageCalculatorPage: React.FC = () => {
 
       // Extract effectiveness dynamically
       let effectiveness = 1;
-      const defType1Id = defender.type1 ? TYPE_IDS[defender.type1.toLowerCase()] : null;
-      const defType2Id = defender.type2 ? TYPE_IDS[defender.type2.toLowerCase()] : null;
+      const activeDefType1 = defender.isTypeOverridden ? defender.type1 : defBase.type1;
+      const activeDefType2 = defender.isTypeOverridden ? defender.type2 : defBase.type2;
+      const defType1Id = activeDefType1 ? TYPE_IDS[activeDefType1.toLowerCase()] : null;
+      const defType2Id = activeDefType2 ? TYPE_IDS[activeDefType2.toLowerCase()] : null;
+      
       const calcMoveTypeId = TYPE_IDS[result.move.type.toLowerCase()] || moveData.typeId;
       effectiveness = calculateEffectiveness(efficacyMap, calcMoveTypeId, defType1Id, defType2Id);
 
-      const attackerType1Id = attacker.type1 ? TYPE_IDS[attacker.type1.toLowerCase()] : null;
-      const attackerType2Id = attacker.type2 ? TYPE_IDS[attacker.type2.toLowerCase()] : null;
+      const activeAtkType1 = attacker.isTypeOverridden ? attacker.type1 : atkBase.type1;
+      const activeAtkType2 = attacker.isTypeOverridden ? attacker.type2 : atkBase.type2;
+      const attackerType1Id = activeAtkType1 ? TYPE_IDS[activeAtkType1.toLowerCase()] : null;
+      const attackerType2Id = activeAtkType2 ? TYPE_IDS[activeAtkType2.toLowerCase()] : null;
       const isStab = calcMoveTypeId === attackerType1Id || calcMoveTypeId === attackerType2Id;
 
       const isImmune = result.damage === 0 || maxDamage === 0;
@@ -484,6 +502,11 @@ const DamageCalculatorPage: React.FC = () => {
           activeWeather={state.weather}
           hpPercent={state.p1.hpPercent}
           onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val } })}
+          type1={state.p1.type1}
+          type2={state.p1.type2}
+          onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p1', slot, type } })}
+          isTypeOverridden={state.p1.isTypeOverridden}
+          onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' } })}
         />
       }
       defenderPanel={
@@ -511,6 +534,11 @@ const DamageCalculatorPage: React.FC = () => {
           activeWeather={state.weather}
           hpPercent={state.p2.hpPercent}
           onHpPercentChange={(val) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val } })}
+          type1={state.p2.type1}
+          type2={state.p2.type2}
+          onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p2', slot, type } })}
+          isTypeOverridden={state.p2.isTypeOverridden}
+          onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p2' } })}
         />
       }
     />

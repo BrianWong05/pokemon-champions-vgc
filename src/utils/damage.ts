@@ -131,22 +131,24 @@ export const getStatModifier = (
   return { modifier, triggered };
 };
 
-export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon => {
+export const mapToSmogonPokemon = (
+  stateSide: any, 
+  pokemonName: string,
+  baseType1: string,
+  baseType2?: string | null
+): Pokemon => {
   const gen = Generations.get(9);
   
-  // Convert current HP percentage to actual HP value
-  const safeHpPercent = isNaN(stateSide.hpPercent) ? 100 : stateSide.hpPercent;
-  const maxHp = calculateHP(stateSide.baseHp, stateSide.spHp);
-  const currentHp = Math.floor(maxHp * (safeHpPercent / 100));
-
   const evs = {
-    hp: spToEv(stateSide.spHp),
-    atk: spToEv(stateSide.spAtk),
-    def: spToEv(stateSide.spDef),
-    spa: spToEv(stateSide.spSpa),
-    spd: spToEv(stateSide.spSpd),
-    spe: spToEv(stateSide.spSpe),
+    hp: stateSide.spHp || 0,
+    atk: stateSide.spAtk || 0,
+    def: stateSide.spDef || 0,
+    spa: stateSide.spSpa || 0,
+    spd: stateSide.spSpd || 0,
+    spe: stateSide.spSpe || 0,
   };
+
+  const currentHp = Math.floor(calculateHP(stateSide.baseHp, stateSide.spHp) * (stateSide.hpPercent / 100));
 
   const boosts = {
     atk: stateSide.stages.atk || 0,
@@ -156,21 +158,29 @@ export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon
     spe: stateSide.stages.spe || 0,
   };
 
-  const types = [stateSide.type1, stateSide.type2]
-    .filter(Boolean)
-    .map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
+  const t1 = stateSide.isTypeOverridden ? stateSide.type1 : baseType1;
+  const t2 = stateSide.isTypeOverridden ? stateSide.type2 : baseType2;
 
-  return new Pokemon(gen, pokemonName, {
+  const types = [t1, t2]
+    .filter(Boolean)
+    .filter(t => t!.toLowerCase() !== 'none')
+    .map(t => t!.charAt(0).toUpperCase() + t!.slice(1).toLowerCase());
+
+  // Use 'None' as species if overridden to prevent species-specific logic (like Garchomp's Ground immunity)
+  // from interfering with our manual type selection.
+  const effectiveName = stateSide.isTypeOverridden ? 'None' : pokemonName;
+
+  const p = new Pokemon(gen, effectiveName, {
     level: 50,
     ability: stateSide.activeAbility || undefined,
     nature: getNatureName(stateSide.boostedStat, stateSide.hinderedStat) as any,
     evs,
-    ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 }, // Assume max IVs for Level 50 calc mapping
+    ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
     boosts,
     curHP: currentHp,
     overrides: {
       types: types as any,
-      weightkg: 100, // Fallback weight to prevent NaN for moves like Grass Knot if species is unrecognized
+      weightkg: 100,
       baseStats: {
         hp: stateSide.baseHp,
         atk: stateSide.baseAtk,
@@ -181,6 +191,22 @@ export const mapToSmogonPokemon = (stateSide: any, pokemonName: string): Pokemon
       }
     }
   });
+
+  // Deep override: ensure the instance and its species reference use the overridden types
+  if (stateSide.isTypeOverridden) {
+    p.types = types as unknown as typeof p.types;
+    if (p.species) {
+      // Nuclear option: Shadow the species object entirely and change ID to prevent cached lookups
+      p.species = {
+        ...p.species,
+        id: 'custom' as any,
+        types: types,
+        name: pokemonName as any
+      } as any;
+    }
+  }
+  
+  return p;
 };
 
 export const mapToSmogonField = (

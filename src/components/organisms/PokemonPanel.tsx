@@ -5,7 +5,7 @@ import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
 import { calculateHP } from '@/utils/damage';
 
 interface PokemonPanelProps {
@@ -32,6 +32,11 @@ interface PokemonPanelProps {
   activeWeather: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow';
   hpPercent: number;
   onHpPercentChange: (val: number) => void;
+  type1: string | null;
+  type2: string | null;
+  onTypeChange: (slot: 1 | 2, type: string | null) => void;
+  isTypeOverridden: boolean;
+  onToggleTypeOverride: () => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
@@ -40,13 +45,17 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   stages, onStageChange,
   moveList, moves, onSelectMove, onClearMove,
   abilities, activeAbility, onAbilityChange, activeWeather,
-  hpPercent, onHpPercentChange
+  hpPercent, onHpPercentChange,
+  type1, type2, onTypeChange,
+  isTypeOverridden, onToggleTypeOverride
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
-  const pokemonTypes = selectedPokemon ? [selectedPokemon.type1, selectedPokemon.type2].filter((t): t is string => !!t).map(t => t.toLowerCase()) : [];
+  const pokemonTypes = [type1, type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
 
   const maxHp = calculateHP(stats.baseHp, stats.spHp);
   const currentHp = Math.floor(maxHp * (hpPercent / 100));
+
+  const allTypes = Object.keys(TYPE_IDS);
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 space-y-6 h-full">
@@ -75,8 +84,16 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
             <div className="flex items-center gap-2 justify-between">
               {selectedPokemon && (
                 <div className="flex gap-2">
-                  <TypeBadge type={selectedPokemon.type1} size="sm" /> 
-                  {selectedPokemon.type2 && <TypeBadge type={selectedPokemon.type2} size="sm" />}
+                  <TypeBadge 
+                    type={isTypeOverridden ? type1 : selectedPokemon.type1} 
+                    size="sm" 
+                  /> 
+                  {(isTypeOverridden ? type2 : selectedPokemon.type2) && (
+                    <TypeBadge 
+                      type={isTypeOverridden ? type2 : selectedPokemon.type2} 
+                      size="sm" 
+                    />
+                  )}
                 </div>
               )}
               {abilities.length > 0 && (
@@ -93,6 +110,53 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
             </div>
           </div>
         </div>
+
+        {selectedId && (
+          <div className={`p-3 rounded-xl border transition-all space-y-2 ${isTypeOverridden ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+            <div className="flex justify-between items-center">
+              <label className="flex items-center gap-2 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  checked={isTypeOverridden} 
+                  onChange={onToggleTypeOverride}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <Typography variant="label" className={`uppercase tracking-widest text-[8px] font-black transition-colors ${isTypeOverridden ? 'text-amber-700' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                  Manual Type Override
+                </Typography>
+              </label>
+              {isTypeOverridden && (
+                <Typography variant="body" className="text-[8px] font-bold text-amber-600/70 uppercase tracking-tighter italic animate-pulse">
+                  Calculation Active
+                </Typography>
+              )}
+            </div>
+            <div className="flex gap-1.5 items-center">
+              <select 
+                value={type1 || ''} 
+                onChange={(e) => onTypeChange(1, e.target.value)}
+                disabled={!isTypeOverridden}
+                className={`text-[9px] font-black uppercase tracking-widest border rounded px-1.5 py-1 outline-none transition-all ${isTypeOverridden ? 'bg-white border-amber-200 focus:border-amber-400' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
+              >
+                {allTypes.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <span className={`text-[8px] font-bold ${isTypeOverridden ? 'text-amber-200' : 'text-gray-300'}`}>/</span>
+              <select 
+                value={type2 || 'none'} 
+                onChange={(e) => onTypeChange(2, e.target.value === 'none' ? null : e.target.value)}
+                disabled={!isTypeOverridden}
+                className={`text-[9px] font-black uppercase tracking-widest border rounded px-1.5 py-1 outline-none transition-all ${isTypeOverridden ? 'bg-white border-amber-200 focus:border-amber-400' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
+              >
+                <option value="none">NONE</option>
+                {allTypes.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
