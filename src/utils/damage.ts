@@ -256,9 +256,25 @@ export const mapToSmogonField = (
   });
 };
 
-export const mapToSmogonMove = (moveName: string, isCrit: boolean = false): Move => {
+export const mapToSmogonMove = (moveName: string, isCrit: boolean = false, hits?: number): Move => {
   const gen = Generations.get(9);
-  return new Move(gen, moveName, { isCrit });
+  return new Move(gen, moveName, { isCrit, hits });
+};
+
+export const isMultiHitMove = (moveName: string): boolean => {
+  if (!moveName) return false;
+  
+  // Explicit fallback for common multi-hit moves to ensure UI responsiveness
+  const multiHitRegex = /Bullet Seed|Icicle Spear|Rock Blast|Pin Missile|Tail Slap|Arm Thrust|Fury Swipes|Population Bomb|Triple Axel|Dual Wingbeat|Surging Strikes|Water Shuriken|Bonemerang|Bone Rush|Gear Grind|Double Hit|Double Iron Bash|Dual Chop/i;
+  if (multiHitRegex.test(moveName)) return true;
+
+  try {
+    const gen = Generations.get(9);
+    const move = new Move(gen, moveName);
+    return !!move.multihit;
+  } catch (e) {
+    return false;
+  }
 };
 
 export const getStageMultiplier = (stage: number): number => {

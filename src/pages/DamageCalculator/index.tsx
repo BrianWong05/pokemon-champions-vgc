@@ -44,6 +44,7 @@ interface SideState {
   isFriendGuard: boolean;
   isTailwind: boolean;
   movesForceCrit: boolean[];
+  movesHits: number[];
 }
 
 interface CalcState {
@@ -73,6 +74,7 @@ type CalcAction =
   | { type: 'SET_ITEM', payload: { side: 'p1' | 'p2', item: string | null } }
   | { type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1' | 'p2', effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind' } }
   | { type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p1' | 'p2', index: number } }
+  | { type: 'SET_MOVE_HITS', payload: { side: 'p1' | 'p2', index: number, val: number } }
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
@@ -105,6 +107,7 @@ const initialSide: SideState = {
   isFriendGuard: false,
   isTailwind: false,
   movesForceCrit: [false, false, false, false],
+  movesHits: [3, 3, 3, 3],
 };
 
 const initialState: CalcState = {
@@ -135,6 +138,13 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       const newMovesForceCrit = [...current.movesForceCrit];
       newMovesForceCrit[index] = !newMovesForceCrit[index];
       return { ...state, [side]: { ...current, movesForceCrit: newMovesForceCrit } };
+    }
+    case 'SET_MOVE_HITS': {
+      const { side, index, val } = action.payload;
+      const current = state[side];
+      const newMovesHits = [...current.movesHits];
+      newMovesHits[index] = val;
+      return { ...state, [side]: { ...current, movesHits: newMovesHits } };
     }
     case 'SET_WEATHER':
       return { ...state, weather: action.payload };
@@ -238,7 +248,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           activeMoveIndex: 0,
           abilities: [],
           activeAbility: null,
-          hpPercent: 100
+          hpPercent: 100,
+          movesHits: [3, 3, 3, 3]
         }
       };
     }
@@ -392,7 +403,8 @@ const DamageCalculatorPage: React.FC = () => {
         defender
       );
       const isCrit = attacker.movesForceCrit[moveIdx];
-      const move = mapToSmogonMove(moveData.nameEn, isCrit);
+      const hits = attacker.movesHits[moveIdx];
+      const move = mapToSmogonMove(moveData.nameEn, isCrit, hits);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
       
@@ -563,6 +575,8 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p1', effect } })}
           movesForceCrit={state.p1.movesForceCrit}
           onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p1', index } })}
+          movesHits={state.p1.movesHits}
+          onUpdateMoveHits={(index, val) => dispatch({ type: 'SET_MOVE_HITS', payload: { side: 'p1', index, val } })}
         />
       }
       defenderPanel={
@@ -605,6 +619,8 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side: 'p2', effect } })}
           movesForceCrit={state.p2.movesForceCrit}
           onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p2', index } })}
+          movesHits={state.p2.movesHits}
+          onUpdateMoveHits={(index, val) => dispatch({ type: 'SET_MOVE_HITS', payload: { side: 'p2', index, val } })}
         />
       }
     />

@@ -8,7 +8,7 @@ import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
-import { calculateHP } from '@/utils/damage';
+import { calculateHP, isMultiHitMove } from '@/utils/damage';
 
 interface PokemonPanelProps {
   title: string;
@@ -50,6 +50,8 @@ interface PokemonPanelProps {
   onToggleSideEffect: (effect: 'isReflect' | 'isLightScreen' | 'isAuroraVeil' | 'isHelpingHand' | 'isFriendGuard' | 'isTailwind') => void;
   movesForceCrit: boolean[];
   onToggleMoveCrit: (index: number) => void;
+  movesHits: number[];
+  onUpdateMoveHits: (index: number, val: number) => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
@@ -65,7 +67,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   isTypeOverridden, onToggleTypeOverride,
   isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
   onToggleSideEffect,
-  movesForceCrit, onToggleMoveCrit
+  movesForceCrit, onToggleMoveCrit,
+  movesHits, onUpdateMoveHits
 }) => {
   const selectedPokemon = pokemonList.find(p => p.id === selectedId);
   const pokemonTypes = [type1, type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
@@ -285,7 +288,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 pl-2">
+                    <div className="flex items-center gap-1.5 pl-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -301,6 +304,21 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
                       >
                         Crit
                       </button>
+
+                      {move && isMultiHitMove(move.nameEn) && (
+                        <div className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">
+                          <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">Hits</span>
+                          <input 
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={movesHits[idx]}
+                            onChange={(e) => onUpdateMoveHits(idx, parseInt(e.target.value, 10) || 1)}
+                            className="w-7 bg-transparent text-[10px] font-black text-indigo-700 text-center outline-none"
+                          />
+                        </div>
+                      )}
+
                       <div className="flex items-baseline gap-1">
                         <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
                         <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
