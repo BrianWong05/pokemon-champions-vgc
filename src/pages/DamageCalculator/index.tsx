@@ -10,6 +10,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
 import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { POKEMON_PRESETS, PokemonPreset, getNatureStats } from '@/utils/pokemon-presets';
 
 interface SideState {
   selectedId: number | null;
@@ -82,7 +83,8 @@ type CalcAction =
   | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
   | { type: 'TOGGLE_GRAVITY' }
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
-  | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } };
+  | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
+  | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -309,6 +311,40 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         } 
       };
     }
+    case 'APPLY_PRESET': {
+      const { side, pokemon: p, abilities, movesData, preset, natureStats } = action.payload;
+      return {
+        ...state,
+        [side]: {
+          ...state[side],
+          selectedId: p.id,
+          type1: p.type1,
+          type2: p.type2,
+          baseHp: p.baseHp,
+          baseAtk: p.baseAttack,
+          baseDef: p.baseDefense,
+          baseSpa: p.baseSpAtk,
+          baseSpd: p.baseSpDef,
+          baseSpe: p.baseSpeed,
+          boostedStat: natureStats.boostedStat,
+          hinderedStat: natureStats.hinderedStat,
+          stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+          moves: movesData,
+          activeMoveIndex: 0,
+          abilities: abilities,
+          activeAbility: preset.ability && abilities.includes(preset.ability) ? preset.ability : (abilities[0] || null),
+          item: preset.item,
+          spHp: preset.sp.hp,
+          spAtk: preset.sp.atk,
+          spDef: preset.sp.def,
+          spSpa: preset.sp.spa,
+          spSpd: preset.sp.spd,
+          spSpe: preset.sp.spe,
+          hpPercent: 100,
+          movesHits: [3, 3, 3, 3]
+        }
+      }
+    }
     default: return state;
   }
 }
@@ -334,9 +370,50 @@ const DamageCalculatorPage: React.FC = () => {
 
       const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
       dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
+      return abilityNames;
     } catch (error) {
       console.error('Failed to fetch abilities:', error);
+      return [];
     }
+  };
+
+  const handleSelectPreset = async (side: 'p1' | 'p2', preset: PokemonPreset) => {
+    const p = pokemonList.find(p => p.nameEn === preset.pokemonName);
+    if (!p) return;
+    
+    // We need abilities from DB first to ensure the active ability is set correctly if it's in the list
+    let abilityNames: string[] = [];
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {
+      console.error('Failed to fetch abilities for preset:', e);
+    }
+
+    const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
+    const natureStats = getNatureStats(preset.nature);
+
+    // Provide default empty arrays if moves list is short
+    while (movesData.length < 4) {
+      movesData.push(null);
+    }
+
+    dispatch({
+      type: 'APPLY_PRESET',
+      payload: {
+        side,
+        pokemon: p,
+        abilities: abilityNames,
+        movesData: movesData.slice(0, 4),
+        preset,
+        natureStats
+      }
+    });
   };
 
   useEffect(() => {
@@ -543,6 +620,7 @@ const DamageCalculatorPage: React.FC = () => {
           pokemonList={pokemonList}
           selectedId={state.p1.selectedId}
           onSelectPokemon={(p) => handleSelectPokemon('p1', p)}
+          onSelectPreset={(preset) => handleSelectPreset('p1', preset)}
           stats={state.p1}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
           boostedStat={state.p1.boostedStat}
@@ -587,6 +665,7 @@ const DamageCalculatorPage: React.FC = () => {
           pokemonList={pokemonList}
           selectedId={state.p2.selectedId}
           onSelectPokemon={(p) => handleSelectPokemon('p2', p)}
+          onSelectPreset={(preset) => handleSelectPreset('p2', preset)}
           stats={state.p2}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
           boostedStat={state.p2.boostedStat}

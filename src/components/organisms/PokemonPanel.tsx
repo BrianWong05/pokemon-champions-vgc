@@ -9,6 +9,7 @@ import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
 import { calculateHP, isMultiHitMove } from '@/utils/damage';
+import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
 
 interface PokemonPanelProps {
   title: string;
@@ -17,6 +18,7 @@ interface PokemonPanelProps {
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
+  onSelectPreset?: (preset: PokemonPreset) => void;
   stats: any;
   onSpChange: (key: string, val: number) => void;
   boostedStat: string | null;
@@ -55,7 +57,7 @@ interface PokemonPanelProps {
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = ({
-  title, sideColor, side, pokemonList, selectedId, onSelectPokemon,
+  title, sideColor, side, pokemonList, selectedId, onSelectPokemon, onSelectPreset,
   stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
   stages, onStageChange,
   moveList, moves, onSelectMove, onClearMove,
@@ -77,6 +79,10 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
   const currentHp = Math.floor(maxHp * (hpPercent / 100));
 
   const allTypes = Object.keys(TYPE_IDS);
+  
+  const availablePresets = selectedPokemon 
+    ? POKEMON_PRESETS.filter(p => p.pokemonName === selectedPokemon.nameEn)
+    : [];
 
   return (
     <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 space-y-4 h-full">
@@ -86,6 +92,25 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
             <span className={`w-2 h-8 ${sideColor} rounded-full inline-block`} />
             {title}
           </Typography>
+          
+          {onSelectPreset && selectedPokemon && availablePresets.length > 0 && (
+            <select
+              className="text-xs border border-gray-200 rounded px-2 py-1 bg-gray-50 outline-none focus:border-blue-400"
+              onChange={(e) => {
+                const preset = availablePresets.find(p => p.id === e.target.value);
+                if (preset) {
+                  onSelectPreset(preset);
+                  e.target.value = ""; // reset to default option
+                }
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>Load Preset...</option>
+              {availablePresets.map(preset => (
+                <option key={preset.id} value={preset.id}>{preset.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
