@@ -4,9 +4,13 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 const Layout: React.FC = () => {
   const location = useLocation();
 
-  const getLinkClass = (path: string) => {
+  const getLinkClass = (path: string, exact: boolean = true) => {
     const baseClass = "px-4 py-2 rounded-md transition-colors";
-    return location.pathname === path 
+    const isActive = exact 
+      ? location.pathname === path 
+      : location.pathname.startsWith(path);
+      
+    return isActive 
       ? `${baseClass} bg-blue-700 text-white font-semibold`
       : `${baseClass} text-blue-100 hover:bg-blue-600`;
   };
@@ -19,6 +23,9 @@ const Layout: React.FC = () => {
           <nav className="flex gap-2">
             <Link to="/" className={getLinkClass('/')}>
               Damage Calculator
+            </Link>
+            <Link to="/teams" className={getLinkClass('/teams', false)}>
+              Teams
             </Link>
             <Link to="/ev-converter" className={getLinkClass('/ev-converter')}>
               EV/SP Converter

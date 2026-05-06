@@ -26,7 +26,7 @@ export const POKEMON_PRESETS: PokemonPreset[] = [
     nature: "Careful",
     sp: { hp: 32, atk: 0, def: 12, spa: 0, spd: 32, spe: 0 },
     moves: ["Knock Off", "Parting Shot", "Flare Blitz", "Fake Out"],
-  },,
+  },
   {
     id: "sneasler-white-herb",
     name: "Sneasler (White Herb)",

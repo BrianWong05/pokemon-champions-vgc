@@ -223,3 +223,29 @@ export const pokemonAbilitiesRelations = relations(pokemonAbilities, ({ one }) =
     references: [abilities.id],
   }),
 }));
+
+export const teams = sqliteTable('teams', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const teamMembers = sqliteTable('team_members', {
+  id: text('id').primaryKey(),
+  teamId: text('team_id')
+    .notNull()
+    .references(() => teams.id, { onDelete: 'cascade' }),
+  configuration: text('configuration', { mode: 'json' }).notNull(),
+  order: integer('order').notNull(),
+});
+
+export const teamsRelations = relations(teams, ({ many }) => ({
+  members: many(teamMembers),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+}));
