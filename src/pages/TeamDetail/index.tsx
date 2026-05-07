@@ -12,6 +12,7 @@ import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import Typography from '@/components/atoms/Typography';
+import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -232,13 +233,15 @@ const TeamDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-50">
+              <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-gray-50 mb-4">
                 {member.configuration.moves.map((move, mIdx) => (
                   <div key={mIdx} className="text-[10px] font-black text-gray-400 truncate bg-gray-50 px-2 py-1 rounded-lg">
                     {move?.nameEn || '-'}
                   </div>
                 ))}
               </div>
+
+              <TeamMemberStatDisplay config={member.configuration} />
             </div>
             <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between">
               <button
