@@ -10,7 +10,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
 import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { POKEMON_PRESETS, PokemonPreset, getNatureStats } from '@/utils/pokemon-presets';
+import { POKEMON_PRESETS, PokemonPreset, getNatureStats, getNatureFromStats } from '@/utils/pokemon-presets';
 
 interface SideState {
   selectedId: number | null;
@@ -30,6 +30,7 @@ interface SideState {
   spSpe: number;
   boostedStat: string | null;
   hinderedStat: string | null;
+  nature: string;
   stages: Record<string, number>;
   moves: (MoveData | null)[];
   activeMoveIndex: number;
@@ -62,6 +63,7 @@ interface CalcState {
 
 type CalcAction = 
   | { type: 'SET_SP', payload: { side: 'p1' | 'p2', key: string, val: number } }
+  | { type: 'SET_NATURE', payload: { side: 'p1' | 'p2', nature: string } }
   | { type: 'TOGGLE_NATURE', payload: { side: 'p1' | 'p2', stat: string, mod: '+' | '-' } }
   | { type: 'SET_STAT_STAGE', payload: { side: 'p1' | 'p2', stat: string, val: number } }
   | { type: 'SET_MOVE_POWER', payload: { side: 'p1' | 'p2', val: number } }
@@ -80,7 +82,7 @@ type CalcAction =
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
   | { type: 'SET_HP_PERCENT', payload: { side: 'p1' | 'p2', val: number } }
-  | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
+  | { type: 'TOGGLE_FIELD_Aura', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
   | { type: 'TOGGLE_GRAVITY' }
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
@@ -94,6 +96,7 @@ const initialSide: SideState = {
   spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
   boostedStat: null,
   hinderedStat: null,
+  nature: 'Hardy',
   stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moves: [null, null, null, null],
   activeMoveIndex: 0,
@@ -130,6 +133,19 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       const { side, item } = action.payload;
       return { ...state, [side]: { ...state[side], item } };
     }
+    case 'SET_NATURE': {
+      const { side, nature } = action.payload;
+      const stats = getNatureStats(nature);
+      return { 
+        ...state, 
+        [side]: { 
+          ...state[side], 
+          nature, 
+          boostedStat: stats.boostedStat, 
+          hinderedStat: stats.hinderedStat 
+        } 
+      };
+    }
     case 'TOGGLE_SIDE_EFFECT': {
       const { side, effect } = action.payload;
       return { ...state, [side]: { ...state[side], [effect]: !state[side][effect] } };
@@ -147,29 +163,6 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
       const newMovesHits = [...current.movesHits];
       newMovesHits[index] = val;
       return { ...state, [side]: { ...current, movesHits: newMovesHits } };
-    }
-    case 'SET_WEATHER':
-      return { ...state, weather: action.payload };
-    case 'SET_TERRAIN':
-      return { ...state, terrain: action.payload };
-    case 'SET_SPREAD_TARGET':
-      return { ...state, isSpreadTarget: action.payload };
-    case 'TOGGLE_FIELD_AURA':
-      return { ...state, [action.payload]: !state[action.payload] };
-    case 'TOGGLE_GRAVITY':
-      return { ...state, isGravity: !state.isGravity };
-    case 'SET_TYPE': {
-      const { side, slot, type } = action.payload;
-      const typeKey = slot === 1 ? 'type1' : 'type2';
-      return { ...state, [side]: { ...state[side], [typeKey]: type } };
-    }
-    case 'TOGGLE_TYPE_OVERRIDE': {
-      const { side } = action.payload;
-      return { ...state, [side]: { ...state[side], isTypeOverridden: !state[side].isTypeOverridden } };
-    }
-    case 'SET_HP_PERCENT': {
-      const { side, val } = action.payload;
-      return { ...state, [side]: { ...state[side], hpPercent: val } };
     }
     case 'SET_SP': {
       const { side, key, val } = action.payload;
@@ -197,43 +190,20 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         }
       }
 
-      return { ...state, [side]: { ...state[side], boostedStat: newBoosted, hinderedStat: newHindered } };
+      const newNature = getNatureFromStats(newBoosted, newHindered);
+      return { ...state, [side]: { ...current, boostedStat: newBoosted, hinderedStat: newHindered, nature: newNature } };
     }
     case 'SET_STAT_STAGE': {
       const { side, stat, val } = action.payload;
-      const clampedVal = Math.min(6, Math.max(-6, val));
-      return {
-        ...state,
-        [side]: {
-          ...state[side],
-          stages: { ...state[side].stages, [stat]: clampedVal }
-        }
-      };
-    }
-    case 'SET_MOVE_POWER': {
-      const { side, val } = action.payload;
-      const newMoves = [...state[side].moves];
-      const activeMove = newMoves[state[side].activeMoveIndex];
-      if (activeMove) {
-        newMoves[state[side].activeMoveIndex] = { ...activeMove, power: val };
-      }
-      return { ...state, [side]: { ...state[side], moves: newMoves } };
-    }
-    case 'SET_MOVE_CATEGORY': {
-      const { side, val } = action.payload;
-      const newMoves = [...state[side].moves];
-      const activeMove = newMoves[state[side].activeMoveIndex];
-      if (activeMove) {
-        newMoves[state[side].activeMoveIndex] = { ...activeMove, damageClassId: val === 'physical' ? 2 : 3 };
-      }
-      return { ...state, [side]: { ...state[side], moves: newMoves } };
+      const newStages = { ...state[side].stages, [stat]: Math.min(6, Math.max(-6, val)) };
+      return { ...state, [side]: { ...state[side], stages: newStages } };
     }
     case 'SELECT_POKEMON': {
       const { side, pokemon: p } = action.payload;
       return {
         ...state,
         [side]: {
-          ...state[side],
+          ...initialSide,
           selectedId: p.id,
           type1: p.type1,
           type2: p.type2,
@@ -243,6 +213,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           baseSpa: p.baseSpAtk,
           baseSpd: p.baseSpDef,
           baseSpe: p.baseSpeed,
+          spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
           boostedStat: null,
           hinderedStat: null,
           stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
@@ -251,9 +222,26 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           abilities: [],
           activeAbility: null,
           hpPercent: 100,
+          nature: 'Hardy',
           movesHits: [3, 3, 3, 3]
         }
       };
+    }
+    case 'SELECT_MOVE_FOR_SLOT': {
+      const { side, index, move } = action.payload;
+      const newMoves = [...state[side].moves];
+      newMoves[index] = move;
+      return { ...state, [side]: { ...state[side], moves: newMoves, activeMoveIndex: index } };
+    }
+    case 'CLEAR_MOVE_SLOT': {
+      const { side, index } = action.payload;
+      const newMoves = [...state[side].moves];
+      newMoves[index] = null;
+      return { ...state, [side]: { ...state[side], moves: newMoves } };
+    }
+    case 'SET_ACTIVE_MOVE_SLOT': {
+      const { side, index } = action.payload;
+      return { ...state, [side]: { ...state[side], activeMoveIndex: index } };
     }
     case 'SET_ABILITIES': {
       const { side, abilities } = action.payload;
@@ -268,55 +256,32 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
     }
     case 'SET_ACTIVE_ABILITY': {
       const { side, ability } = action.payload;
-      return {
-        ...state,
-        [side]: {
-          ...state[side],
-          activeAbility: ability
-        }
-      };
+      return { ...state, [side]: { ...state[side], activeAbility: ability } };
     }
-    case 'SELECT_MOVE_FOR_SLOT': {
-      const { side, index, move } = action.payload;
-      const newMoves = [...state[side].moves];
-      newMoves[index] = move;
-      return { 
-        ...state, 
-        [side]: { 
-          ...state[side], 
-          moves: newMoves, 
-          activeMoveIndex: index 
-        } 
-      };
+    case 'SET_WEATHER': return { ...state, weather: action.payload };
+    case 'SET_TERRAIN': return { ...state, terrain: action.payload };
+    case 'SET_SPREAD_TARGET': return { ...state, isSpreadTarget: action.payload };
+    case 'SET_HP_PERCENT': {
+      const { side, val } = action.payload;
+      return { ...state, [side]: { ...state[side], hpPercent: val } };
     }
-    case 'CLEAR_MOVE_SLOT': {
-      const { side, index } = action.payload;
-      const newMoves = [...state[side].moves];
-      newMoves[index] = null;
-      return { 
-        ...state, 
-        [side]: { 
-          ...state[side], 
-          moves: newMoves 
-        } 
-      };
+    case 'TOGGLE_FIELD_AURA': return { ...state, [action.payload]: !state[action.payload] };
+    case 'TOGGLE_GRAVITY': return { ...state, isGravity: !state.isGravity };
+    case 'SET_TYPE': {
+      const { side, slot, type } = action.payload;
+      const typeKey = slot === 1 ? 'type1' : 'type2';
+      return { ...state, [side]: { ...state[side], [typeKey]: type } };
     }
-    case 'SET_ACTIVE_MOVE_SLOT': {
-      const { side, index } = action.payload;
-      return { 
-        ...state, 
-        [side]: { 
-          ...state[side], 
-          activeMoveIndex: index 
-        } 
-      };
+    case 'TOGGLE_TYPE_OVERRIDE': {
+      const { side } = action.payload;
+      return { ...state, [side]: { ...state[side], isTypeOverridden: !state[side].isTypeOverridden } };
     }
     case 'APPLY_PRESET': {
       const { side, pokemon: p, abilities, movesData, preset, natureStats } = action.payload;
       return {
         ...state,
         [side]: {
-          ...state[side],
+          ...initialSide,
           selectedId: p.id,
           type1: p.type1,
           type2: p.type2,
@@ -340,6 +305,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpa: preset.sp.spa,
           spSpd: preset.sp.spd,
           spSpe: preset.sp.spe,
+          nature: preset.nature,
           hpPercent: 100,
           movesHits: [3, 3, 3, 3]
         }
@@ -355,72 +321,11 @@ const DamageCalculatorPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
 
-  const handleSelectPokemon = async (side: 'p1' | 'p2', p: PokemonBaseStats) => {
-    dispatch({ type: 'SELECT_POKEMON', payload: { side, pokemon: p } });
-    
-    try {
-      const db = await getDb();
-      const abilityResult = await db.select({
-        name: abilities.nameEn
-      })
-      .from(pokemonAbilities)
-      .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-      .where(eq(pokemonAbilities.pokemonId, p.id))
-      .orderBy(pokemonAbilities.slot);
-
-      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
-      dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
-      return abilityNames;
-    } catch (error) {
-      console.error('Failed to fetch abilities:', error);
-      return [];
-    }
-  };
-
-  const handleSelectPreset = async (side: 'p1' | 'p2', preset: PokemonPreset) => {
-    const p = pokemonList.find(p => p.nameEn === preset.pokemonName);
-    if (!p) return;
-    
-    // We need abilities from DB first to ensure the active ability is set correctly if it's in the list
-    let abilityNames: string[] = [];
-    try {
-      const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
-        .from(pokemonAbilities)
-        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
-        .where(eq(pokemonAbilities.pokemonId, p.id))
-        .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
-    } catch (e) {
-      console.error('Failed to fetch abilities for preset:', e);
-    }
-
-    const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
-    const natureStats = getNatureStats(preset.nature);
-
-    // Provide default empty arrays if moves list is short
-    while (movesData.length < 4) {
-      movesData.push(null);
-    }
-
-    dispatch({
-      type: 'APPLY_PRESET',
-      payload: {
-        side,
-        pokemon: p,
-        abilities: abilityNames,
-        movesData: movesData.slice(0, 4),
-        preset,
-        natureStats
-      }
-    });
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         const db = await getDb();
-        const [pokeResult, efficacyResult, moveResult] = await Promise.all([
+        const [pokeResult, moveResult, efficacyResult] = await Promise.all([
           db.select({
             id: pokemon.id,
             identifier: pokemon.identifier,
@@ -439,13 +344,13 @@ const DamageCalculatorPage: React.FC = () => {
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
           .where(eq(formats.name, 'Regulation M-A')),
-          fetchTypeEfficacy(),
-          db.select().from(moves)
+          db.select().from(moves),
+          fetchTypeEfficacy()
         ]);
         
         setPokemonList(pokeResult as PokemonBaseStats[]);
-        setEfficacyMap(efficacyResult);
         setMoveList(moveResult as MoveData[]);
+        setEfficacyMap(efficacyResult);
       } catch (error) {
         console.error('Failed to fetch initial data:', error);
       }
@@ -453,55 +358,94 @@ const DamageCalculatorPage: React.FC = () => {
     fetchData();
   }, []);
 
-  const p1MaxHp = useMemo(() => calculateHP(state.p1.baseHp, state.p1.spHp), [state.p1]);
-  const p2MaxHp = useMemo(() => calculateHP(state.p2.baseHp, state.p2.spHp), [state.p2]);
+  const handleSelectPokemon = async (side: 'p1' | 'p2', p: PokemonBaseStats) => {
+    dispatch({ type: 'SELECT_POKEMON', payload: { side, pokemon: p } });
+    
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({
+        name: abilities.nameEn
+      })
+      .from(pokemonAbilities)
+      .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+      .where(eq(pokemonAbilities.pokemonId, p.id))
+      .orderBy(pokemonAbilities.slot);
 
-  const computeResults = (attacker: SideState, defender: SideState, defMaxHp: number) => {
+      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
+    } catch (error) {
+      console.error('Failed to fetch abilities:', error);
+    }
+  };
+
+  const handleSelectPreset = async (side: 'p1' | 'p2', preset: PokemonPreset) => {
+    const p = pokemonList.find(p => p.nameEn === preset.pokemonName);
+    if (!p) return;
+    
+    let abilityNames: string[] = [];
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {}
+
+    const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
+    const natureStats = getNatureStats(preset.nature);
+
+    dispatch({
+      type: 'APPLY_PRESET',
+      payload: {
+        side,
+        pokemon: p,
+        abilities: abilityNames,
+        movesData,
+        preset,
+        natureStats
+      }
+    });
+  };
+
+  const p1MaxHp = calculateHP(state.p1.baseHp, state.p1.spHp);
+  const p2MaxHp = calculateHP(state.p2.baseHp, state.p2.spHp);
+
+  const computeResults = (attacker: SideState, defender: SideState, defMaxHp: number): (DamageResult | null)[] => {
+    const atkBase = pokemonList.find(p => p.id === attacker.selectedId);
+    const defBase = pokemonList.find(p => p.id === defender.selectedId);
+
+    if (!atkBase || !defBase) return [null, null, null, null];
+
+    const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn);
+    const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn);
+    
+    const field = mapToSmogonField(
+      state.weather, 
+      state.terrain, 
+      state.isGravity, 
+      attacker.side === 'p1' ? state.p1 : state.p2, // attacker side
+      attacker.side === 'p1' ? state.p2 : state.p1, // defender side
+      state.isSpreadTarget,
+      state.isFairyAura,
+      state.isDarkAura,
+      state.isAuraBreak
+    );
+
     return attacker.moves.map((moveData, moveIdx) => {
       if (!moveData) return null;
 
-      const atkBase = pokemonList.find(p => p.id === attacker.selectedId);
-      const defBase = pokemonList.find(p => p.id === defender.selectedId);
-      
-      // If pokemon aren't selected yet, we can't calculate properly
-      if (!atkBase || !defBase) return null;
-
-      const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn, atkBase.type1, atkBase.type2);
-      const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn, defBase.type1, defBase.type2);
-      const field = mapToSmogonField(
-        state.weather, 
-        state.isSpreadTarget, 
-        state.isFairyAura, 
-        state.isDarkAura, 
-        state.isAuraBreak, 
-        state.terrain, 
-        state.isGravity,
-        attacker,
-        defender
-      );
       const isCrit = attacker.movesForceCrit[moveIdx];
       const hits = attacker.movesHits[moveIdx];
       const move = mapToSmogonMove(moveData.nameEn, isCrit, hits);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
-      
-      console.log(`[DEBUG Calc] ${attackerPokemon.name} vs ${defenderPokemon.name} with ${move.name}`, {
-        resultDamage: result.damage,
-        attackerStats: attackerPokemon.stats,
-        defenderStats: defenderPokemon.stats,
-        move: move.name,
-        field: field.weather
-      });
-
       const damageArr = Array.isArray(result.damage) ? result.damage : [result.damage || 0];
       
-      // smogon/calc returns damage as an array of possible rolls or a single number (0) for immunity
-      // We need to handle multi-hit moves which return an array of arrays
       const flattenDamage = (arr: any[]): number[] => {
         if (arr.length === 0) return [0];
         if (Array.isArray(arr[0])) {
-          // For multi-hit, sum up the first and last elements of each sub-array
-          // Actually, smogon provides a way to get the total range, but we'll do it manually for simplicity
           const min = arr.reduce((acc, sub) => acc + (typeof sub[0] === 'number' ? sub[0] : 0), 0);
           const max = arr.reduce((acc, sub) => acc + (typeof sub[sub.length - 1] === 'number' ? sub[sub.length - 1] : 0), 0);
           return [min, max];
@@ -513,7 +457,6 @@ const DamageCalculatorPage: React.FC = () => {
       const minDamage = cleanDamage.length > 0 ? cleanDamage[0] : 0;
       const maxDamage = cleanDamage.length > 0 ? cleanDamage[cleanDamage.length - 1] : 0;
 
-      // Extract effectiveness dynamically
       let effectiveness = 1;
       const activeDefType1 = defender.isTypeOverridden ? defender.type1 : defBase.type1;
       const activeDefType2 = defender.isTypeOverridden ? defender.type2 : defBase.type2;
@@ -530,53 +473,29 @@ const DamageCalculatorPage: React.FC = () => {
       const isStab = calcMoveTypeId === attackerType1Id || calcMoveTypeId === attackerType2Id;
 
       const isImmune = result.damage === 0 || maxDamage === 0;
-
       const triggeredAbilities: string[] = [];
       let koChanceText = 'Survival';
 
       if (!isImmune) {
         try {
           const descStr = result.desc();
-          if (result.attacker.ability && descStr.includes(result.attacker.ability)) {
-            triggeredAbilities.push(result.attacker.ability);
-          }
-          if (result.defender.ability && descStr.includes(result.defender.ability)) {
-            triggeredAbilities.push(result.defender.ability);
-          }
-          
-          // Use kochance() to get the precise string if available
+          if (result.attacker.ability && descStr.includes(result.attacker.ability)) triggeredAbilities.push(result.attacker.ability);
+          if (result.defender.ability && descStr.includes(result.defender.ability)) triggeredAbilities.push(result.defender.ability);
           const koObj = result.kochance();
-          if (koObj && koObj.text) {
-            koChanceText = koObj.text;
-          } else {
-             // Fallback to substring from desc if kochance() is empty
-             const parts = descStr.split(' -- ');
-             if (parts.length > 1) {
-               koChanceText = parts[parts.length - 1];
-             }
-          }
-        } catch (e) {
-          // Ignore desc() errors
-        }
+          if (koObj && koObj.text) koChanceText = koObj.text;
+        } catch (e) {}
       }
 
-      const minDamageNum = isNaN(minDamage) ? 0 : Number(minDamage);
-      const maxDamageNum = isNaN(maxDamage) ? 0 : Number(maxDamage);
       const smogonDefMaxHp = defenderPokemon.maxHP();
-
       return {
-        minDamage: minDamageNum,
-        maxDamage: maxDamageNum,
-        minPercent: Math.floor((minDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
-        maxPercent: Math.floor((maxDamageNum * 1000) / smogonDefMaxHp) / 10 || 0,
+        minDamage, maxDamage,
+        minPercent: Math.floor((minDamage * 1000) / smogonDefMaxHp) / 10 || 0,
+        maxPercent: Math.floor((maxDamage * 1000) / smogonDefMaxHp) / 10 || 0,
         moveName: moveData.nameEn,
         moveNameZh: moveData.nameZh,
         moveType: calcMoveTypeId,
         originalType: moveData.typeId,
-        isStab,
-        effectiveness,
-        triggeredAbilities,
-        koChanceText
+        isStab, effectiveness, triggeredAbilities, koChanceText
       } as DamageResult;
     });
   };
@@ -623,6 +542,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSelectPreset={(preset) => handleSelectPreset('p1', preset)}
           stats={state.p1}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
+          onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side: 'p1', nature } })}
           boostedStat={state.p1.boostedStat}
           hinderedStat={state.p1.hinderedStat}
           onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p1', stat, mod } })}
@@ -668,6 +588,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSelectPreset={(preset) => handleSelectPreset('p2', preset)}
           stats={state.p2}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
+          onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side: 'p2', nature } })}
           boostedStat={state.p2.boostedStat}
           hinderedStat={state.p2.hinderedStat}
           onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side: 'p2', stat, mod } })}

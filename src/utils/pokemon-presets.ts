@@ -161,6 +161,14 @@ export const POKEMON_PRESETS: PokemonPreset[] = [
   }
 ];
 
+export const NATURES = [
+  "Hardy", "Lonely", "Adamant", "Naughty", "Brave",
+  "Bold", "Docile", "Impish", "Lax", "Relaxed",
+  "Modest", "Mild", "Bashful", "Rash", "Quiet",
+  "Calm", "Gentle", "Careful", "Quirky", "Sassy",
+  "Timid", "Hasty", "Jolly", "Naive", "Serious"
+];
+
 export const getNatureStats = (nature: string): { boostedStat: string | null; hinderedStat: string | null } => {
   const natureMap: Record<string, { boosted: string; hindered: string }> = {
     Lonely: { boosted: "atk", hindered: "def" },
@@ -189,4 +197,39 @@ export const getNatureStats = (nature: string): { boostedStat: string | null; hi
     return { boostedStat: natureMap[nature].boosted, hinderedStat: natureMap[nature].hindered };
   }
   return { boostedStat: null, hinderedStat: null };
+};
+
+export const getNatureFromStats = (boostedStat: string | null, hinderedStat: string | null): string => {
+  if (!boostedStat || !hinderedStat || boostedStat === hinderedStat) return "Hardy";
+  
+  const natureMap: Record<string, { boosted: string; hindered: string }> = {
+    Lonely: { boosted: "atk", hindered: "def" },
+    Adamant: { boosted: "atk", hindered: "spa" },
+    Naughty: { boosted: "atk", hindered: "spd" },
+    Brave: { boosted: "atk", hindered: "spe" },
+    Bold: { boosted: "def", hindered: "atk" },
+    Impish: { boosted: "def", hindered: "spa" },
+    Lax: { boosted: "def", hindered: "spd" },
+    Relaxed: { boosted: "def", hindered: "spe" },
+    Modest: { boosted: "spa", hindered: "atk" },
+    Mild: { boosted: "spa", hindered: "def" },
+    Rash: { boosted: "spa", hindered: "spd" },
+    Quiet: { boosted: "spa", hindered: "spe" },
+    Calm: { boosted: "spd", hindered: "atk" },
+    Gentle: { boosted: "spd", hindered: "def" },
+    Careful: { boosted: "spd", hindered: "spa" },
+    Sassy: { boosted: "spd", hindered: "spe" },
+    Timid: { boosted: "spe", hindered: "atk" },
+    Hasty: { boosted: "spe", hindered: "def" },
+    Jolly: { boosted: "spe", hindered: "spa" },
+    Naive: { boosted: "spe", hindered: "spd" },
+  };
+
+  for (const [nature, stats] of Object.entries(natureMap)) {
+    if (stats.boosted === boostedStat && stats.hindered === hinderedStat) {
+      return nature;
+    }
+  }
+  
+  return "Hardy";
 };

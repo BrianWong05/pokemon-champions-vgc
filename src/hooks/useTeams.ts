@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { getDb } from '@/db';
 import { teams, teamMembers } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { PokemonPreset } from '@/utils/pokemon-presets';
+import { PokemonConfig } from '@/hooks/usePokemonEditor';
 
 export interface Team {
   id: string;
@@ -13,7 +13,7 @@ export interface Team {
 export interface TeamMember {
   id: string;
   teamId: string;
-  configuration: PokemonPreset;
+  configuration: PokemonConfig;
   order: number;
 }
 
@@ -64,7 +64,7 @@ export const useTeams = () => {
     }
   }, []);
 
-  const createTeam = useCallback(async (name: string, members: PokemonPreset[] = []) => {
+  const createTeam = useCallback(async (name: string, members: PokemonConfig[] = []) => {
     try {
       const db = await getDb();
       const newTeamId = crypto.randomUUID();
@@ -92,7 +92,7 @@ export const useTeams = () => {
     }
   }, [fetchTeams]);
 
-  const updateTeam = useCallback(async (teamId: string, name: string, members: PokemonPreset[]) => {
+  const updateTeam = useCallback(async (teamId: string, name: string, members: PokemonConfig[]) => {
     try {
       const db = await getDb();
       

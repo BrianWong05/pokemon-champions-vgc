@@ -1,15 +1,11 @@
 import React from 'react';
 import Typography from '@/components/atoms/Typography';
-import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
-import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
-import PokemonImage from '@/components/atoms/PokemonImage';
-import ItemImage from '@/components/atoms/ItemImage';
-import TypeBadge from '@/components/atoms/TypeBadge';
-import StatGrid from '@/components/molecules/StatGrid';
-import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
-import { calculateHP, isMultiHitMove } from '@/utils/damage';
-import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
+import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { isMultiHitMove } from '@/utils/damage';
+import { PokemonPreset } from '@/utils/pokemon-presets';
+import PokemonConfigForm from './PokemonConfigForm';
+import { calculateHP } from '@/utils/damage';
 
 interface PokemonPanelProps {
   title: string;
@@ -21,6 +17,7 @@ interface PokemonPanelProps {
   onSelectPreset?: (preset: PokemonPreset) => void;
   stats: any;
   onSpChange: (key: string, val: number) => void;
+  onNatureChange: (nature: string) => void;
   boostedStat: string | null;
   hinderedStat: string | null;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
@@ -56,191 +53,99 @@ interface PokemonPanelProps {
   onUpdateMoveHits: (index: number, val: number) => void;
 }
 
-const PokemonPanel: React.FC<PokemonPanelProps> = ({
-  title, sideColor, side, pokemonList, selectedId, onSelectPokemon, onSelectPreset,
-  stats, onSpChange, boostedStat, hinderedStat, onToggleNature,
-  stages, onStageChange,
-  moveList, moves, onSelectMove, onClearMove,
-  abilities, activeAbility, onAbilityChange,
-  item, onItemChange,
-  activeWeather,
-  hpPercent, onHpPercentChange,
-  type1, type2, onTypeChange,
-  isTypeOverridden, onToggleTypeOverride,
-  isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
-  onToggleSideEffect,
-  movesForceCrit, onToggleMoveCrit,
-  movesHits, onUpdateMoveHits
-}) => {
-  const selectedPokemon = pokemonList.find(p => p.id === selectedId);
-  const pokemonTypes = [type1, type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
+const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
+  const {
+    title, sideColor, side, hpPercent, onHpPercentChange, stats,
+    isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
+    onToggleSideEffect, movesForceCrit, onToggleMoveCrit, movesHits, onUpdateMoveHits,
+    stages, onStageChange
+  } = props;
 
   const maxHp = calculateHP(stats.baseHp, stats.spHp);
   const currentHp = Math.floor(maxHp * (hpPercent / 100));
 
-  const allTypes = Object.keys(TYPE_IDS);
-  
-  const availablePresets = selectedPokemon 
-    ? POKEMON_PRESETS.filter(p => p.pokemonName === selectedPokemon.nameEn)
-    : [];
+  const renderMoveActions = (move: MoveData | null, idx: number) => (
+    <>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleMoveCrit(idx);
+        }}
+        className={`
+          px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest transition-all border
+          ${movesForceCrit[idx] 
+            ? 'bg-red-500 border-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
+            : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400'}
+        `}
+        title="Force Critical Hit"
+      >
+        Crit
+      </button>
+
+      {move && isMultiHitMove(move.nameEn) && (
+        <div className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">
+          <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">Hits</span>
+          <input 
+            type="number"
+            min="1"
+            max="10"
+            value={movesHits[idx]}
+            onChange={(e) => onUpdateMoveHits(idx, parseInt(e.target.value, 10) || 1)}
+            className="w-7 bg-transparent text-[10px] font-black text-indigo-700 text-center outline-none border-none"
+          />
+        </div>
+      )}
+    </>
+  );
 
   return (
-    <div className="bg-white p-4 rounded-2xl shadow-lg border border-gray-100 space-y-4 h-full">
-      <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <Typography variant="h2" className="flex items-center gap-2">
-            <span className={`w-2 h-8 ${sideColor} rounded-full inline-block`} />
-            {title}
-          </Typography>
-          
-          {onSelectPreset && selectedPokemon && availablePresets.length > 0 && (
-            <select
-              className="text-xs border border-gray-200 rounded px-2 py-1 bg-gray-50 outline-none focus:border-blue-400"
-              onChange={(e) => {
-                const preset = availablePresets.find(p => p.id === e.target.value);
-                if (preset) {
-                  onSelectPreset(preset);
-                  e.target.value = ""; // reset to default option
-                }
-              }}
-              defaultValue=""
-            >
-              <option value="" disabled>Load Preset...</option>
-              {availablePresets.map(preset => (
-                <option key={preset.id} value={preset.id}>{preset.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden shrink-0">
-            {selectedId ? (
-              <PokemonImage id={selectedId} name={title} className="w-14 h-14" />
-            ) : (
-              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-            )}
-          </div>
-          <div className="flex-1 space-y-1.5">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <PokemonSearchSelect 
-                  label={`Select ${title}`} 
-                  pokemonList={pokemonList} 
-                  onSelect={onSelectPokemon}
-                />
-              </div>
-              <div className="flex-1 flex items-end gap-1.5">
-                <ItemImage name={item} className="w-9 h-9 shrink-0" />
-                <div className="flex-1">
-                  <ItemSearchSelect
-                    label="Hold Item"
-                    selectedItem={item}
-                    onSelect={onItemChange}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 justify-between">
-              {selectedPokemon && (
-                <div className="flex gap-2">
-                  <TypeBadge 
-                    type={(isTypeOverridden ? type1 : selectedPokemon.type1) || 'normal'} 
-                    size="sm" 
-                  /> 
-                  {(isTypeOverridden ? type2 : selectedPokemon.type2) && (
-                    <TypeBadge 
-                      type={(isTypeOverridden ? type2 : selectedPokemon.type2) || 'normal'} 
-                      size="sm" 
-                    />
-                  )}
-                </div>
-              )}
-              {abilities.length > 0 && (
-                <select 
-                  value={activeAbility || ''} 
-                  onChange={(e) => onAbilityChange(e.target.value)}
-                  className="text-[10px] font-black uppercase tracking-widest bg-gray-50 border border-gray-100 rounded px-2 py-1 outline-none focus:border-blue-300"
-                >
-                  {abilities.map(a => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {selectedId && (
-          <div className={`p-2 rounded-xl border transition-all space-y-1.5 ${isTypeOverridden ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
-            <div className="flex justify-between items-center">
-              <label className="flex items-center gap-2 cursor-pointer group">
-                <input 
-                  type="checkbox" 
-                  checked={isTypeOverridden} 
-                  onChange={onToggleTypeOverride}
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
-                />
-                <Typography variant="label" className={`uppercase tracking-widest text-[8px] font-black transition-colors ${isTypeOverridden ? 'text-amber-700' : 'text-gray-400 group-hover:text-gray-600'}`}>
-                  Manual Type Override
-                </Typography>
-              </label>
-              {isTypeOverridden && (
-                <Typography variant="body" className="text-[8px] font-bold text-amber-600/70 uppercase tracking-tighter italic animate-pulse">
-                  Calculation Active
-                </Typography>
-              )}
-            </div>
-            <div className="flex gap-1.5 items-center">
-              <select 
-                value={type1 || ''} 
-                onChange={(e) => onTypeChange(1, e.target.value)}
-                disabled={!isTypeOverridden}
-                className={`text-[9px] font-black uppercase tracking-widest border rounded px-1.5 py-1 outline-none transition-all ${isTypeOverridden ? 'bg-white border-amber-200 focus:border-amber-400' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
-              >
-                {allTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-              <span className={`text-[8px] font-bold ${isTypeOverridden ? 'text-amber-200' : 'text-gray-300'}`}>/</span>
-              <select 
-                value={type2 || 'none'} 
-                onChange={(e) => onTypeChange(2, e.target.value === 'none' ? null : e.target.value)}
-                disabled={!isTypeOverridden}
-                className={`text-[9px] font-black uppercase tracking-widest border rounded px-1.5 py-1 outline-none transition-all ${isTypeOverridden ? 'bg-white border-amber-200 focus:border-amber-400' : 'bg-gray-100 border-gray-200 text-gray-400'}`}
-              >
-                <option value="none">NONE</option>
-                {allTypes.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <StatGrid 
-          stats={{
-            hp: { base: stats.baseHp, sp: stats.spHp },
-            atk: { base: stats.baseAtk, sp: stats.spAtk },
-            def: { base: stats.baseDef, sp: stats.spDef },
-            spa: { base: stats.baseSpa, sp: stats.spSpa },
-            spd: { base: stats.baseSpd, sp: stats.spSpd },
-            spe: { base: stats.baseSpe, sp: stats.spSpe },
-          }}
-          boostedStat={boostedStat}
-          hinderedStat={hinderedStat}
-          onToggleNature={onToggleNature}
-          stages={stages}
-          onStageChange={onStageChange}
-          onSpChange={onSpChange}
-          ability={activeAbility}
-          weather={activeWeather}
-          pokemonTypes={pokemonTypes}
-          role={side === 'p1' ? 'attacker' : 'defender'}
-        />
-      </div>
+    <div className="bg-white p-4 rounded-3xl shadow-lg border border-gray-100 space-y-4 h-full">
+      <PokemonConfigForm
+        config={{
+          selectedId: props.selectedId,
+          type1: props.type1,
+          type2: props.type2,
+          baseHp: stats.baseHp,
+          baseAtk: stats.baseAtk,
+          baseDef: stats.baseDef,
+          baseSpa: stats.baseSpa,
+          baseSpd: stats.baseSpd,
+          baseSpe: stats.baseSpe,
+          spHp: stats.spHp,
+          spAtk: stats.spAtk,
+          spDef: stats.spDef,
+          spSpa: stats.spSpa,
+          spSpd: stats.spSpd,
+          spSpe: stats.spSpe,
+          boostedStat: props.boostedStat,
+          hinderedStat: props.hinderedStat,
+          nature: props.stats.nature || 'Hardy',
+          moves: props.moves,
+          activeMoveIndex: 0, 
+          abilities: props.abilities,
+          activeAbility: props.activeAbility,
+          item: props.item,
+          hpPercent: props.hpPercent,
+          isTypeOverridden: props.isTypeOverridden,
+        }}
+        pokemonList={props.pokemonList}
+        moveList={props.moveList}
+        onSelectPokemon={props.onSelectPokemon}
+        onSelectPreset={props.onSelectPreset}
+        onSpChange={props.onSpChange}
+        onNatureChange={props.onNatureChange}
+        onToggleNature={props.onToggleNature}
+        onStageChange={props.onStageChange}
+        onSelectMove={props.onSelectMove}
+        onClearMove={props.onClearMove}
+        onAbilityChange={props.onAbilityChange}
+        onItemChange={props.onItemChange}
+        onTypeChange={props.onTypeChange}
+        onToggleTypeOverride={props.onToggleTypeOverride}
+        title={title}
+        sideColor={sideColor}
+        renderMoveActions={renderMoveActions}
+      />
 
       <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100 flex items-center gap-3">
         <div className="flex flex-col min-w-[70px]">
@@ -280,99 +185,6 @@ const PokemonPanel: React.FC<PokemonPanelProps> = ({
             className="w-9 bg-white border border-gray-200 text-center text-[10px] font-black text-indigo-600 rounded py-0.5 px-0.5 outline-none focus:border-indigo-400 transition-colors"
           />
           <span className="text-[9px] font-black text-gray-400">%</span>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Typography variant="label" className="text-gray-400 block mb-1 uppercase tracking-widest text-[10px] font-black">Move Pool Selection</Typography>
-        <div className="grid grid-cols-1 gap-1.5">
-          {moves.map((move, idx) => (
-            <div 
-              key={idx} 
-              className={`
-                p-2 rounded-xl border transition-all flex items-center gap-2
-                ${move ? 'border-gray-200 bg-white shadow-sm' : 'border-gray-100 bg-gray-50/30'}
-              `}
-            >
-              <div className="text-[10px] font-black text-gray-300 w-4">
-                {idx + 1}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                {move ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-baseline gap-2 overflow-hidden">
-                        <span className="text-sm font-bold text-blue-900 leading-tight truncate">{move.nameEn}</span>
-                        {move.nameZh && <span className="text-[10px] font-medium text-blue-900/60 truncate">{move.nameZh}</span>}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <TypeBadge type={REVERSE_TYPE_IDS[move.typeId] || 'normal'} size="sm" className="scale-[0.8] origin-left" />
-                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter bg-gray-50 px-1 rounded border border-gray-100">
-                          {move.damageClassId === 2 ? 'Phys' : 'Spec'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 pl-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleMoveCrit(idx);
-                        }}
-                        className={`
-                          px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest transition-all border
-                          ${movesForceCrit[idx] 
-                            ? 'bg-red-500 border-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
-                            : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400'}
-                        `}
-                        title="Force Critical Hit"
-                      >
-                        Crit
-                      </button>
-
-                      {move && isMultiHitMove(move.nameEn) && (
-                        <div className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">
-                          <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">Hits</span>
-                          <input 
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={movesHits[idx]}
-                            onChange={(e) => onUpdateMoveHits(idx, parseInt(e.target.value, 10) || 1)}
-                            className="w-7 bg-transparent text-[10px] font-black text-indigo-700 text-center outline-none"
-                          />
-                        </div>
-                      )}
-
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-[9px] font-black text-gray-300 uppercase">Pwr</span>
-                        <span className="text-sm font-black text-blue-900">{move.power || '--'}</span>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClearMove(idx);
-                        }}
-                        className="p-1 hover:bg-red-50 text-gray-300 hover:text-red-500 rounded-lg transition-colors group/clear"
-                        title="Clear move"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <MoveSearchSelect 
-                    label="" 
-                    moveList={moveList} 
-                    onSelect={(m) => onSelectMove(idx, m)}
-                    className="w-full"
-                  />
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

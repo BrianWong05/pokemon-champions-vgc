@@ -35,16 +35,16 @@ const StatRow: React.FC<StatRowProps> = ({
   const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityResult.modifier);
 
   return (
-    <div className="grid grid-cols-10 gap-2 items-center py-0.5">
-      {/* 1. Stat Label (1 col) */}
-      <div className="col-span-1 text-xs font-bold text-gray-500 uppercase">{label}</div>
+    <div className="grid grid-cols-12 gap-2 items-center py-1.5 border-b border-gray-50 last:border-0">
+      {/* 1. Stat Label */}
+      <div className="col-span-2 text-xs font-black text-gray-400 uppercase tracking-tighter">{label}</div>
       
-      {/* 2. Base (1 col) */}
-      <div className="col-span-1 text-center text-sm font-medium text-gray-500">
+      {/* 2. Base */}
+      <div className="col-span-1 text-center text-sm font-bold text-gray-500">
         {base}
       </div>
 
-      {/* 3. SP Slider (3 cols) */}
+      {/* 3. SP Slider */}
       <div className="col-span-3 px-1">
         <input 
           type="range" 
@@ -52,65 +52,67 @@ const StatRow: React.FC<StatRowProps> = ({
           max="32" 
           value={sp} 
           onChange={(e) => onSpChange(parseInt(e.target.value, 10))}
-          className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          className="w-full h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
         />
       </div>
 
-      {/* 4. SP Numeric (1 col) */}
-      <div className="col-span-1">
+      {/* 4. SP Numeric Input */}
+      <div className="col-span-1 flex justify-center">
         <input 
           type="number" 
           min="0" 
           max="32" 
           value={sp} 
           onChange={(e) => onSpChange(Math.min(32, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-          className="w-full bg-white border border-gray-200 text-center text-[10px] font-black text-blue-600 rounded p-0.5 outline-none focus:border-blue-400 transition-colors"
+          className="w-10 bg-white border border-gray-200 text-center text-[11px] font-black text-blue-600 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all appearance-none"
         />
       </div>
 
+      {/* 5. Nature Buttons */}
       <div className="col-span-2 flex justify-center">
         {!isHp && onToggleNature ? (
           <div className="flex gap-1">
             <button
               onClick={() => onToggleNature(statKey, '+')}
-              className={`w-4 h-4 flex items-center justify-center rounded text-[9px] font-black transition-colors ${isBoosted ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isBoosted ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-50 text-gray-300 hover:bg-gray-100'}`}
             >
               +
             </button>
             <button
               onClick={() => onToggleNature(statKey, '-')}
-              className={`w-4 h-4 flex items-center justify-center rounded text-[9px] font-black transition-colors ${isHindered ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isHindered ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-50 text-gray-300 hover:bg-gray-100'}`}
             >
               -
             </button>
           </div>
-        ) : <div className="h-4" />}
+        ) : <div className="h-5" />}
       </div>
 
-      <div className="col-span-1 flex justify-center">
+      {/* 6. Stage Controls */}
+      <div className="col-span-2 flex justify-center">
         {!isHp && onStageChange ? (
-          <div className="flex items-center bg-gray-100 rounded px-0.5 py-px">
+          <div className="flex items-center bg-gray-50 rounded-lg px-1 py-0.5 border border-gray-100">
             <button 
               onClick={() => onStageChange(statKey, stage - 1)}
-              className="text-[9px] font-black text-gray-400 hover:text-blue-500 px-0.5"
+              className="text-[10px] font-black text-gray-300 hover:text-blue-500 px-1"
             >
-              «
+              -
             </button>
-            <span className={`text-[8px] font-black min-w-[16px] text-center ${stage > 0 ? 'text-green-500' : stage < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-              {stage > 0 ? `+${stage}` : stage}
+            <span className={`text-[10px] font-black min-w-[14px] text-center ${stage > 0 ? 'text-green-500' : stage < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+              {stage !== 0 ? (stage > 0 ? `+${stage}` : stage) : ''}
             </span>
             <button 
               onClick={() => onStageChange(statKey, stage + 1)}
-              className="text-[9px] font-black text-gray-400 hover:text-green-500 px-0.5"
+              className="text-[10px] font-black text-gray-300 hover:text-green-500 px-1"
             >
-              »
+              +
             </button>
           </div>
-        ) : <div className="h-4" />}
+        ) : <div className="h-5" />}
       </div>
 
-      {/* 7. Total (1 col) */}
-      <div className={`col-span-1 text-right text-sm font-black ${isBoosted ? 'text-red-600' : isHindered ? 'text-blue-600' : 'text-gray-900'}`}>
+      {/* 7. Total */}
+      <div className={`col-span-1 text-right text-base font-black ${isBoosted ? 'text-red-600' : isHindered ? 'text-blue-600' : 'text-gray-900'}`}>
         {total}
       </div>
     </div>
@@ -128,10 +130,10 @@ interface StatGridProps {
   };
   boostedStat: string | null;
   hinderedStat: string | null;
-  stages: Record<string, number>;
+  stages?: Record<string, number>;
   onSpChange: (key: string, val: number) => void;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
-  onStageChange: (stat: string, val: number) => void;
+  onStageChange?: (stat: string, val: number) => void;
   ability?: string | null;
   weather?: string;
   pokemonTypes?: string[];
@@ -141,7 +143,7 @@ interface StatGridProps {
 }
 
 const StatGrid: React.FC<StatGridProps> = ({ 
-  stats, boostedStat, hinderedStat, stages, onSpChange, onToggleNature, onStageChange, 
+  stats, boostedStat, hinderedStat, stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, onSpChange, onToggleNature, onStageChange, 
   ability, weather, pokemonTypes, role, hpPercent, className = '' 
 }) => {
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
@@ -154,12 +156,14 @@ const StatGrid: React.FC<StatGridProps> = ({
 
   return (
     <div className={`space-y-1 ${className}`}>
-      <div className="grid grid-cols-10 gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest pb-1 border-b border-gray-100 mb-1">
-        <div className="col-span-1 text-left">Stat</div>
+      {/* Header Row */}
+      <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-2">
+        <div className="col-span-2">Stat</div>
         <div className="col-span-1 text-center">Base</div>
-        <div className="col-span-4 text-center">SP</div>
+        <div className="col-span-3 text-center">SP</div>
+        <div className="col-span-1 text-center"></div>
         <div className="col-span-2 text-center">Nature</div>
-        <div className="col-span-1 text-center">Stage</div>
+        <div className="col-span-2 text-center">Stage</div>
         <div className="col-span-1 text-right">Total</div>
       </div>
       
@@ -172,10 +176,11 @@ const StatGrid: React.FC<StatGridProps> = ({
         <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} stage={stages.spe} onSpChange={(val) => onSpChange('spSpe', val)} {...rowBaseProps} />
       </div>
 
-      <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-1">
-        <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Total SP Used (Max 66)</span>
-        <span className={`text-sm font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
-          {totalSp} / 66
+      {/* Summary Footer */}
+      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total SP Used (Max 66)</span>
+        <span className={`text-base font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
+          {totalSp} <span className="text-gray-300 font-bold">/ 66</span>
         </span>
       </div>
     </div>
