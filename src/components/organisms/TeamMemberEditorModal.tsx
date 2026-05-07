@@ -56,6 +56,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           onItemChange={setItem}
           onTypeChange={setType}
           onToggleTypeOverride={toggleTypeOverride}
+          hideTypeOverride={true}
         />
         
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
