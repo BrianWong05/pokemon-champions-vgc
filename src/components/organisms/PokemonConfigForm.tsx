@@ -7,7 +7,7 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
 import { POKEMON_PRESETS, PokemonPreset, NATURES } from '@/utils/pokemon-presets';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 

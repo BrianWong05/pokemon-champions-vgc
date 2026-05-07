@@ -13,3 +13,12 @@ The system SHALL display the converted SP value immediately as the EV input chan
 #### Scenario: Live update
 - **WHEN** the user changes the "HP" EV input
 - **THEN** the adjacent SP badge SHALL update its value dynamically without page reload.
+
+## MODIFIED Requirements
+
+### Requirement: Type Override Stability
+The "Manual Type Override" functionality SHALL work correctly without runtime errors.
+
+#### Scenario: Toggling Manual Type Override
+- **WHEN** the user toggles the "Manual Type Override" in the Damage Calculator
+- **THEN** the type selection dropdowns render without errors.
