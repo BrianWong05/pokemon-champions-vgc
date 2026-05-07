@@ -10,6 +10,7 @@ import TeamMemberEditorModal from '@/components/organisms/TeamMemberEditorModal'
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import ItemImage from '@/components/atoms/ItemImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import Typography from '@/components/atoms/Typography';
 import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
@@ -219,9 +220,16 @@ const TeamDetailPage: React.FC = () => {
               </h3>
               
               <div className="space-y-1.5 text-xs font-bold text-gray-500 mb-4">
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="uppercase tracking-tighter">Item:</span>
-                  <span className="text-blue-600">{member.configuration.item || 'None'}</span>
+                  <div className="flex items-center gap-1.5">
+                    {member.configuration.item && member.configuration.item !== 'None' && (
+                      <div className="w-5 h-5 flex items-center justify-center bg-gray-50 rounded-md border border-gray-100 overflow-hidden shrink-0">
+                        <ItemImage name={member.configuration.item} className="w-4 h-4 object-contain" />
+                      </div>
+                    )}
+                    <span className="text-blue-600">{member.configuration.item || 'None'}</span>
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="uppercase tracking-tighter">Ability:</span>

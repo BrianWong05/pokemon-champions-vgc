@@ -40,3 +40,10 @@ The system SHALL allow users to delete an entire saved team.
 #### Scenario: Deleting a saved team
 - **WHEN** the user clicks "Delete" on a saved team and confirms the action
 - **THEN** the team is permanently removed from storage and the UI.
+
+### Requirement: Item Image Rendering
+The `ItemImage` component SHALL render the correct image for a given item name.
+
+#### Scenario: Displaying item image in team view
+- **WHEN** a team member card is displayed
+- **THEN** the `ItemImage` component successfully loads and displays the image corresponding to the member's item.

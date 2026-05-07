@@ -35,21 +35,29 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block flex justify-between">
-        <span>{label}</span>
-        {selectedItem && (
-          <button 
-            type="button"
-            className="text-red-500 hover:text-red-700" 
-            onClick={() => {
-              onSelect(null);
-              setSearchTerm('');
-            }}
-          >
-            Clear
-          </button>
-        )}
-      </label>
+      {(label || selectedItem) && (
+        <div className="flex justify-between items-end mb-1 min-h-[16px]">
+          {label ? (
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-0.5">
+              {label}
+            </label>
+          ) : (
+            <div /> // Spacer if no label
+          )}
+          {selectedItem && (
+            <button 
+              type="button"
+              className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-0.5" 
+              onClick={() => {
+                onSelect(null);
+                setSearchTerm('');
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <input

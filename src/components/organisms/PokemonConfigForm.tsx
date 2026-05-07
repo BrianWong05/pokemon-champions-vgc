@@ -82,15 +82,16 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
           </div>
 
           <div className="flex items-end gap-2">
-            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 shrink-0 mb-1">
-              <span className="text-gray-300 font-bold text-sm">?</span>
+            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 shrink-0 overflow-hidden">
+              {config.item && config.item !== 'None' ? (
+                <ItemImage name={config.item} className="w-8 h-8 object-contain" />
+              ) : (
+                <span className="text-gray-300 font-bold text-sm">?</span>
+              )}
             </div>
-            <div className="flex-1 space-y-1.5">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block px-0.5">
-                HOLD ITEM
-              </label>
+            <div className="flex-1 flex flex-col justify-end">
               <ItemSearchSelect
-                label=""
+                label="HOLD ITEM"
                 selectedItem={config.item}
                 onSelect={onItemChange}
               />
