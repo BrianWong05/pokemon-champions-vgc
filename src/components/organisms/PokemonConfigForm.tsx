@@ -77,6 +77,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
             <PokemonSearchSelect 
               label="" 
               pokemonList={pokemonList} 
+              selectedPokemonName={selectedPokemon?.nameEn}
               onSelect={onSelectPokemon}
             />
           </div>

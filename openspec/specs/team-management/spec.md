@@ -47,3 +47,10 @@ The `ItemImage` component SHALL render the correct image for a given item name.
 #### Scenario: Displaying item image in team view
 - **WHEN** a team member card is displayed
 - **THEN** the `ItemImage` component successfully loads and displays the image corresponding to the member's item.
+
+### Requirement: Pokemon Search Display
+The search dropdown in `PokemonSearchSelect` SHALL display the name of each Pokémon.
+
+#### Scenario: Displaying name in search dropdown
+- **WHEN** the user opens the Pokémon search dropdown
+- **THEN** each entry correctly displays the Pokémon's name.
