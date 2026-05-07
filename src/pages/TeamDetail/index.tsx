@@ -4,7 +4,7 @@ import { useTeams, TeamWithMembers } from '@/hooks/useTeams';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats, moves } from '@/db/schema';
+import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import TeamMemberEditorModal from '@/components/organisms/TeamMemberEditorModal';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
@@ -86,7 +86,20 @@ const TeamDetailPage: React.FC = () => {
     loadTeam();
   }, [id, getTeam, teamsLoading]);
 
-  const handleAddPokemonClick = (p: PokemonBaseStats) => {
+  const handleAddPokemonClick = async (p: PokemonBaseStats) => {
+    let abilityNames: string[] = [];
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {
+      console.error('Failed to fetch abilities:', e);
+    }
+
     const initialConfig: PokemonConfig = {
       selectedId: p.id,
       type1: p.type1,
@@ -103,8 +116,8 @@ const TeamDetailPage: React.FC = () => {
       hinderedStat: null,
       moves: [null, null, null, null],
       activeMoveIndex: 0,
-      abilities: [],
-      activeAbility: null,
+      abilities: abilityNames,
+      activeAbility: abilityNames[0] || null,
       item: null,
       hpPercent: 100,
       isTypeOverridden: false,
