@@ -1,9 +1,12 @@
 import React from 'react';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 import { calculateHP, calculateStat } from '@/utils/damage';
+import PokemonImage from '@/components/atoms/PokemonImage';
+import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 interface TeamMemberStatDisplayProps {
   config: PokemonConfig;
+  pokemonList: PokemonBaseStats[];
 }
 
 const StatRow = ({ label, base, sp, total, isBoosted, isHindered }: { label: string, base: number, sp: number, total: number, isBoosted?: boolean, isHindered?: boolean }) => (
@@ -15,7 +18,7 @@ const StatRow = ({ label, base, sp, total, isBoosted, isHindered }: { label: str
   </div>
 );
 
-const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config }) => {
+const TeamMemberStatDisplay: React.FC<TeamMemberStatDisplayProps> = ({ config, pokemonList }) => {
   const hpTotal = calculateHP(config.baseHp, config.spHp);
   const atkTotal = calculateStat(config.baseAtk, config.spAtk, config.boostedStat === 'atk' ? 1.1 : config.hinderedStat === 'atk' ? 0.9 : 1.0, 0, 1.0);
   const defTotal = calculateStat(config.baseDef, config.spDef, config.boostedStat === 'def' ? 1.1 : config.hinderedStat === 'def' ? 0.9 : 1.0, 0, 1.0);

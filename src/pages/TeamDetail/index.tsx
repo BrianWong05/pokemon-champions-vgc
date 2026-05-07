@@ -249,7 +249,7 @@ const TeamDetailPage: React.FC = () => {
                 ))}
               </div>
 
-              <TeamMemberStatDisplay config={member.configuration} />
+              <TeamMemberStatDisplay config={member.configuration} pokemonList={pokemonList} />
             </div>
             <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between">
               <button

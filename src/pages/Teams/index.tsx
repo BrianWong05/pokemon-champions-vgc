@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTeams } from '@/hooks/useTeams';
+import PokemonImage from '@/components/atoms/PokemonImage';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading, error, createTeam, deleteTeam } = useTeams();
@@ -109,10 +110,17 @@ const TeamsPage: React.FC = () => {
                   {team.members.slice(0, 6).map((member) => (
                     <div 
                       key={member.id} 
-                      className="bg-gray-50 border border-gray-200 px-2 py-1 rounded text-xs font-medium"
-                      title={member.configuration.name}
+                      className="bg-gray-50 border border-gray-200 p-1 rounded flex items-center gap-1"
+                      title={member.configuration.nature}
                     >
-                      {member.configuration.pokemonName}
+                      <PokemonImage 
+                        id={member.configuration.selectedId!} 
+                        name={member.configuration.pokemonName} 
+                        className="w-6 h-6" 
+                      />
+                      <span className="text-xs font-medium truncate max-w-[60px]">
+                        {member.configuration.pokemonName}
+                      </span>
                     </div>
                   ))}
                   {team.members.length === 0 && (
