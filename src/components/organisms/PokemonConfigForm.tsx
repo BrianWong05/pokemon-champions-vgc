@@ -8,7 +8,7 @@ import TypeBadge from '@/components/atoms/TypeBadge';
 import StatGrid from '@/components/molecules/StatGrid';
 import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
-import { POKEMON_PRESETS, PokemonPreset, NATURES } from '@/utils/pokemon-presets';
+import { POKEMON_PRESETS, PokemonPreset, NATURES, getNatureStats } from '@/utils/pokemon-presets';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 import ShowdownImportModal from './ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
@@ -283,21 +283,23 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
             Ability & Nature
           </label>
-          <div className="flex gap-2">
-            <select 
-              value={config.activeAbility || ''} 
-              onChange={(e) => onAbilityChange(e.target.value)}
-              className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              {config.abilities.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-            <select 
-              value={config.nature} 
-              onChange={(e) => onNatureChange(e.target.value)}
-              className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
-            >
-              {NATURES.map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <select 
+                value={config.activeAbility || ''} 
+                onChange={(e) => onAbilityChange(e.target.value)}
+                className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {config.abilities.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <select 
+                value={config.nature} 
+                onChange={(e) => onNatureChange(e.target.value)}
+                className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {NATURES.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 

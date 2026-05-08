@@ -6,7 +6,7 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { getNatureStats } from '@/utils/pokemon-presets';
+import { getNatureStats, getNatureDisplay } from '@/utils/pokemon-presets';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, pokemonAbilities, abilities, moves } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -253,7 +253,7 @@ const TeamsPage: React.FC = () => {
                     <div 
                       key={member.id} 
                       className="bg-gray-50 border border-gray-200 p-1 rounded flex items-center justify-center gap-1"
-                      title={member.configuration.nature}
+                      title={getNatureDisplay(member.configuration.nature)}
                     >
                       <PokemonImage 
                         id={member.configuration.selectedId!} 

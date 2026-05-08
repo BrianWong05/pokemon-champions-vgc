@@ -18,7 +18,7 @@ import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { getNatureStats } from '@/utils/pokemon-presets';
+import { getNatureStats, getNatureDisplay } from '@/utils/pokemon-presets';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -516,7 +516,7 @@ const TeamDetailPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="uppercase tracking-tighter">Nature:</span>
-                  <span className="text-amber-600">{member.configuration.nature}</span>
+                  <span className="text-amber-600">{getNatureDisplay(member.configuration.nature)}</span>
                 </div>
               </div>
 
