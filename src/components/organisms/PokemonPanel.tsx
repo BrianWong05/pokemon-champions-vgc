@@ -54,6 +54,8 @@ interface PokemonPanelProps {
   onToggleMoveCrit: (index: number) => void;
   movesHits: number[];
   onUpdateMoveHits: (index: number, val: number) => void;
+  faintedCount: number;
+  onFaintedCountChange: (val: number) => void;
 }
 
 const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
@@ -61,7 +63,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
     title, sideColor, side, hpPercent, onHpPercentChange, stats,
     isReflect, isLightScreen, isAuroraVeil, isHelpingHand, isFriendGuard, isTailwind,
     onToggleSideEffect, movesForceCrit, onToggleMoveCrit, movesHits, onUpdateMoveHits,
-    stages, onStageChange
+    stages, onStageChange, faintedCount, onFaintedCountChange
   } = props;
 
   const maxHp = calculateHP(stats.baseHp, stats.spHp);
@@ -216,6 +218,20 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
               </span>
             </label>
           ))}
+        </div>
+        <div className="pt-2 flex items-center justify-between">
+          <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[10px] font-black">Fainted Teammates</Typography>
+          <div className="flex items-center gap-2">
+            <input 
+              type="range" 
+              min="0" 
+              max="5" 
+              value={faintedCount} 
+              onChange={(e) => onFaintedCountChange(parseInt(e.target.value, 10))}
+              className="w-24 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+            <span className="text-[10px] font-black text-indigo-600 w-4 text-center">{faintedCount}</span>
+          </div>
         </div>
       </div>
     </div>

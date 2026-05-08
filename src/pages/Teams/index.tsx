@@ -115,11 +115,11 @@ const TeamsPage: React.FC = () => {
                     >
                       <PokemonImage 
                         id={member.configuration.selectedId!} 
-                        name={member.configuration.pokemonName} 
+                        name={member.configuration.activeAbility || "pokemon"} 
                         className="w-6 h-6" 
                       />
                       <span className="text-xs font-medium truncate max-w-[60px]">
-                        {member.configuration.pokemonName}
+                        {member.configuration.item || "No Item"}
                       </span>
                     </div>
                   ))}

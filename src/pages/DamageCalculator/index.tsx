@@ -2,7 +2,7 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove } from '@/utils/damage';
+import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/utils/damage';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -48,6 +48,7 @@ interface SideState {
   isTailwind: boolean;
   movesForceCrit: boolean[];
   movesHits: number[];
+  faintedCount: number;
 }
 
 interface CalcState {
@@ -83,13 +84,14 @@ type CalcAction =
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
   | { type: 'SET_HP_PERCENT', payload: { side: 'p1' | 'p2', val: number } }
-  | { type: 'TOGGLE_FIELD_Aura', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
+  | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
   | { type: 'TOGGLE_GRAVITY' }
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
   | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } };
+  | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'SET_FAINTED_COUNT', payload: { side: 'p1' | 'p2', val: number } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -116,6 +118,7 @@ const initialSide: SideState = {
   isTailwind: false,
   movesForceCrit: [false, false, false, false],
   movesHits: [3, 3, 3, 3],
+  faintedCount: 0,
 };
 
 const initialState: CalcState = {
@@ -385,6 +388,10 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         }
       }
     }
+    case 'SET_FAINTED_COUNT': {
+      const { side, val } = action.payload;
+      return { ...state, [side]: { ...state[side], faintedCount: val } };
+    }
     default: return state;
   }
 }
@@ -594,19 +601,19 @@ const DamageCalculatorPage: React.FC = () => {
 
     if (!atkBase || !defBase) return [null, null, null, null];
 
-    const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn);
-    const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn);
+    const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn, atkBase.type1, atkBase.type2);
+    const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn, defBase.type1, defBase.type2);
     
     const field = mapToSmogonField(
       state.weather, 
-      state.terrain, 
-      state.isGravity, 
-      attacker.side === 'p1' ? state.p1 : state.p2, // attacker side
-      attacker.side === 'p1' ? state.p2 : state.p1, // defender side
       state.isSpreadTarget,
       state.isFairyAura,
       state.isDarkAura,
-      state.isAuraBreak
+      state.isAuraBreak,
+      state.terrain, 
+      state.isGravity, 
+      attacker, // attacker side
+      defender  // defender side
     );
 
     return attacker.moves.map((moveData, moveIdx) => {
@@ -614,7 +621,8 @@ const DamageCalculatorPage: React.FC = () => {
 
       const isCrit = attacker.movesForceCrit[moveIdx];
       const hits = attacker.movesHits[moveIdx];
-      const move = mapToSmogonMove(moveData.nameEn, isCrit, hits);
+      const customBp = getMovePowerModifier(moveData.nameEn, { faintedCount: attacker.faintedCount });
+      const move = mapToSmogonMove(moveData.nameEn, isCrit, hits, customBp);
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
       const damageArr = Array.isArray(result.damage) ? result.damage : [result.damage || 0];
@@ -745,6 +753,7 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' } })}
           isReflect={state.p1.isReflect}
           isLightScreen={state.p1.isLightScreen}
+          isAuroraVeil={state.p1.isAuroraVeil}
           isHelpingHand={state.p1.isHelpingHand}
           isFriendGuard={state.p1.isFriendGuard}
           isTailwind={state.p1.isTailwind}
@@ -753,6 +762,8 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p1', index } })}
           movesHits={state.p1.movesHits}
           onUpdateMoveHits={(index, val) => dispatch({ type: 'SET_MOVE_HITS', payload: { side: 'p1', index, val } })}
+          faintedCount={state.p1.faintedCount}
+          onFaintedCountChange={(val) => dispatch({ type: 'SET_FAINTED_COUNT', payload: { side: 'p1', val } })}
         />
       }
       defenderPanel={
@@ -793,6 +804,7 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p2' } })}
           isReflect={state.p2.isReflect}
           isLightScreen={state.p2.isLightScreen}
+          isAuroraVeil={state.p2.isAuroraVeil}
           isHelpingHand={state.p2.isHelpingHand}
           isFriendGuard={state.p2.isFriendGuard}
           isTailwind={state.p2.isTailwind}
@@ -801,6 +813,8 @@ const DamageCalculatorPage: React.FC = () => {
           onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side: 'p2', index } })}
           movesHits={state.p2.movesHits}
           onUpdateMoveHits={(index, val) => dispatch({ type: 'SET_MOVE_HITS', payload: { side: 'p2', index, val } })}
+          faintedCount={state.p2.faintedCount}
+          onFaintedCountChange={(val) => dispatch({ type: 'SET_FAINTED_COUNT', payload: { side: 'p2', val } })}
         />
       }
     />

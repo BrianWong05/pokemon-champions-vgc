@@ -198,7 +198,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
   return (
     <div className="bg-gray-900 p-4 rounded-3xl shadow-2xl text-white space-y-4 border border-gray-800 h-full">
       <div className="flex justify-between items-center border-b border-gray-800 pb-3">
-        <Typography variant="h3" className="text-white flex items-center gap-3 font-black uppercase tracking-tighter">
+        <Typography variant="h2" className="text-white flex items-center gap-3 font-black uppercase tracking-tighter">
           <span className="w-1.5 h-6 bg-indigo-500 rounded-full" />
           Battle Analysis Dashboard
         </Typography>

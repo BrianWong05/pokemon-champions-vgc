@@ -319,9 +319,21 @@ export const mapToSmogonField = (
   });
 };
 
-export const mapToSmogonMove = (moveName: string, isCrit: boolean = false, hits?: number): Move => {
+export const mapToSmogonMove = (moveName: string, isCrit: boolean = false, hits?: number, customBp?: number): Move => {
   const gen = Generations.get(9);
-  return new Move(gen, moveName, { isCrit, hits });
+  const options: any = { isCrit, hits };
+  if (customBp !== undefined) {
+    options.overrides = { basePower: customBp };
+  }
+  return new Move(gen, moveName, options);
+};
+
+export const getMovePowerModifier = (moveName: string, battleState: any): number | undefined => {
+  if (moveName === 'Last Respects') {
+    const faintedCount = battleState.faintedCount || 0;
+    return 50 + (faintedCount * 50);
+  }
+  return undefined;
 };
 
 export const isMultiHitMove = (moveName: string): boolean => {
@@ -334,7 +346,7 @@ export const isMultiHitMove = (moveName: string): boolean => {
   try {
     const gen = Generations.get(9);
     const move = new Move(gen, moveName);
-    return !!move.multihit;
+    return !!(move as any).multihit;
   } catch (e) {
     return false;
   }
