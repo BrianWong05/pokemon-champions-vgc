@@ -396,13 +396,17 @@ const DamageCalculatorPage: React.FC = () => {
     const movesData = preset.moves.map(mName => moveList.find(m => m.nameEn === mName) || null);
     const natureStats = getNatureStats(preset.nature);
 
+    while (movesData.length < 4) {
+      movesData.push(null);
+    }
+
     dispatch({
       type: 'APPLY_PRESET',
       payload: {
         side,
         pokemon: p,
         abilities: abilityNames,
-        movesData,
+        movesData: movesData.slice(0, 4),
         preset,
         natureStats
       }

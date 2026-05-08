@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Typography from '@/components/atoms/Typography';
 import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
@@ -42,6 +42,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   title, sideColor, hideTypeOverride = false,
   renderMoveActions
 }) => {
+  const [lastAppliedPreset, setLastAppliedPreset] = useState<string | null>(null);
   const selectedPokemon = pokemonList.find(p => p.id === config.selectedId);
   const pokemonTypes = [config.type1, config.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
   
@@ -52,9 +53,49 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-6">
       {/* 1. Title Bar */}
-      <div className="flex items-center gap-3">
-        <div className={`w-1.5 h-7 ${sideColor || 'bg-blue-600'} rounded-full`} />
-        <h2 className="text-xl font-bold text-gray-800">{title || "Pokémon 1"}</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-1.5 h-7 ${sideColor || 'bg-blue-600'} rounded-full`} />
+          <h2 className="text-xl font-bold text-gray-800">{title || "Pokémon 1"}</h2>
+        </div>
+        
+        {/* Preset Selection moved to top right */}
+        {selectedPokemon && availablePresets.length > 0 ? (
+          <div className="relative group">
+            <button className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-2">
+              Presets <span className="bg-blue-200 text-blue-700 px-1.5 rounded-full text-[9px] leading-tight">{availablePresets.length}</span>
+            </button>
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
+              <div className="max-h-60 overflow-y-auto">
+                {availablePresets.map(preset => (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      if (onSelectPreset) {
+                        onSelectPreset(preset);
+                        setLastAppliedPreset(preset.name);
+                        setTimeout(() => setLastAppliedPreset(null), 3000);
+                      }
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs transition-colors border-b last:border-0 border-gray-50 flex flex-col gap-0.5 ${
+                      lastAppliedPreset === preset.name 
+                        ? 'bg-green-50 text-green-700' 
+                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    }`}
+                  >
+                    <span className="font-bold flex justify-between items-center">
+                      {preset.name}
+                      {lastAppliedPreset === preset.name && <span className="text-[10px] text-green-600 bg-green-200 px-1.5 rounded-full">Applied</span>}
+                    </span>
+                    <span className="text-[9px] text-gray-400 uppercase tracking-wider">{preset.nature} • {preset.item}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : selectedPokemon ? (
+          <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-full">No Presets</span>
+        ) : null}
       </div>
 
       {/* 2. Top Selection Row */}
