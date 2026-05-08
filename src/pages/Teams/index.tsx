@@ -4,10 +4,15 @@ import { useTeams, TeamWithMembers } from '@/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
+import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
+import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { getNatureStats } from '@/utils/pokemon-presets';
 import { getDb } from '@/db';
-import { pokemon, formatPokemon, formats } from '@/db/schema';
+import { pokemon, formatPokemon, formats, pokemonAbilities, abilities, moves } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { PokemonConfig } from '@/hooks/usePokemonEditor';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
@@ -16,38 +21,127 @@ const TeamsPage: React.FC = () => {
   const [newTeamName, setNewTeamName] = useState('');
   
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
+  const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchPokemon = async () => {
+    const fetchMetadata = async () => {
       try {
         const db = await getDb();
-        const pokeResult = await db.select({
-          id: pokemon.id,
-          identifier: pokemon.identifier,
-          nameEn: pokemon.nameEn,
-          nameZh: pokemon.nameZh,
-          type1: pokemon.type1,
-          type2: pokemon.type2,
-          baseHp: pokemon.baseHp,
-          baseAttack: pokemon.baseAttack,
-          baseDefense: pokemon.baseDefense,
-          baseSpAtk: pokemon.baseSpAtk,
-          baseSpDef: pokemon.baseSpDef,
-          baseSpeed: pokemon.baseSpeed,
-        })
-        .from(pokemon)
-        .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
-        .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-        .where(eq(formats.name, 'Regulation M-A'));
+        const [pokeResult, moveResult] = await Promise.all([
+          db.select({
+            id: pokemon.id,
+            identifier: pokemon.identifier,
+            nameEn: pokemon.nameEn,
+            nameZh: pokemon.nameZh,
+            type1: pokemon.type1,
+            type2: pokemon.type2,
+            baseHp: pokemon.baseHp,
+            baseAttack: pokemon.baseAttack,
+            baseDefense: pokemon.baseDefense,
+            baseSpAtk: pokemon.baseSpAtk,
+            baseSpDef: pokemon.baseSpDef,
+            baseSpeed: pokemon.baseSpeed,
+          })
+          .from(pokemon)
+          .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
+          .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
+          .where(eq(formats.name, 'Regulation M-A')),
+          db.select().from(moves)
+        ]);
         
         setPokemonList(pokeResult as PokemonBaseStats[]);
+        setMoveList(moveResult as MoveData[]);
       } catch (error) {
         console.error('Failed to fetch pokemon list:', error);
       }
     };
-    fetchPokemon();
+    fetchMetadata();
   }, []);
+
+  const handleImportTeam = async (sets: ParsedShowdownSet[]) => {
+    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const newMembers: PokemonConfig[] = [];
+    const db = await getDb();
+
+    for (const set of sets.slice(0, 6)) {
+      const showdownNorm = normalizeName(set.species);
+      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+
+      if (!p) {
+        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
+        if (megaMatch) {
+          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
+          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
+        }
+      }
+
+      if (!p && showdownNorm === 'indeedeef') {
+        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+      }
+
+      if (!p) {
+        const prefix = set.species.toLowerCase().split('-')[0];
+        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
+            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
+      }
+
+      if (!p) continue;
+
+      let abilityNames: string[] = [];
+      try {
+        const abilityResult = await db.select({ name: abilities.nameEn })
+          .from(pokemonAbilities)
+          .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+          .where(eq(pokemonAbilities.pokemonId, p.id))
+          .orderBy(pokemonAbilities.slot);
+        abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      } catch (e) {}
+
+      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+      while (movesData.length < 4) movesData.push(null);
+      const natureStats = getNatureStats(set.nature);
+
+      newMembers.push({
+        selectedId: p.id,
+        type1: p.type1,
+        type2: p.type2,
+        baseHp: p.baseHp,
+        baseAtk: p.baseAttack,
+        baseDef: p.baseDefense,
+        baseSpa: p.baseSpAtk,
+        baseSpd: p.baseSpDef,
+        baseSpe: p.baseSpeed,
+        spHp: set.evs.hp,
+        spAtk: set.evs.atk,
+        spDef: set.evs.def,
+        spSpa: set.evs.spa,
+        spSpd: set.evs.spd,
+        spSpe: set.evs.spe,
+        nature: set.nature,
+        boostedStat: natureStats.boostedStat,
+        hinderedStat: natureStats.hinderedStat,
+        moves: movesData.slice(0, 4),
+        activeMoveIndex: 0,
+        abilities: abilityNames,
+        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
+        item: set.item,
+        hpPercent: 100,
+        isTypeOverridden: false,
+      });
+    }
+
+    if (newMembers.length === 0) {
+      alert('Could not find any Pokémon from the import text in our database.');
+      return;
+    }
+
+    const teamName = sets[0].species + "'s Team";
+    const teamId = await createTeam(teamName, newMembers);
+    setIsImportModalOpen(false);
+    navigate(`/teams/${teamId}`);
+  };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +175,20 @@ const TeamsPage: React.FC = () => {
     <div className="container mx-auto p-4 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">My Teams</h1>
-        <button
-          onClick={() => setIsCreating(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Create New Team
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="text-purple-600 bg-purple-50 hover:bg-purple-100 px-4 py-2 rounded-md transition-colors font-medium"
+          >
+            Import Team
+          </button>
+          <button
+            onClick={() => setIsCreating(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Create New Team
+          </button>
+        </div>
       </div>
 
       {isCreating && (
@@ -208,6 +310,12 @@ const TeamsPage: React.FC = () => {
           }))}
         />
       )}
+
+      <TeamShowdownImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportTeam}
+      />
     </div>
   );
 };
