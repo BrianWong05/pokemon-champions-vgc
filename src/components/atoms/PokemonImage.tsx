@@ -11,7 +11,7 @@ const PokemonImage: React.FC<PokemonImageProps> = ({ id, name, className = '' })
     <img 
       src={`${import.meta.env.BASE_URL}images/pokemon/thumbnails/${id}.png`} 
       alt={name}
-      className={`w-10 h-10 object-contain ${className}`}
+      className={`object-contain ${className || 'w-10 h-10'}`}
       onError={(e) => {
         (e.target as HTMLImageElement).src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
       }}

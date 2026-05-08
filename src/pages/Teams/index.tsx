@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTeams } from '@/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
+import ItemImage from '@/components/atoms/ItemImage';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading, error, createTeam, deleteTeam } = useTeams();
@@ -106,21 +107,23 @@ const TeamsPage: React.FC = () => {
                   Created {team.createdAt.toLocaleDateString()}
                 </p>
                 
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-4">
                   {team.members.slice(0, 6).map((member) => (
                     <div 
                       key={member.id} 
-                      className="bg-gray-50 border border-gray-200 p-1 rounded flex items-center gap-1"
+                      className="bg-gray-50 border border-gray-200 p-1 rounded flex items-center justify-center gap-1"
                       title={member.configuration.nature}
                     >
                       <PokemonImage 
                         id={member.configuration.selectedId!} 
                         name={member.configuration.activeAbility || "pokemon"} 
-                        className="w-6 h-6" 
+                        className="w-16 h-16" 
                       />
-                      <span className="text-xs font-medium truncate max-w-[60px]">
-                        {member.configuration.item || "No Item"}
-                      </span>
+                      <ItemImage 
+                        name={member.configuration.item} 
+                        className="w-6 h-6" 
+                        title={member.configuration.item || "No Item"}
+                      />
                     </div>
                   ))}
                   {team.members.length === 0 && (
