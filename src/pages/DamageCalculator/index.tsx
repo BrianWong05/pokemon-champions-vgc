@@ -10,7 +10,8 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
 import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { POKEMON_PRESETS, PokemonPreset, getNatureStats, getNatureFromStats } from '@/utils/pokemon-presets';
+import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
+import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 
 interface SideState {
@@ -311,7 +312,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpa: preset.sp.spa,
           spSpd: preset.sp.spd,
           spSpe: preset.sp.spe,
-          nature: preset.nature,
+          nature: getFormattedNature(preset.nature),
           hpPercent: 100,
           movesHits: [3, 3, 3, 3]
         }
@@ -346,7 +347,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpa: set.evs.spa,
           spSpd: set.evs.spd,
           spSpe: set.evs.spe,
-          nature: set.nature,
+          nature: getFormattedNature(set.nature),
           hpPercent: 100,
           movesHits: [3, 3, 3, 3]
         }
@@ -381,7 +382,7 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpa: config.spSpa,
           spSpd: config.spSpd,
           spSpe: config.spSpe,
-          nature: config.nature,
+          nature: getFormattedNature(config.nature),
           hpPercent: 100,
           movesHits: [3, 3, 3, 3],
           isTypeOverridden: config.isTypeOverridden || false

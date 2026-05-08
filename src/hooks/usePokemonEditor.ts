@@ -4,7 +4,8 @@ import { pokemonAbilities, abilities } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { PokemonPreset, getNatureStats, NATURES, getNatureFromStats } from '@/utils/pokemon-presets';
+import { PokemonPreset } from '@/utils/pokemon-presets';
+import { getNatureStats, NATURES, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 
 export interface PokemonConfig {
@@ -196,7 +197,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpe: p.baseSpeed,
         boostedStat: natureStats.boostedStat,
         hinderedStat: natureStats.hinderedStat,
-        nature: preset.nature,
+        nature: getFormattedNature(preset.nature),
         moves: movesData,
         activeMoveIndex: 0,
         abilities: abilities,
@@ -227,7 +228,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         baseSpe: p.baseSpeed,
         boostedStat: natureStats.boostedStat,
         hinderedStat: natureStats.hinderedStat,
-        nature: set.nature,
+        nature: getFormattedNature(set.nature),
         moves: movesData,
         activeAbility: set.ability && abilities.includes(set.ability) ? set.ability : (abilities[0] || null),
         abilities: abilities,
@@ -243,7 +244,10 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
       };
     }
     case 'LOAD_CONFIG': {
-      return action.payload;
+      return {
+        ...action.payload,
+        nature: getFormattedNature(action.payload.nature)
+      };
     }
     default: return state;
   }
