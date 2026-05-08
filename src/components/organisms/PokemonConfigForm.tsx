@@ -12,6 +12,7 @@ import { POKEMON_PRESETS, PokemonPreset, NATURES } from '@/utils/pokemon-presets
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 import ShowdownImportModal from './ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { TeamImportSelector } from '@/features/calculator/components/TeamImportSelector';
 
 interface PokemonConfigFormProps {
   config: PokemonConfig;
@@ -20,6 +21,7 @@ interface PokemonConfigFormProps {
   onSelectPokemon: (p: PokemonBaseStats) => void;
   onSelectPreset?: (preset: PokemonPreset) => void;
   onImportShowdown?: (set: ParsedShowdownSet) => void;
+  onLoadConfig?: (config: PokemonConfig) => void;
   onSpChange: (key: string, val: number) => void;
   onNatureChange: (nature: string) => void;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
@@ -39,7 +41,7 @@ interface PokemonConfigFormProps {
 
 const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   config, pokemonList, moveList, 
-  onSelectPokemon, onSelectPreset, onImportShowdown, onSpChange, onNatureChange, onToggleNature, onStageChange,
+  onSelectPokemon, onSelectPreset, onImportShowdown, onLoadConfig, onSpChange, onNatureChange, onToggleNature, onStageChange,
   onSelectMove, onClearMove, onAbilityChange, onItemChange,
   onTypeChange, onToggleTypeOverride,
   title, sideColor, hideTypeOverride = false,
@@ -47,6 +49,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
 }) => {
   const [lastAppliedPreset, setLastAppliedPreset] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isTeamSelectorOpen, setIsTeamSelectorOpen] = useState(false);
   const selectedPokemon = pokemonList.find(p => p.id === config.selectedId);
   const pokemonTypes = [config.type1, config.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
   
@@ -74,6 +77,47 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
         
         {/* Actions Selection moved to top right */}
         <div className="flex gap-2 items-center">
+          {onLoadConfig && (
+            <div className="relative">
+              <button 
+                onClick={() => setIsTeamSelectorOpen(!isTeamSelectorOpen)}
+                className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-2"
+              >
+                My Teams
+              </button>
+              {isTeamSelectorOpen && (
+                <div className="absolute right-0 top-full mt-2 w-[400px] max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-30 overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50/50">
+                    <span className="text-xs font-bold text-gray-700">Import from Team</span>
+                    <button 
+                      onClick={() => setIsTeamSelectorOpen(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    <TeamImportSelector 
+                      onSelect={(loadedConfig) => {
+                        onLoadConfig(loadedConfig);
+                        setIsTeamSelectorOpen(false);
+                      }} 
+                      onClose={() => setIsTeamSelectorOpen(false)}
+                    />
+                  </div>
+                </div>
+              )}
+              {isTeamSelectorOpen && (
+                <div 
+                  className="fixed inset-0 z-20" 
+                  onClick={() => setIsTeamSelectorOpen(false)}
+                />
+              )}
+            </div>
+          )}
+
           {onImportShowdown && (
             <button 
               onClick={() => setIsImportModalOpen(true)}

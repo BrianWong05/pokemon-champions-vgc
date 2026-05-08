@@ -88,7 +88,8 @@ type CalcAction =
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
   | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } };
+  | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } };
 
 const initialSide: SideState = {
   selectedId: null,
@@ -348,6 +349,42 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
         }
       }
     }
+    case 'LOAD_CONFIG': {
+      const { side, config, pokemon: p, abilities, movesData, natureStats } = action.payload;
+      return {
+        ...state,
+        [side]: {
+          ...initialSide,
+          selectedId: p.id,
+          type1: config.type1 ?? p.type1,
+          type2: config.type2 ?? p.type2,
+          baseHp: p.baseHp,
+          baseAtk: p.baseAttack,
+          baseDef: p.baseDefense,
+          baseSpa: p.baseSpAtk,
+          baseSpd: p.baseSpDef,
+          baseSpe: p.baseSpeed,
+          boostedStat: natureStats.boostedStat,
+          hinderedStat: natureStats.hinderedStat,
+          stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+          moves: movesData,
+          activeMoveIndex: 0,
+          abilities: abilities,
+          activeAbility: config.activeAbility,
+          item: config.item,
+          spHp: config.spHp,
+          spAtk: config.spAtk,
+          spDef: config.spDef,
+          spSpa: config.spSpa,
+          spSpd: config.spSpd,
+          spSpe: config.spSpe,
+          nature: config.nature,
+          hpPercent: 100,
+          movesHits: [3, 3, 3, 3],
+          isTypeOverridden: config.isTypeOverridden || false
+        }
+      }
+    }
     default: return state;
   }
 }
@@ -513,6 +550,41 @@ const DamageCalculatorPage: React.FC = () => {
     });
   };
 
+  const handleLoadConfig = async (side: 'p1' | 'p2', config: any) => {
+    const p = pokemonList.find(p => p.id === config.selectedId);
+    if (!p) return;
+    
+    let abilityNames: string[] = [];
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {}
+
+    const movesData = config.moves.map((m: any) => m ? (moveList.find(move => move.nameEn === m.nameEn) || null) : null);
+    const natureStats = getNatureStats(config.nature);
+
+    while (movesData.length < 4) {
+      movesData.push(null);
+    }
+
+    dispatch({
+      type: 'LOAD_CONFIG',
+      payload: {
+        side,
+        config,
+        pokemon: p,
+        abilities: abilityNames,
+        movesData: movesData.slice(0, 4),
+        natureStats
+      }
+    });
+  };
+
   const p1MaxHp = calculateHP(state.p1.baseHp, state.p1.spHp);
   const p2MaxHp = calculateHP(state.p2.baseHp, state.p2.spHp);
 
@@ -645,6 +717,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSelectPokemon={(p) => handleSelectPokemon('p1', p)}
           onSelectPreset={(preset) => handleSelectPreset('p1', preset)}
           onImportShowdown={(set) => handleImportShowdown('p1', set)}
+          onLoadConfig={(config) => handleLoadConfig('p1', config)}
           stats={state.p1}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key, val } })}
           onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side: 'p1', nature } })}
@@ -692,6 +765,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSelectPokemon={(p) => handleSelectPokemon('p2', p)}
           onSelectPreset={(preset) => handleSelectPreset('p2', preset)}
           onImportShowdown={(set) => handleImportShowdown('p2', set)}
+          onLoadConfig={(config) => handleLoadConfig('p2', config)}
           stats={state.p2}
           onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key, val } })}
           onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side: 'p2', nature } })}
