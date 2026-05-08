@@ -1,14 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams, TeamWithMembers } from '@/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
+import TeamExportModal from '@/components/organisms/TeamExportModal';
+import { getDb } from '@/db';
+import { pokemon, formatPokemon, formats } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 const TeamsPage: React.FC = () => {
-  const { teams, loading, error, createTeam, deleteTeam } = useTeams();
+  const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
+  
+  const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
+  const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
+
+  useEffect(() => {
+    const fetchPokemon = async () => {
+      try {
+        const db = await getDb();
+        const pokeResult = await db.select({
+          id: pokemon.id,
+          identifier: pokemon.identifier,
+          nameEn: pokemon.nameEn,
+          nameZh: pokemon.nameZh,
+          type1: pokemon.type1,
+          type2: pokemon.type2,
+          baseHp: pokemon.baseHp,
+          baseAttack: pokemon.baseAttack,
+          baseDefense: pokemon.baseDefense,
+          baseSpAtk: pokemon.baseSpAtk,
+          baseSpDef: pokemon.baseSpDef,
+          baseSpeed: pokemon.baseSpeed,
+        })
+        .from(pokemon)
+        .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
+        .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
+        .where(eq(formats.name, 'Regulation M-A'));
+        
+        setPokemonList(pokeResult as PokemonBaseStats[]);
+      } catch (error) {
+        console.error('Failed to fetch pokemon list:', error);
+      }
+    };
+    fetchPokemon();
+  }, []);
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +69,7 @@ const TeamsPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (teamsLoading) {
     return <div className="container mx-auto p-4 max-w-4xl text-center">Loading teams...</div>;
   }
 
@@ -132,12 +171,20 @@ const TeamsPage: React.FC = () => {
                 </div>
               </div>
               <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-between">
-                <Link
-                  to={`/teams/${team.id}`}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
-                >
-                  Edit Team
-                </Link>
+                <div className="flex gap-4">
+                  <Link
+                    to={`/teams/${team.id}`}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
+                  >
+                    Edit Team
+                  </Link>
+                  <button
+                    onClick={() => setExportTeam(team)}
+                    className="text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors"
+                  >
+                    Export
+                  </button>
+                </div>
                 <button
                   onClick={() => handleDeleteTeam(team.id, team.name)}
                   className="text-red-500 hover:text-red-700 font-medium text-sm transition-colors"
@@ -148,6 +195,18 @@ const TeamsPage: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {exportTeam && (
+        <TeamExportModal
+          isOpen={!!exportTeam}
+          onClose={() => setExportTeam(null)}
+          teamName={exportTeam.name}
+          members={exportTeam.members.map(m => ({
+            configuration: m.configuration,
+            speciesName: pokemonList.find(p => p.id === m.configuration.selectedId)?.nameEn || 'Unknown'
+          }))}
+        />
       )}
     </div>
   );

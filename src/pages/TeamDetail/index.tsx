@@ -14,6 +14,7 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import Typography from '@/components/atoms/Typography';
 import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
+import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
@@ -31,6 +32,7 @@ const TeamDetailPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isSingleImportOpen, setIsSingleImportOpen] = useState(false);
   const [editingMemberIndex, setEditingMemberIndex] = useState<number | null>(null);
@@ -376,6 +378,15 @@ const TeamDetailPage: React.FC = () => {
             <div className="flex items-center gap-4 mb-1">
               <h1 className="text-4xl font-black text-gray-800">{team.name}</h1>
               <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export Team
+              </button>
+              <button
                 onClick={() => setIsImportModalOpen(true)}
                 className="text-[10px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
               >
@@ -512,6 +523,16 @@ const TeamDetailPage: React.FC = () => {
         initialConfig={currentConfig}
         pokemonList={pokemonList}
         moveList={moveList}
+      />
+
+      <TeamExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        teamName={team.name}
+        members={team.members.map(m => ({
+          configuration: m.configuration,
+          speciesName: pokemonList.find(p => p.id === m.configuration.selectedId)?.nameEn || 'Unknown'
+        }))}
       />
 
       <TeamShowdownImportModal
