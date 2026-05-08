@@ -142,13 +142,51 @@ const exportRegex = /export const POKEMON_PRESETS:\s*PokemonPreset\[\]\s*=\s*\[(
 const match = fileContent.match(exportRegex);
 if (match) {
   const currentListText = match[1];
-  const newPresetsText = presets.map(p => JSON.stringify(p, null, 2).replace(/"([^"]+)":/g, '$1:')).join(',\n');
+  
+  // Parse existing presets to check for duplicates
+  let existingPresets = [];
+  try {
+    // Basic cleanup to help parsing if needed, but new Function should handle standard JS objects
+    existingPresets = new Function(`return [${currentListText}]`)();
+  } catch (e) {
+    console.warn("Warning: Could not parse existing presets for deduplication check. Proceeding with caution.");
+  }
+
+  const arePresetsEqual = (p1, p2) => {
+    return p1.pokemonName === p2.pokemonName &&
+           p1.nature === p2.nature &&
+           p1.ability === p2.ability &&
+           p1.item === p2.item &&
+           p1.sp.hp === p2.sp.hp &&
+           p1.sp.atk === p2.sp.atk &&
+           p1.sp.def === p2.sp.def &&
+           p1.sp.spa === p2.sp.spa &&
+           p1.sp.spd === p2.sp.spd &&
+           p1.sp.spe === p2.sp.spe &&
+           [...p1.moves].sort().join(',') === [...p2.moves].sort().join(',');
+  };
+
+  // Filter out duplicates
+  const uniqueNewPresets = presets.filter(newP => {
+    const isDuplicate = existingPresets.some(oldP => arePresetsEqual(newP, oldP));
+    if (isDuplicate) {
+      console.log(`Skipping duplicate preset: ${newP.name}`);
+    }
+    return !isDuplicate;
+  });
+
+  if (uniqueNewPresets.length === 0) {
+    console.log("No new unique presets to add.");
+    process.exit(0);
+  }
+
+  const newPresetsText = uniqueNewPresets.map(p => JSON.stringify(p, null, 2).replace(/"([^"]+)":/g, '$1:')).join(',\n');
   const separator = currentListText.trim().length > 0 ? ',\n  ' : '';
   const replacement = `export const POKEMON_PRESETS: PokemonPreset[] = [${currentListText.replace(/\s+$/, '')}${separator}${newPresetsText.split('\n').join('\n  ')}\n];`;
   
   const updatedContent = fileContent.replace(exportRegex, replacement);
   fs.writeFileSync(PRESETS_FILE, updatedContent);
-  console.log(`Successfully added ${presets.length} preset(s):\n - ${presets.map(p => p.name).join('\n - ')}`);
+  console.log(`Successfully added ${uniqueNewPresets.length} unique preset(s):\n - ${uniqueNewPresets.map(p => p.name).join('\n - ')}`);
 } else {
   console.error("Error: Could not find POKEMON_PRESETS array in the file.");
   process.exit(1);
