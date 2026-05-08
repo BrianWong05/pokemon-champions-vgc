@@ -15,6 +15,7 @@ import TypeBadge from '@/components/atoms/TypeBadge';
 import Typography from '@/components/atoms/Typography';
 import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
+import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { getNatureStats } from '@/utils/pokemon-presets';
 
@@ -31,6 +32,7 @@ const TeamDetailPage: React.FC = () => {
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isSingleImportOpen, setIsSingleImportOpen] = useState(false);
   const [editingMemberIndex, setEditingMemberIndex] = useState<number | null>(null);
   const [currentConfig, setCurrentConfig] = useState<PokemonConfig | null>(null);
 
@@ -267,6 +269,89 @@ const TeamDetailPage: React.FC = () => {
     }
   };
 
+  const handleImportSingleShowdown = async (set: ParsedShowdownSet) => {
+    if (!team) return;
+
+    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const showdownNorm = normalizeName(set.species);
+    let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+
+    if (!p) {
+      const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
+      if (megaMatch) {
+        const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
+        p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
+      }
+    }
+
+    if (!p && showdownNorm === 'indeedeef') {
+      p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+    }
+
+    if (!p) {
+      const prefix = set.species.toLowerCase().split('-')[0];
+      p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
+          pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
+    }
+
+    if (!p) {
+      alert(`Could not find Pokémon matching "${set.species}"`);
+      return;
+    }
+
+    const db = await getDb();
+    let abilityNames: string[] = [];
+    try {
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {}
+
+    const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+    while (movesData.length < 4) movesData.push(null);
+    const natureStats = getNatureStats(set.nature);
+
+    const newConfig: PokemonConfig = {
+      selectedId: p.id,
+      type1: p.type1,
+      type2: p.type2,
+      baseHp: p.baseHp,
+      baseAtk: p.baseAttack,
+      baseDef: p.baseDefense,
+      baseSpa: p.baseSpAtk,
+      baseSpd: p.baseSpDef,
+      baseSpe: p.baseSpeed,
+      spHp: set.evs.hp,
+      spAtk: set.evs.atk,
+      spDef: set.evs.def,
+      spSpa: set.evs.spa,
+      spSpd: set.evs.spd,
+      spSpe: set.evs.spe,
+      nature: set.nature,
+      boostedStat: natureStats.boostedStat,
+      hinderedStat: natureStats.hinderedStat,
+      moves: movesData.slice(0, 4),
+      activeMoveIndex: 0,
+      abilities: abilityNames,
+      activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
+      item: set.item,
+      hpPercent: 100,
+      isTypeOverridden: false,
+    };
+
+    const newMembers = [...team.members.map(m => m.configuration), newConfig];
+    try {
+      await updateTeam(team.id, team.name, newMembers);
+      const updatedTeam = await getTeam(team.id);
+      setTeam(updatedTeam);
+    } catch (err) {
+      console.error('Failed to add Pokémon via Showdown:', err);
+    }
+  };
+
   if (loading || teamsLoading) {
     return <div className="container mx-auto p-4 max-w-4xl text-center">Loading team...</div>;
   }
@@ -388,10 +473,21 @@ const TeamDetailPage: React.FC = () => {
         ))}
 
         {team.members.length < 6 && (
-          <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center justify-center min-h-[300px] transition-colors hover:border-blue-300 group">
-            <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[10px] font-black mb-4">
-              Add New Member
-            </Typography>
+          <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center justify-center min-h-[300px] transition-colors hover:border-blue-300 group relative">
+            <div className="flex flex-col items-center gap-4 w-full mb-4">
+              <Typography variant="label" className="text-gray-400 uppercase tracking-widest text-[10px] font-black">
+                Add New Member
+              </Typography>
+              <button
+                onClick={() => setIsSingleImportOpen(true)}
+                className="text-[10px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                Import Showdown
+              </button>
+            </div>
             <div className="w-full">
                <PokemonSearchSelect 
                 label="" 
@@ -422,6 +518,12 @@ const TeamDetailPage: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={handleImportTeamShowdown}
+      />
+
+      <ShowdownImportModal
+        isOpen={isSingleImportOpen}
+        onClose={() => setIsSingleImportOpen(false)}
+        onImport={handleImportSingleShowdown}
       />
     </div>
   );

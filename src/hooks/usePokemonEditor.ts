@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonPreset, getNatureStats, NATURES, getNatureFromStats } from '@/utils/pokemon-presets';
+import { ParsedShowdownSet } from '@/utils/showdown-parser';
 
 export interface PokemonConfig {
   selectedId: number | null;
@@ -49,6 +50,7 @@ type PokemonAction =
   | { type: 'SET_TYPE', payload: { slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE' }
   | { type: 'APPLY_PRESET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'IMPORT_SHOWDOWN_SET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'LOAD_CONFIG', payload: PokemonConfig };
 
 const initialPokemonState: PokemonConfig = {
@@ -210,6 +212,36 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         isTypeOverridden: false,
       };
     }
+    case 'IMPORT_SHOWDOWN_SET': {
+      const { pokemon: p, abilities, movesData, set, natureStats } = action.payload;
+      return {
+        ...state,
+        selectedId: p.id,
+        type1: p.type1,
+        type2: p.type2,
+        baseHp: p.baseHp,
+        baseAtk: p.baseAttack,
+        baseDef: p.baseDefense,
+        baseSpa: p.baseSpAtk,
+        baseSpd: p.baseSpDef,
+        baseSpe: p.baseSpeed,
+        boostedStat: natureStats.boostedStat,
+        hinderedStat: natureStats.hinderedStat,
+        nature: set.nature,
+        moves: movesData,
+        activeAbility: set.ability && abilities.includes(set.ability) ? set.ability : (abilities[0] || null),
+        abilities: abilities,
+        item: set.item,
+        spHp: set.evs.hp,
+        spAtk: set.evs.atk,
+        spDef: set.evs.def,
+        spSpa: set.evs.spa,
+        spSpd: set.evs.spd,
+        spSpe: set.evs.spe,
+        hpPercent: 100,
+        isTypeOverridden: false,
+      };
+    }
     case 'LOAD_CONFIG': {
       return action.payload;
     }
@@ -278,6 +310,62 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     });
   }, []);
 
+  const handleImportShowdown = useCallback(async (set: ParsedShowdownSet, pokemonList: PokemonBaseStats[], moveList: MoveData[]) => {
+    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const showdownNorm = normalizeName(set.species);
+    
+    let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+
+    if (!p) {
+      const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
+      if (megaMatch) {
+        const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
+        p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
+      }
+    }
+    
+    if (!p && showdownNorm === 'indeedeef') {
+      p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+    }
+
+    if (!p) {
+      const prefix = set.species.toLowerCase().split('-')[0];
+      p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
+          pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
+    }
+
+    if (!p) {
+      alert(`Could not find Pokémon matching "${set.species}"`);
+      return;
+    }
+
+    let abilityNames: string[] = [];
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+    } catch (e) {}
+
+    const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+    while (movesData.length < 4) movesData.push(null);
+    const natureStats = getNatureStats(set.nature);
+
+    dispatch({
+      type: 'IMPORT_SHOWDOWN_SET',
+      payload: {
+        pokemon: p,
+        abilities: abilityNames,
+        movesData: movesData.slice(0, 4),
+        set,
+        natureStats
+      }
+    });
+  }, []);
+
   const setSp = useCallback((key: string, val: number) => {
     dispatch({ type: 'SET_SP', payload: { key, val } });
   }, []);
@@ -330,6 +418,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     state,
     handleSelectPokemon,
     handleSelectPreset,
+    handleImportShowdown,
     setSp,
     setNature,
     toggleNature,

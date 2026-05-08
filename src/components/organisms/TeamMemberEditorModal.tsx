@@ -19,7 +19,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
   isOpen, onClose, onSave, initialConfig, pokemonList, moveList
 }) => {
   const { 
-    state, handleSelectPokemon, handleSelectPreset, setSp, toggleNature, 
+    state, handleSelectPokemon, handleSelectPreset, handleImportShowdown, setSp, setNature, toggleNature, 
     setItem, setAbility, setMove, clearMove, setType, toggleTypeOverride, loadConfig 
   } = usePokemonEditor();
 
@@ -48,7 +48,9 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           moveList={moveList}
           onSelectPokemon={handleSelectPokemon}
           onSelectPreset={(preset) => handleSelectPreset(preset, pokemonList, moveList)}
+          onImportShowdown={(set) => handleImportShowdown(set, pokemonList, moveList)}
           onSpChange={setSp}
+          onNatureChange={setNature}
           onToggleNature={toggleNature}
           onSelectMove={setMove}
           onClearMove={clearMove}
