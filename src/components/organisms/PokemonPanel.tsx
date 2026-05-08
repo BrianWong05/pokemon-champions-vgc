@@ -6,6 +6,7 @@ import { isMultiHitMove } from '@/utils/damage';
 import { PokemonPreset } from '@/utils/pokemon-presets';
 import PokemonConfigForm from './PokemonConfigForm';
 import { calculateHP } from '@/utils/damage';
+import { ParsedShowdownSet } from '@/utils/showdown-parser';
 
 interface PokemonPanelProps {
   title: string;
@@ -15,6 +16,7 @@ interface PokemonPanelProps {
   selectedId: number | null;
   onSelectPokemon: (p: PokemonBaseStats) => void;
   onSelectPreset?: (preset: PokemonPreset) => void;
+  onImportShowdown?: (set: ParsedShowdownSet) => void;
   stats: any;
   onSpChange: (key: string, val: number) => void;
   onNatureChange: (nature: string) => void;
@@ -132,6 +134,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         moveList={props.moveList}
         onSelectPokemon={props.onSelectPokemon}
         onSelectPreset={props.onSelectPreset}
+        onImportShowdown={props.onImportShowdown}
         onSpChange={props.onSpChange}
         onNatureChange={props.onNatureChange}
         onToggleNature={props.onToggleNature}
