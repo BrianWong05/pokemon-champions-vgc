@@ -131,6 +131,69 @@ export const getStatModifier = (
   return { modifier, triggered };
 };
 
+export const normalizeSmogonName = (name: string): string => {
+  if (!name) return name;
+
+  const fallbacks: Record<string, string> = {
+    'Urshifu (Single Strike)': 'Urshifu',
+    'Urshifu (Rapid Strike)': 'Urshifu-Rapid-Strike',
+    'Urshifu (Single Strike Gmax)': 'Urshifu-Gmax',
+    'Urshifu (Rapid Strike Gmax)': 'Urshifu-Rapid-Strike-Gmax',
+    'Ogerpon (Teal Mask)': 'Ogerpon',
+    'Ogerpon (Wellspring Mask)': 'Ogerpon-Wellspring',
+    'Ogerpon (Hearthflame Mask)': 'Ogerpon-Hearthflame',
+    'Ogerpon (Cornerstone Mask)': 'Ogerpon-Cornerstone',
+    'Calyrex (Ice Rider)': 'Calyrex-Ice',
+    'Calyrex (Shadow Rider)': 'Calyrex-Shadow',
+    'Necrozma (Dusk Mane)': 'Necrozma-Dusk-Mane',
+    'Necrozma (Dawn Wings)': 'Necrozma-Dawn-Wings',
+    'Necrozma (Ultra)': 'Necrozma-Ultra',
+    'Zygarde (10% Forme)': 'Zygarde-10%',
+    'Zygarde (Complete Forme)': 'Zygarde-Complete',
+    'Kyurem (Black)': 'Kyurem-Black',
+    'Kyurem (White)': 'Kyurem-White',
+    'Terapagos (Terastal Form)': 'Terapagos-Terastal',
+    'Terapagos (Stellar Form)': 'Terapagos-Stellar',
+    'Zacian (Crowned Sword)': 'Zacian-Crowned',
+    'Zamazenta (Crowned Shield)': 'Zamazenta-Crowned',
+    'Palafin (Hero Form)': 'Palafin-Hero',
+    'Mega Charizard X': 'Charizard-Mega-X',
+    'Mega Charizard Y': 'Charizard-Mega-Y',
+    'Mega Mewtwo X': 'Mewtwo-Mega-X',
+    'Mega Mewtwo Y': 'Mewtwo-Mega-Y',
+  };
+
+  if (fallbacks[name]) {
+    return fallbacks[name];
+  }
+
+  let normalized = name;
+
+  normalized = normalized.replace(/^(Alolan|Galarian|Hisuian|Paldean)\s+(.+)$/, (match, region, pokemon) => {
+    const regionMap: Record<string, string> = {
+      'Alolan': 'Alola',
+      'Galarian': 'Galar',
+      'Hisuian': 'Hisui',
+      'Paldean': 'Paldea'
+    };
+    return `${pokemon}-${regionMap[region]}`;
+  });
+
+  normalized = normalized.replace(/^Mega\s+(.+)$/, '$1-Mega');
+
+  const genderBaseSpecies = ['Basculegion', 'Meowstic', 'Indeedee'];
+  for (const species of genderBaseSpecies) {
+    if (normalized === `${species} (Male)`) {
+      return species;
+    }
+    if (normalized === `${species} (Female)`) {
+      return `${species}-F`;
+    }
+  }
+
+  return normalized;
+};
+
 export const mapToSmogonPokemon = (
   stateSide: any, 
   pokemonName: string,
@@ -168,7 +231,7 @@ export const mapToSmogonPokemon = (
 
   // Use 'None' as species if overridden to prevent species-specific logic (like Garchomp's Ground immunity)
   // from interfering with our manual type selection.
-  const effectiveName = stateSide.isTypeOverridden ? 'None' : pokemonName;
+  const effectiveName = stateSide.isTypeOverridden ? 'None' : normalizeSmogonName(pokemonName);
 
   const p = new Pokemon(gen, effectiveName, {
     level: 50,
