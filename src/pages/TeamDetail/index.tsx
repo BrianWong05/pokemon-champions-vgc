@@ -14,6 +14,9 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TypeBadge from '@/components/atoms/TypeBadge';
 import Typography from '@/components/atoms/Typography';
 import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
+import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
+import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { getNatureStats } from '@/utils/pokemon-presets';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +30,7 @@ const TeamDetailPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingMemberIndex, setEditingMemberIndex] = useState<number | null>(null);
   const [currentConfig, setCurrentConfig] = useState<PokemonConfig | null>(null);
 
@@ -172,6 +176,97 @@ const TeamDetailPage: React.FC = () => {
     }
   };
 
+  const handleImportTeamShowdown = async (sets: ParsedShowdownSet[]) => {
+    if (!team) return;
+
+    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const newMembers: PokemonConfig[] = [];
+
+    const db = await getDb();
+
+    for (const set of sets.slice(0, 6)) {
+      const showdownNorm = normalizeName(set.species);
+      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+
+      if (!p) {
+        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
+        if (megaMatch) {
+          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
+          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
+        }
+      }
+
+      if (!p && showdownNorm === 'indeedeef') {
+        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+      }
+
+      if (!p) {
+        const prefix = set.species.toLowerCase().split('-')[0];
+        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
+            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
+      }
+
+      if (!p) continue;
+
+      let abilityNames: string[] = [];
+      try {
+        const abilityResult = await db.select({ name: abilities.nameEn })
+          .from(pokemonAbilities)
+          .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+          .where(eq(pokemonAbilities.pokemonId, p.id))
+          .orderBy(pokemonAbilities.slot);
+        abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      } catch (e) {}
+
+      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+      while (movesData.length < 4) movesData.push(null);
+      const natureStats = getNatureStats(set.nature);
+
+      newMembers.push({
+        selectedId: p.id,
+        type1: p.type1,
+        type2: p.type2,
+        baseHp: p.baseHp,
+        baseAtk: p.baseAttack,
+        baseDef: p.baseDefense,
+        baseSpa: p.baseSpAtk,
+        baseSpd: p.baseSpDef,
+        baseSpe: p.baseSpeed,
+        spHp: set.evs.hp,
+        spAtk: set.evs.atk,
+        spDef: set.evs.def,
+        spSpa: set.evs.spa,
+        spSpd: set.evs.spd,
+        spSpe: set.evs.spe,
+        nature: set.nature,
+        boostedStat: natureStats.boostedStat,
+        hinderedStat: natureStats.hinderedStat,
+        moves: movesData.slice(0, 4),
+        activeMoveIndex: 0,
+        abilities: abilityNames,
+        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
+        item: set.item,
+        hpPercent: 100,
+        isTypeOverridden: false,
+      });
+    }
+
+    if (newMembers.length === 0) {
+      alert('Could not find any Pokémon from the import text in our database.');
+      return;
+    }
+
+    if (window.confirm(`Found ${newMembers.length} Pokémon. This will OVERWRITE your current team. Proceed?`)) {
+      try {
+        await updateTeam(team.id, team.name, newMembers);
+        const updatedTeam = await getTeam(team.id);
+        setTeam(updatedTeam);
+      } catch (err) {
+        console.error('Failed to import team:', err);
+      }
+    }
+  };
+
   if (loading || teamsLoading) {
     return <div className="container mx-auto p-4 max-w-4xl text-center">Loading team...</div>;
   }
@@ -193,7 +288,18 @@ const TeamDetailPage: React.FC = () => {
         </Link>
         <div className="flex justify-between items-end bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
           <div>
-            <h1 className="text-4xl font-black text-gray-800 mb-1">{team.name}</h1>
+            <div className="flex items-center gap-4 mb-1">
+              <h1 className="text-4xl font-black text-gray-800">{team.name}</h1>
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="text-[10px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                Import Team
+              </button>
+            </div>
             <p className="text-gray-400 font-medium">Created {team.createdAt.toLocaleDateString()}</p>
           </div>
           <div className="text-right">
@@ -310,6 +416,12 @@ const TeamDetailPage: React.FC = () => {
         initialConfig={currentConfig}
         pokemonList={pokemonList}
         moveList={moveList}
+      />
+
+      <TeamShowdownImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportTeamShowdown}
       />
     </div>
   );

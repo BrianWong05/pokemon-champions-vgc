@@ -125,3 +125,18 @@ export const parseShowdownSet = (exportText: string): ParsedShowdownSet | null =
 
   return parsed;
 };
+
+export const parseShowdownTeam = (exportText: string): ParsedShowdownSet[] => {
+  // Split by one or more empty lines
+  const blocks = exportText.split(/\n\s*\n/);
+  const sets: ParsedShowdownSet[] = [];
+  
+  for (const block of blocks) {
+    const parsed = parseShowdownSet(block);
+    if (parsed) {
+      sets.push(parsed);
+    }
+  }
+  
+  return sets;
+};
