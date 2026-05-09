@@ -76,6 +76,10 @@ const initialPokemonState: PokemonConfig = {
 
 export const AEGISLASH_ID = 681;
 
+import { useStatEngine } from './useStatEngine';
+
+const statEngine = useStatEngine();
+
 function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonConfig {
   switch (action.type) {
     case 'SET_SP': {
@@ -83,7 +87,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
       return { ...state, [key]: val };
     }
     case 'SET_NATURE': {
-      const stats = getNatureStats(action.payload);
+      const stats = statEngine.getStatsForNature(action.payload);
       return { 
         ...state, 
         nature: action.payload, 
@@ -93,29 +97,8 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
     }
     case 'TOGGLE_NATURE': {
       const { stat, mod } = action.payload;
-      let newBoosted = state.boostedStat;
-      let newHindered = state.hinderedStat;
-
-      if (mod === '+') {
-        if (newBoosted === stat) {
-          newBoosted = null;
-        } else {
-          newBoosted = stat;
-          if (newHindered === stat) newHindered = null;
-        }
-      } else {
-        if (newHindered === stat) {
-          newHindered = null;
-        } else {
-          newHindered = stat;
-          if (newBoosted === stat) newBoosted = null;
-        }
-      }
-
-      // We should probably find the nature name that matches this combo
-      // For now, keep it simple and just update the stats.
-      const newNature = getNatureFromStats(newBoosted, newHindered);
-      return { ...state, boostedStat: newBoosted, hinderedStat: newHindered, nature: newNature };
+      const stats = statEngine.calculateNatureToggle(state.boostedStat, state.hinderedStat, stat, mod);
+      return { ...state, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat, nature: stats.nature };
     }
     case 'SELECT_POKEMON': {
       const { pokemon: p } = action.payload;

@@ -1,25 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { getDb } from '@/db';
-import { teams, teamMembers } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { teamRepository, TeamWithMembers } from '@/db/repositories/team.repo';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 
-export interface Team {
-  id: string;
-  name: string;
-  createdAt: Date;
-}
-
-export interface TeamMember {
-  id: string;
-  teamId: string;
-  configuration: PokemonConfig;
-  order: number;
-}
-
-export interface TeamWithMembers extends Team {
-  members: TeamMember[];
-}
+export type { Team, TeamMember, TeamWithMembers } from '@/db/repositories/team.repo';
 
 export const useTeams = () => {
   const [allTeams, setAllTeams] = useState<TeamWithMembers[]>([]);
@@ -29,31 +12,7 @@ export const useTeams = () => {
   const fetchTeams = useCallback(async () => {
     try {
       setLoading(true);
-      const db = await getDb();
-      
-      const fetchedTeams = await db.select().from(teams).orderBy(desc(teams.createdAt));
-      
-      const teamsWithMembers: TeamWithMembers[] = [];
-      
-      for (const team of fetchedTeams) {
-        const fetchedMembers = await db
-          .select()
-          .from(teamMembers)
-          .where(eq(teamMembers.teamId, team.id))
-          .orderBy(teamMembers.order);
-          
-        teamsWithMembers.push({
-          ...team,
-          createdAt: new Date(team.createdAt),
-          members: fetchedMembers.map(m => ({
-            ...m,
-            configuration: typeof m.configuration === 'string' 
-              ? JSON.parse(m.configuration) 
-              : m.configuration,
-          })),
-        });
-      }
-      
+      const teamsWithMembers = await teamRepository.getAllTeams();
       setAllTeams(teamsWithMembers);
       setError(null);
     } catch (err) {
@@ -66,24 +25,7 @@ export const useTeams = () => {
 
   const createTeam = useCallback(async (name: string, members: PokemonConfig[] = []) => {
     try {
-      const db = await getDb();
-      const newTeamId = crypto.randomUUID();
-      
-      await db.insert(teams).values({
-        id: newTeamId,
-        name,
-        createdAt: new Date(),
-      });
-      
-      for (let i = 0; i < members.length; i++) {
-        await db.insert(teamMembers).values({
-          id: crypto.randomUUID(),
-          teamId: newTeamId,
-          configuration: JSON.stringify(members[i]),
-          order: i,
-        });
-      }
-      
+      const newTeamId = await teamRepository.createTeam(name, members);
       await fetchTeams();
       return newTeamId;
     } catch (err) {
@@ -94,23 +36,7 @@ export const useTeams = () => {
 
   const updateTeam = useCallback(async (teamId: string, name: string, members: PokemonConfig[]) => {
     try {
-      const db = await getDb();
-      
-      await db.update(teams)
-        .set({ name })
-        .where(eq(teams.id, teamId));
-        
-      await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId));
-      
-      for (let i = 0; i < members.length; i++) {
-        await db.insert(teamMembers).values({
-          id: crypto.randomUUID(),
-          teamId,
-          configuration: JSON.stringify(members[i]),
-          order: i,
-        });
-      }
-      
+      await teamRepository.updateTeam(teamId, name, members);
       await fetchTeams();
     } catch (err) {
       console.error("Failed to update team:", err);
@@ -120,11 +46,7 @@ export const useTeams = () => {
 
   const deleteTeam = useCallback(async (teamId: string) => {
     try {
-      const db = await getDb();
-      
-      await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId));
-      await db.delete(teams).where(eq(teams.id, teamId));
-      
+      await teamRepository.deleteTeam(teamId);
       await fetchTeams();
     } catch (err) {
       console.error("Failed to delete team:", err);
@@ -134,30 +56,7 @@ export const useTeams = () => {
 
   const getTeam = useCallback(async (teamId: string): Promise<TeamWithMembers | null> => {
     try {
-      const db = await getDb();
-      
-      const fetchedTeams = await db.select().from(teams).where(eq(teams.id, teamId));
-      
-      if (fetchedTeams.length === 0) return null;
-      
-      const team = fetchedTeams[0];
-      
-      const fetchedMembers = await db
-        .select()
-        .from(teamMembers)
-        .where(eq(teamMembers.teamId, teamId))
-        .orderBy(teamMembers.order);
-        
-      return {
-        ...team,
-        createdAt: new Date(team.createdAt),
-        members: fetchedMembers.map(m => ({
-          ...m,
-          configuration: typeof m.configuration === 'string' 
-            ? JSON.parse(m.configuration) 
-            : m.configuration,
-        })),
-      };
+      return await teamRepository.getTeamById(teamId);
     } catch (err) {
       console.error("Failed to get team:", err);
       throw err;
@@ -183,25 +82,9 @@ export const useTeams = () => {
         if (stored) {
           try {
             const parsed = JSON.parse(stored) as TeamWithMembers[];
-            const db = await getDb();
             // Restore missing teams to DB
             for (const team of parsed) {
-              const existing = await db.select().from(teams).where(eq(teams.id, team.id));
-              if (existing.length === 0) {
-                await db.insert(teams).values({
-                  id: team.id,
-                  name: team.name,
-                  createdAt: new Date(team.createdAt),
-                });
-                for (const member of team.members) {
-                  await db.insert(teamMembers).values({
-                    id: member.id,
-                    teamId: team.id,
-                    configuration: JSON.stringify(member.configuration),
-                    order: member.order,
-                  });
-                }
-              }
+              await teamRepository.restoreTeam(team);
             }
             if (parsed.length > 0) {
               fetchTeams();
