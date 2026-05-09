@@ -54,7 +54,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
         {/* Header */}
         <div className="p-6 pb-4 flex justify-between items-start">
           <div className="flex items-center space-x-4">
-            <PokemonImage id={pokemon.id} name={pokemon.nameEn} className="w-20 h-20" />
+            <PokemonImage id={pokemon.id} name={pokemon.nameEn} className="w-32 h-32 flex-shrink-0" />
             <div>
               <Typography variant="h1" className="text-2xl leading-tight">
                 {pokemon.nameEn}
