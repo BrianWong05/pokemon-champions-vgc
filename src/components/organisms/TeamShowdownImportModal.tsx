@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '@/components/atoms/Modal';
 import { parseShowdownTeam, ParsedShowdownSet } from '@/utils/showdown-parser';
+import { fetchTeamFromUrl } from '@/services/paste-fetcher';
 
 interface TeamShowdownImportModalProps {
   isOpen: boolean;
@@ -10,7 +11,9 @@ interface TeamShowdownImportModalProps {
 
 const TeamShowdownImportModal: React.FC<TeamShowdownImportModalProps> = ({ isOpen, onClose, onImport }) => {
   const [text, setText] = useState('');
+  const [url, setUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   const handleImport = () => {
     setError(null);
@@ -21,17 +24,49 @@ const TeamShowdownImportModal: React.FC<TeamShowdownImportModalProps> = ({ isOpe
     }
     onImport(sets);
     setText('');
+    setUrl('');
     onClose();
   };
 
+  const handleFetchUrl = async () => {
+    if (!url.trim()) return;
+    
+    setError(null);
+    setIsFetching(true);
+    try {
+      const result = await fetchTeamFromUrl(url);
+      setText(result.text);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch team from URL.');
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Import Team from Showdown" maxWidth="max-w-3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Import Team from Showdown / URL" maxWidth="max-w-3xl">
       <div className="space-y-4">
-        <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+        <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl space-y-2">
           <p className="text-xs text-blue-700 font-medium leading-relaxed">
-            Paste your Pokémon Showdown team export here. Each Pokémon should be separated by an empty line.
-            Up to 6 Pokémon will be imported into the team.
+            Paste your Pokémon Showdown team export below, or enter a URL from <strong>Pokepaste</strong> or <strong>Victory Road</strong>.
           </p>
+          
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://pokepast.es/xxxxx or https://www.vrpastes.com/xxxxx"
+              className="flex-1 px-3 py-2 bg-white border border-blue-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-300"
+            />
+            <button
+              onClick={handleFetchUrl}
+              disabled={isFetching || !url.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-600 disabled:opacity-50 transition-colors shrink-0"
+            >
+              {isFetching ? 'Fetching...' : 'Fetch URL'}
+            </button>
+          </div>
         </div>
         
         <textarea
