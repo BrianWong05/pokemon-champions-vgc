@@ -135,6 +135,15 @@ def scrape_regulation_m_a():
     # Clear existing to ensure fresh start with fixed logic
     cursor.execute("DELETE FROM format_pokemon WHERE format_id = ?", (format_id,))
 
+    # Blacklist for specific variants that shouldn't be in Regulation M-A
+    blacklist_ids = {
+        10307, # Absol (Mega Z)
+        10309, # Garchomp (Mega Z)
+        10310, # Lucario (Mega Z)
+        10304, # Mega Raichu X
+        10305, # Mega Raichu Y
+    }
+
     success_count = 0
     failed_matches = []
 
@@ -143,6 +152,9 @@ def scrape_regulation_m_a():
         
         if p_ids:
             for p_id in p_ids:
+                if p_id in blacklist_ids:
+                    print(f"Skipping blacklisted ID {p_id} ({entry['name']})")
+                    continue
                 cursor.execute("INSERT OR IGNORE INTO format_pokemon (format_id, pokemon_id) VALUES (?, ?)", (format_id, p_id))
                 success_count += 1
         else:
