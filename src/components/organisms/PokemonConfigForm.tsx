@@ -279,7 +279,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
       </div>
 
       {/* 5. Utility Section (Ability, Nature, Type) */}
-      <div className="pt-4 border-t border-gray-50 grid grid-cols-2 gap-6">
+      <div className="pt-4 border-t border-gray-50 flex flex-col gap-4">
         <div className="space-y-3">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
             Ability & Nature
