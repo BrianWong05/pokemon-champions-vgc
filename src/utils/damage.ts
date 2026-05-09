@@ -336,12 +336,43 @@ export const getMovePowerModifier = (moveName: string, battleState: any): number
   return undefined;
 };
 
+export const MULTIHIT_MOVES_DATA: Record<string, { min: number; max: number }> = {
+  'Double Kick': { min: 2, max: 2 },
+  'Twineedle': { min: 2, max: 2 },
+  'Bonemerang': { min: 2, max: 2 },
+  'Double Hit': { min: 2, max: 2 },
+  'Dual Chop': { min: 2, max: 2 },
+  'Gear Grind': { min: 2, max: 2 },
+  'Double Iron Bash': { min: 2, max: 2 },
+  'Dragon Darts': { min: 2, max: 2 },
+  'Dual Wingbeat': { min: 2, max: 2 },
+  'Twin Beam': { min: 2, max: 2 },
+  'Tachyon Cutter': { min: 2, max: 2 },
+  'Surging Strikes': { min: 3, max: 3 },
+  'Triple Dive': { min: 3, max: 3 },
+  'Triple Kick': { min: 1, max: 3 },
+  'Triple Axel': { min: 1, max: 3 },
+  'Double Slap': { min: 2, max: 5 },
+  'Comet Punch': { min: 2, max: 5 },
+  'Fury Attack': { min: 2, max: 5 },
+  'Pin Missile': { min: 2, max: 5 },
+  'Spike Cannon': { min: 2, max: 5 },
+  'Barrage': { min: 2, max: 5 },
+  'Fury Swipes': { min: 2, max: 5 },
+  'Bone Rush': { min: 2, max: 5 },
+  'Arm Thrust': { min: 2, max: 5 },
+  'Bullet Seed': { min: 2, max: 5 },
+  'Icicle Spear': { min: 2, max: 5 },
+  'Rock Blast': { min: 2, max: 5 },
+  'Tail Slap': { min: 2, max: 5 },
+  'Water Shuriken': { min: 2, max: 5 },
+  'Scale Shot': { min: 2, max: 5 },
+  'Population Bomb': { min: 1, max: 10 },
+};
+
 export const isMultiHitMove = (moveName: string): boolean => {
   if (!moveName) return false;
-  
-  // Explicit fallback for common multi-hit moves to ensure UI responsiveness
-  const multiHitRegex = /Bullet Seed|Icicle Spear|Rock Blast|Pin Missile|Tail Slap|Arm Thrust|Fury Swipes|Population Bomb|Triple Axel|Dual Wingbeat|Surging Strikes|Water Shuriken|Bonemerang|Bone Rush|Gear Grind|Double Hit|Double Iron Bash|Dual Chop/i;
-  if (multiHitRegex.test(moveName)) return true;
+  if (MULTIHIT_MOVES_DATA[moveName]) return true;
 
   try {
     const gen = Generations.get(9);
@@ -350,6 +381,25 @@ export const isMultiHitMove = (moveName: string): boolean => {
   } catch (e) {
     return false;
   }
+};
+
+export const getMultiHitLimits = (moveName: string): { min: number; max: number } => {
+  if (MULTIHIT_MOVES_DATA[moveName]) {
+    return MULTIHIT_MOVES_DATA[moveName];
+  }
+
+  try {
+    const gen = Generations.get(9);
+    const move = new Move(gen, moveName);
+    const multihit = (move as any).multihit;
+    if (Array.isArray(multihit)) {
+      return { min: multihit[0], max: multihit[1] };
+    } else if (typeof multihit === 'number') {
+      return { min: multihit, max: multihit };
+    }
+  } catch (e) {}
+
+  return { min: 2, max: 5 }; // Default fallback
 };
 
 export const getStageMultiplier = (stage: number): number => {

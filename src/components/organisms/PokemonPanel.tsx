@@ -2,7 +2,7 @@ import React from 'react';
 import Typography from '@/components/atoms/Typography';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { isMultiHitMove } from '@/utils/damage';
+import { isMultiHitMove, getMultiHitLimits } from '@/utils/damage';
 import { PokemonPreset } from '@/utils/pokemon-presets';
 import PokemonConfigForm from './PokemonConfigForm';
 import { calculateHP } from '@/utils/damage';
@@ -87,19 +87,22 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         Crit
       </button>
 
-      {move && isMultiHitMove(move.nameEn) && (
-        <div className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">
-          <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">Hits</span>
-          <input 
-            type="number"
-            min="1"
-            max="10"
-            value={movesHits[idx]}
-            onChange={(e) => onUpdateMoveHits(idx, parseInt(e.target.value, 10) || 1)}
-            className="w-7 bg-transparent text-[10px] font-black text-indigo-700 text-center outline-none border-none"
-          />
-        </div>
-      )}
+      {move && isMultiHitMove(move.nameEn) && (() => {
+        const { min, max } = getMultiHitLimits(move.nameEn);
+        return (
+          <div className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded border border-indigo-200 shadow-sm">
+            <span className="text-[8px] font-black text-indigo-500 uppercase tracking-tighter">Hits</span>
+            <input 
+              type="number"
+              min={min}
+              max={max}
+              value={Math.min(max, Math.max(min, movesHits[idx]))}
+              onChange={(e) => onUpdateMoveHits(idx, Math.min(max, Math.max(min, parseInt(e.target.value, 10) || min)))}
+              className="w-7 bg-transparent text-[10px] font-black text-indigo-700 text-center outline-none border-none"
+            />
+          </div>
+        );
+      })()}
     </>
   );
 
