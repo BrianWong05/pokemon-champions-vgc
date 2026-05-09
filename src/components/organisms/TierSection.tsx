@@ -22,29 +22,10 @@ interface TierSectionProps {
 
 const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon, onSelectPokemon }) => {
   return (
-    <div className="border rounded-lg overflow-hidden shadow-sm bg-white">
+    <div className="border rounded-lg overflow-hidden shadow-sm bg-gray-50/50">
       <TierHeader baseSpeed={baseSpeed} />
       
-      <div className="divide-y">
-        {/* Header for the grid */}
-        <div className="grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 items-center">
-          <div className="col-span-4 lg:col-span-5">
-            <Typography variant="label">Pokemon</Typography>
-          </div>
-          <div className="col-span-1 text-center">
-            <Typography variant="label">Base</Typography>
-          </div>
-          <div className="col-span-2 text-center">
-            <Typography variant="label">Max+</Typography>
-          </div>
-          <div className="col-span-2 text-center">
-            <Typography variant="label">Max</Typography>
-          </div>
-          <div className="col-span-3 lg:col-span-2 text-center">
-            <Typography variant="label">Min-</Typography>
-          </div>
-        </div>
-
+      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {pokemon.map((p) => (
           <StatGridItem key={p.id} {...p} onSelect={onSelectPokemon} />
         ))}
