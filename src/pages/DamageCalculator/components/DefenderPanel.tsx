@@ -2,8 +2,8 @@ import React from 'react';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { CalcState, CalcAction } from '../hooks/useCalculatorState';
-import { useCalculatorActions } from '../hooks/useCalculatorActions';
+import { CalcState, CalcAction } from '@/pages/DamageCalculator/hooks/useCalculatorState';
+import { useCalculatorActions } from '@/pages/DamageCalculator/hooks/useCalculatorActions';
 
 interface Props {
   state: CalcState;

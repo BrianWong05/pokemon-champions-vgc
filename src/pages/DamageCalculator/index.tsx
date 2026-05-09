@@ -15,11 +15,11 @@ import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/utils/
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
 
-import { useCalculatorState, SideState } from './hooks/useCalculatorState';
-import { useDamageCalc } from './hooks/useDamageCalc';
-import { AttackerPanel } from './components/AttackerPanel';
-import { DefenderPanel } from './components/DefenderPanel';
-import { ResultSummary } from './components/ResultSummary';
+import { useCalculatorState, SideState } from '@/pages/DamageCalculator/hooks/useCalculatorState';
+import { useDamageCalc } from '@/pages/DamageCalculator/hooks/useDamageCalc';
+import { AttackerPanel } from '@/pages/DamageCalculator/components/AttackerPanel';
+import { DefenderPanel } from '@/pages/DamageCalculator/components/DefenderPanel';
+import { ResultSummary } from '@/pages/DamageCalculator/components/ResultSummary';
 
 const DamageCalculatorPage: React.FC = () => {
   const { state, dispatch } = useCalculatorState();

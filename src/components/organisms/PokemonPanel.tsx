@@ -4,7 +4,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { isMultiHitMove, getMultiHitLimits } from '@/utils/damage-calc';
 import { PokemonPreset } from '@/utils/pokemon-presets';
-import PokemonConfigForm from './PokemonConfigForm';
+import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
 import { calculateHP } from '@/utils/damage-calc';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 

@@ -6,7 +6,7 @@ import { PokemonPreset } from '@/utils/pokemon-presets';
 import { getNatureStats } from '@/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { CalcAction } from './useCalculatorState';
+import { CalcAction } from '@/pages/DamageCalculator/hooks/useCalculatorState';
 
 export function useCalculatorActions(
   dispatch: React.Dispatch<CalcAction>,

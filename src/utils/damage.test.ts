@@ -1,4 +1,4 @@
-import { calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonMove, mapToSmogonField } from './damage';
+import { calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonMove, mapToSmogonField } from '@/hooks/damage';
 import { describe, it, expect } from 'vitest';
 
 describe('Critical Hit Mechanics', () => {

@@ -1,4 +1,4 @@
-import { parseShowdownSet } from './showdown-parser';
+import { parseShowdownSet } from '@/hooks/showdown-parser';
 
 describe('parseShowdownSet', () => {
   it('parses a standard Showdown export with EVs (values > 32)', () => {

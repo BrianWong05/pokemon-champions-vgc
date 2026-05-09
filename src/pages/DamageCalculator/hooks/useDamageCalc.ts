@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { SideState, CalcState } from './useCalculatorState';
+import { SideState, CalcState } from '@/pages/DamageCalculator/hooks/useCalculatorState';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { TypeEfficacyMap, calculateEffectiveness } from '@/utils/type-effectiveness';

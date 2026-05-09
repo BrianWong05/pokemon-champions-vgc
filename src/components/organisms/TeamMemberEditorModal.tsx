@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import Modal from '@/components/atoms/Modal';
-import PokemonConfigForm from './PokemonConfigForm';
+import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
 import { usePokemonEditor, PokemonConfig } from '@/hooks/usePokemonEditor';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';

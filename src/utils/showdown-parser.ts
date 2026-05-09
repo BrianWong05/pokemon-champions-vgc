@@ -1,4 +1,4 @@
-import { calculateSP } from './ev-conversion';
+import { calculateSP } from '@/utils/ev-conversion';
 
 export interface ParsedShowdownSet {
   species: string;

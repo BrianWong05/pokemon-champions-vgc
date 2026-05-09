@@ -1,4 +1,4 @@
-import { formatShowdownSet } from './showdown-formatter';
+import { formatShowdownSet } from '@/hooks/showdown-formatter';
 import { PokemonConfig } from '@/hooks/usePokemonEditor';
 
 describe('showdown-formatter', () => {

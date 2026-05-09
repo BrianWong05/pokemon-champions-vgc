@@ -4,13 +4,13 @@ import StatGrid from '@/components/molecules/StatGrid';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
 import { PokemonConfig, AEGISLASH_ID } from '@/hooks/usePokemonEditor';
-import ShowdownImportModal from './ShowdownImportModal';
+import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { TeamImportSelector } from '@/features/calculator/components/TeamImportSelector';
 
-import { MoveSection } from './PokemonConfigForm/MoveSection';
-import { MetadataSection } from './PokemonConfigForm/MetadataSection';
-import { TopSection } from './PokemonConfigForm/TopSection';
+import { MoveSection } from '@/components/organisms/PokemonConfigForm/MoveSection';
+import { MetadataSection } from '@/components/organisms/PokemonConfigForm/MetadataSection';
+import { TopSection } from '@/components/organisms/PokemonConfigForm/TopSection';
 
 interface PokemonConfigFormProps {
   config: PokemonConfig;

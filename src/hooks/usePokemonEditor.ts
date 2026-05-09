@@ -76,7 +76,7 @@ const initialPokemonState: PokemonConfig = {
 
 export const AEGISLASH_ID = 681;
 
-import { useStatEngine } from './useStatEngine';
+import { useStatEngine } from '@/hooks/useStatEngine';
 
 const statEngine = useStatEngine();
 

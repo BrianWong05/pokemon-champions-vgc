@@ -1,6 +1,6 @@
 import React from 'react';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { CalcState, CalcAction } from '../hooks/useCalculatorState';
+import { CalcState, CalcAction } from '@/pages/DamageCalculator/hooks/useCalculatorState';
 
 interface Props {
   state: CalcState;
