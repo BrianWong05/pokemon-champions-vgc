@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import Modal from '@/components/atoms/Modal';
 import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
-import { usePokemonEditor, PokemonConfig } from '@/hooks/usePokemonEditor';
+import { usePokemonEditor, PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { PokemonPreset } from '@/utils/pokemon-presets';
+import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 
 interface TeamMemberEditorModalProps {
   isOpen: boolean;

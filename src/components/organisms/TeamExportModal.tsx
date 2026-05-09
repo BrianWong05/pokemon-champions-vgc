@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Modal from '@/components/atoms/Modal';
-import { formatShowdownTeam } from '@/utils/showdown-formatter';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { formatShowdownTeam } from '@/features/pokemon/utils/showdown-formatter';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 interface TeamExportModalProps {

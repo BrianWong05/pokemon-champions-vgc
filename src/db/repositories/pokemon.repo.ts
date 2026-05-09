@@ -38,24 +38,13 @@ export const pokemonRepository = {
   async getPokemonAbilities(pokemonId: number): Promise<string[]> {
     const db = await getDb();
     const abilityResult = await db.select({
-      ability1Id: pokemonAbilities.ability1Id,
-      ability2Id: pokemonAbilities.ability2Id,
-      abilityHiddenId: pokemonAbilities.abilityHiddenId,
+      name: abilities.nameEn
     })
     .from(pokemonAbilities)
-    .where(eq(pokemonAbilities.pokemonId, pokemonId));
+    .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+    .where(eq(pokemonAbilities.pokemonId, pokemonId))
+    .orderBy(pokemonAbilities.slot);
 
-    if (abilityResult.length === 0) return [];
-
-    const { ability1Id, ability2Id, abilityHiddenId } = abilityResult[0];
-    const abilityIds = [ability1Id, ability2Id, abilityHiddenId].filter((id): id is number => id !== null);
-
-    if (abilityIds.length === 0) return [];
-
-    const namesResult = await db.select({ name: abilities.nameEn })
-      .from(abilities)
-      .where(inArray(abilities.id, abilityIds));
-
-    return namesResult.map(r => r.name);
+    return abilityResult.map(r => r.name).filter((name): name is string => !!name);
   }
 };

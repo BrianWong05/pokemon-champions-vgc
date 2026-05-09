@@ -1,6 +1,6 @@
 import React from 'react';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
-import { calculateHP, calculateStat } from '@/utils/damage-calc';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { calculateHP, calculateStat } from '@/features/damage-calculator/utils/damage-calc';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 

@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { SideState, CalcState } from '@/pages/DamageCalculator/hooks/useCalculatorState';
+import { SideState, CalcState } from '@/features/damage-calculator/hooks/useCalculatorState';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { TypeEfficacyMap, calculateEffectiveness } from '@/utils/type-effectiveness';
-import { TYPE_IDS } from '@/utils/pokemon-types';
-import { calculateHP, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/utils/damage-calc';
-import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { TypeEfficacyMap, calculateEffectiveness } from '@/features/pokemon/utils/type-effectiveness';
+import { TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { calculateHP, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/features/damage-calculator/utils/damage-calc';
+import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 import { DamageResult } from '@/components/organisms/ResultsPanel';
 
 export function useDamageCalc(

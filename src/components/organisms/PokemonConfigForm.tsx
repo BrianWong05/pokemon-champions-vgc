@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import StatGrid from '@/components/molecules/StatGrid';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
-import { PokemonConfig, AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { POKEMON_PRESETS, PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
+import { PokemonConfig, AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { TeamImportSelector } from '@/features/calculator/components/TeamImportSelector';
 
 import { MoveSection } from '@/components/organisms/PokemonConfigForm/MoveSection';

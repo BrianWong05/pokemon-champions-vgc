@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTeams, TeamWithMembers } from '@/hooks/useTeams';
+import { useTeams, TeamWithMembers } from '@/features/teams/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { getNatureStats, getFormattedNature } from '@/utils/pokemon-natures';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
+import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, pokemonAbilities, abilities, moves } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();

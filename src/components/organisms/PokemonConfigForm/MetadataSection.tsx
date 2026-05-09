@@ -1,7 +1,7 @@
 import React from 'react';
-import { TYPE_IDS } from '@/utils/pokemon-types';
-import { NATURES } from '@/utils/pokemon-natures';
-import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { NATURES } from '@/features/pokemon/utils/pokemon-natures';
+import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
 interface MetadataSectionProps {
   selectedId: number | null;

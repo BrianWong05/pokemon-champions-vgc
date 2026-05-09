@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
-import TypeBadge from '@/components/atoms/TypeBadge';
+import TypeBadge from '@/components/molecules/TypeBadge';
 import Typography from '@/components/atoms/Typography';
 import TeamMemberStatDisplay from '@/components/molecules/TeamMemberStatDisplay';
 import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';

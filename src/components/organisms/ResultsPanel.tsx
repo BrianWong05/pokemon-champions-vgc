@@ -1,7 +1,7 @@
 import React from 'react';
 import Typography from '@/components/atoms/Typography';
-import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
-import TypeBadge from '@/components/atoms/TypeBadge';
+import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import TypeBadge from '@/components/molecules/TypeBadge';
 
 export interface DamageResult {
   minDamage: number;

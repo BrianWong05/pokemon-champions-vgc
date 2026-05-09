@@ -2,11 +2,11 @@ import React from 'react';
 import Typography from '@/components/atoms/Typography';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { isMultiHitMove, getMultiHitLimits } from '@/utils/damage-calc';
-import { PokemonPreset } from '@/utils/pokemon-presets';
+import { isMultiHitMove, getMultiHitLimits } from '@/features/damage-calculator/utils/damage-calc';
+import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
-import { calculateHP } from '@/utils/damage-calc';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { calculateHP } from '@/features/damage-calculator/utils/damage-calc';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
 interface PokemonPanelProps {
   title: string;

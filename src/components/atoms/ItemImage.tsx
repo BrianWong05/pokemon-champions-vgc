@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getItemImageUrl } from '@/utils/items';
+import { getItemImageUrl } from '@/features/pokemon/utils/items';
 
 interface ItemImageProps {
   name: string | null;

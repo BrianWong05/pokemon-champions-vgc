@@ -1,8 +1,8 @@
 import React from 'react';
-import StatInput from '@/components/atoms/StatInput';
-import StatSlider from '@/components/atoms/StatSlider';
+import StatInput from '@/components/molecules/StatInput';
+import StatSlider from '@/components/molecules/StatSlider';
 import Badge from '@/components/atoms/Badge';
-import { calculateSP } from '@/utils/ev-conversion';
+import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
 
 interface StatConverterRowProps {
   label: string;

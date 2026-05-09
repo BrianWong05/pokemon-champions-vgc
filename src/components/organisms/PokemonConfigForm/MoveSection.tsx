@@ -1,8 +1,8 @@
 import React from 'react';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import MoveSearchSelect from '@/components/molecules/MoveSearchSelect';
-import TypeBadge from '@/components/atoms/TypeBadge';
-import { REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import TypeBadge from '@/components/molecules/TypeBadge';
+import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 
 interface MoveSectionProps {
   moves: (MoveData | null)[];

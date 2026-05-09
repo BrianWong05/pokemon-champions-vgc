@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '@/components/atoms/Modal';
-import { parseShowdownSet, ParsedShowdownSet } from '@/utils/showdown-parser';
+import { parseShowdownSet, ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
 interface ShowdownImportModalProps {
   isOpen: boolean;

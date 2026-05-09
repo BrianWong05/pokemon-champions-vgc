@@ -1,6 +1,6 @@
 import React from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
-import StatValue from '@/components/atoms/StatValue';
+import StatValue from '@/components/molecules/StatValue';
 
 interface StatGridItemProps {
   id: number;

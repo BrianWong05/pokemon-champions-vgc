@@ -4,9 +4,9 @@ import { pokemonAbilities, abilities } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { PokemonPreset } from '@/utils/pokemon-presets';
-import { getNatureStats, NATURES, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
+import { getNatureStats, NATURES, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
 export interface PokemonConfig {
   selectedId: number | null;
@@ -76,7 +76,7 @@ const initialPokemonState: PokemonConfig = {
 
 export const AEGISLASH_ID = 681;
 
-import { useStatEngine } from '@/hooks/useStatEngine';
+import { useStatEngine } from '@/features/pokemon/hooks/useStatEngine';
 
 const statEngine = useStatEngine();
 

@@ -1,7 +1,7 @@
 import { getDb } from '@/db';
 import { teams, teamMembers } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 export interface Team {
   id: string;

@@ -1,9 +1,9 @@
 import React from 'react';
 import Typography from '@/components/atoms/Typography';
-import StatBar from '@/components/atoms/StatBar';
+import StatBar from '@/components/molecules/StatBar';
 import FormItem from '@/components/molecules/FormItem';
 import PokemonImage from '@/components/atoms/PokemonImage';
-import TypeBadge from '@/components/atoms/TypeBadge';
+import TypeBadge from '@/components/molecules/TypeBadge';
 
 export interface FullPokemonDetail {
   id: number;

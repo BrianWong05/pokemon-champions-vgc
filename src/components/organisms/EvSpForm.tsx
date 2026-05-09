@@ -1,6 +1,6 @@
 import React from 'react';
 import StatConverterRow from '@/components/molecules/StatConverterRow';
-import ProgressBar from '@/components/atoms/ProgressBar';
+import ProgressBar from '@/components/molecules/ProgressBar';
 
 export interface EvSpread {
   hp: number;

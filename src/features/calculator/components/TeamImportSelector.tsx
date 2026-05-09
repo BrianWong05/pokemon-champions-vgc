@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useTeams, TeamWithMembers, TeamMember } from '@/hooks/useTeams';
+import { useTeams, TeamWithMembers, TeamMember } from '@/features/teams/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 interface TeamImportSelectorProps {
   onSelect: (config: PokemonConfig) => void;

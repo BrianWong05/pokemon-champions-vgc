@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useTeams, TeamWithMembers } from '@/hooks/useTeams';
+import { useTeams, TeamWithMembers } from '@/features/teams/hooks/useTeams';
 import { pokemonRepository } from '@/db/repositories/pokemon.repo';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { getNatureStats, getFormattedNature } from '@/utils/pokemon-natures';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
+import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { useModalRegistry } from '@/hooks/useModalRegistry';
-import { formatShowdownSet } from '@/utils/showdown-formatter';
+import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 
 export function useTeamDetail(id: string | undefined) {
   const { getTeam, updateTeam, loading: teamsLoading } = useTeams();

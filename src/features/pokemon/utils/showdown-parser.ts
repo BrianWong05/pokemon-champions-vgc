@@ -1,4 +1,4 @@
-import { calculateSP } from '@/utils/ev-conversion';
+import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
 
 export interface ParsedShowdownSet {
   species: string;

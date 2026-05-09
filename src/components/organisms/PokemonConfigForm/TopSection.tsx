@@ -3,7 +3,7 @@ import PokemonSearchSelect, { PokemonBaseStats } from '@/components/molecules/Po
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
-import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
 interface TopSectionProps {
   title?: string;

@@ -1,9 +1,9 @@
 import { useReducer } from 'react';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
+import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
 export interface SideState {
   selectedId: number | null;

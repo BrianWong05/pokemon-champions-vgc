@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { teamRepository, TeamWithMembers } from '@/db/repositories/team.repo';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 export type { Team, TeamMember, TeamWithMembers } from '@/db/repositories/team.repo';
 

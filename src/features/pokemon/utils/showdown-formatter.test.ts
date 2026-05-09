@@ -1,5 +1,5 @@
 import { formatShowdownSet } from '@/hooks/showdown-formatter';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 describe('showdown-formatter', () => {
   it('should format a basic pokemon config correctly', () => {

@@ -1,4 +1,4 @@
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 export const formatShowdownSet = (config: PokemonConfig, speciesName: string): string => {
   const lines: string[] = [];

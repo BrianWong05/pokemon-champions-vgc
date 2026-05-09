@@ -1,5 +1,5 @@
 import React from 'react';
-import NumberInput from '@/components/atoms/NumberInput';
+import NumberInput from '@/components/molecules/NumberInput';
 import Slider from '@/components/atoms/Slider';
 
 interface StatControlGroupProps {

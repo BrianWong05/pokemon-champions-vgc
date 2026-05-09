@@ -1,6 +1,6 @@
 import React from 'react';
-import { TYPE_COLORS, getTypeName } from '@/utils/pokemon-types';
-import TypeIcon from '@/components/atoms/TypeIcon';
+import { TYPE_COLORS, getTypeName } from '@/features/pokemon/utils/pokemon-types';
+import TypeIcon from '@/components/molecules/TypeIcon';
 
 interface TypeBadgeProps {
   type: string;

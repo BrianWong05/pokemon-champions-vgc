@@ -2,24 +2,24 @@ import React, { useReducer, useMemo, useEffect, useState } from 'react';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
-import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/utils/damage-calc';
+import { calculateHP, calculateStat, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/features/damage-calculator/utils/damage-calc';
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
-import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/utils/type-effectiveness';
-import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/utils/pokemon-types';
+import { fetchTypeEfficacy, calculateEffectiveness, TypeEfficacyMap } from '@/features/pokemon/utils/type-effectiveness';
+import { TYPE_IDS, REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
-import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
-import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
+import { POKEMON_PRESETS, PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
+import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
+import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
-import { useCalculatorState, SideState } from '@/pages/DamageCalculator/hooks/useCalculatorState';
-import { useDamageCalc } from '@/pages/DamageCalculator/hooks/useDamageCalc';
-import { AttackerPanel } from '@/pages/DamageCalculator/components/AttackerPanel';
-import { DefenderPanel } from '@/pages/DamageCalculator/components/DefenderPanel';
-import { ResultSummary } from '@/pages/DamageCalculator/components/ResultSummary';
+import { useCalculatorState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
+import { useDamageCalc } from '@/features/damage-calculator/hooks/useDamageCalc';
+import { AttackerPanel } from '@/features/damage-calculator/components/AttackerPanel';
+import { DefenderPanel } from '@/features/damage-calculator/components/DefenderPanel';
+import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
 
 const DamageCalculatorPage: React.FC = () => {
   const { state, dispatch } = useCalculatorState();

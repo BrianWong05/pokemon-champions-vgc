@@ -2,11 +2,11 @@ import { getDb } from '@/db';
 import { abilities, pokemonAbilities } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
-import { PokemonPreset } from '@/utils/pokemon-presets';
-import { getNatureStats } from '@/utils/pokemon-natures';
-import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
+import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
+import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { CalcAction } from '@/pages/DamageCalculator/hooks/useCalculatorState';
+import { CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
 
 export function useCalculatorActions(
   dispatch: React.Dispatch<CalcAction>,

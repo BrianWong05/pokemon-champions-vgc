@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
-import { calculateSP } from '@/utils/ev-conversion';
+import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
 import Typography from '@/components/atoms/Typography';
 
 const EvSpConverterPage: React.FC = () => {

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { getNatureStats, getNatureFromStats } from '@/utils/pokemon-natures';
+import { getNatureStats, getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
 
 export interface StatState {
   boostedStat: string | null;

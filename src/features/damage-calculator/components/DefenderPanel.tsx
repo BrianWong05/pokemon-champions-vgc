@@ -2,8 +2,8 @@ import React from 'react';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { CalcState, CalcAction } from '@/pages/DamageCalculator/hooks/useCalculatorState';
-import { useCalculatorActions } from '@/pages/DamageCalculator/hooks/useCalculatorActions';
+import { CalcState, CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
+import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 
 interface Props {
   state: CalcState;
@@ -12,14 +12,14 @@ interface Props {
   moveList: MoveData[];
 }
 
-export const AttackerPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList }) => {
+export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList }) => {
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
-  const side = 'p1';
+  const side = 'p2';
 
   return (
     <PokemonPanel 
-      title="Pokémon 1"
-      sideColor="bg-blue-600"
+      title="Pokémon 2"
+      sideColor="bg-red-600"
       side={side}
       pokemonList={pokemonList}
       selectedId={state[side].selectedId}

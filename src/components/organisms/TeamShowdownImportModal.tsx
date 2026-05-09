@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '@/components/atoms/Modal';
-import { parseShowdownTeam, ParsedShowdownSet } from '@/utils/showdown-parser';
+import { parseShowdownTeam, ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { fetchTeamFromUrl } from '@/services/paste-fetcher';
 
 interface TeamShowdownImportModalProps {
