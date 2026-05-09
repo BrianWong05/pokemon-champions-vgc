@@ -2,10 +2,10 @@ import React from 'react';
 import Typography from '@/components/atoms/Typography';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
-import { isMultiHitMove, getMultiHitLimits } from '@/utils/damage';
+import { isMultiHitMove, getMultiHitLimits } from '@/utils/damage-calc';
 import { PokemonPreset } from '@/utils/pokemon-presets';
 import PokemonConfigForm from './PokemonConfigForm';
-import { calculateHP } from '@/utils/damage';
+import { calculateHP } from '@/utils/damage-calc';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 
 interface PokemonPanelProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { calculateHP, calculateStat, getStatModifier } from '@/utils/damage';
+import { calculateHP, calculateStat, getStatModifier } from '@/utils/damage-calc';
 
 interface StatRowProps {
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe';
