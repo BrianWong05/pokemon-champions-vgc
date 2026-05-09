@@ -13,6 +13,7 @@ import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
 import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
+import { AEGISLASH_ID } from '@/hooks/usePokemonEditor';
 
 interface SideState {
   selectedId: number | null;
@@ -50,6 +51,7 @@ interface SideState {
   movesForceCrit: boolean[];
   movesHits: number[];
   faintedCount: number;
+  form?: 'Shield' | 'Blade';
 }
 
 interface CalcState {
@@ -89,6 +91,7 @@ type CalcAction =
   | { type: 'TOGGLE_GRAVITY' }
   | { type: 'SET_TYPE', payload: { side: 'p1' | 'p2', slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
+  | { type: 'TOGGLE_AEGISLASH_FORM', payload: { side: 'p1' | 'p2' } }
   | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
@@ -230,7 +233,25 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           activeAbility: null,
           hpPercent: 100,
           nature: 'Hardy',
-          movesHits: [3, 3, 3, 3]
+          movesHits: [3, 3, 3, 3],
+          form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
+        }
+      };
+    }
+    case 'TOGGLE_AEGISLASH_FORM': {
+      const { side } = action.payload;
+      const current = state[side];
+      if (current.selectedId !== AEGISLASH_ID) return state;
+      const newForm = current.form === 'Shield' ? 'Blade' : 'Shield';
+      return {
+        ...state,
+        [side]: {
+          ...current,
+          form: newForm,
+          baseAtk: current.baseDef,
+          baseDef: current.baseAtk,
+          baseSpa: current.baseSpd,
+          baseSpd: current.baseSpa,
         }
       };
     }
@@ -314,7 +335,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpe: preset.sp.spe,
           nature: getFormattedNature(preset.nature),
           hpPercent: 100,
-          movesHits: [3, 3, 3, 3]
+          movesHits: [3, 3, 3, 3],
+          form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
         }
       }
     }
@@ -349,12 +371,18 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           spSpe: set.evs.spe,
           nature: getFormattedNature(set.nature),
           hpPercent: 100,
-          movesHits: [3, 3, 3, 3]
+          movesHits: [3, 3, 3, 3],
+          form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
         }
       }
     }
     case 'LOAD_CONFIG': {
       const { side, config, pokemon: p, abilities, movesData, natureStats } = action.payload;
+      const baseAtk = config.baseAtk ?? p.baseAttack;
+      const baseDef = config.baseDef ?? p.baseDefense;
+      const baseSpa = config.baseSpa ?? p.baseSpAtk;
+      const baseSpd = config.baseSpd ?? p.baseSpDef;
+
       return {
         ...state,
         [side]: {
@@ -362,12 +390,12 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           selectedId: p.id,
           type1: config.type1 ?? p.type1,
           type2: config.type2 ?? p.type2,
-          baseHp: p.baseHp,
-          baseAtk: p.baseAttack,
-          baseDef: p.baseDefense,
-          baseSpa: p.baseSpAtk,
-          baseSpd: p.baseSpDef,
-          baseSpe: p.baseSpeed,
+          baseHp: config.baseHp ?? p.baseHp,
+          baseAtk,
+          baseDef,
+          baseSpa,
+          baseSpd,
+          baseSpe: config.baseSpe ?? p.baseSpeed,
           boostedStat: natureStats.boostedStat,
           hinderedStat: natureStats.hinderedStat,
           stages: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
@@ -385,7 +413,8 @@ function calcReducer(state: CalcState, action: CalcAction): CalcState {
           nature: getFormattedNature(config.nature),
           hpPercent: 100,
           movesHits: [3, 3, 3, 3],
-          isTypeOverridden: config.isTypeOverridden || false
+          isTypeOverridden: config.isTypeOverridden || false,
+          form: config.form || (p.id === AEGISLASH_ID ? 'Shield' : undefined),
         }
       }
     }
@@ -602,8 +631,15 @@ const DamageCalculatorPage: React.FC = () => {
 
     if (!atkBase || !defBase) return [null, null, null, null];
 
-    const attackerPokemon = mapToSmogonPokemon(attacker, atkBase.nameEn, atkBase.type1, atkBase.type2);
-    const defenderPokemon = mapToSmogonPokemon(defender, defBase.nameEn, defBase.type1, defBase.type2);
+    const getFormName = (base: PokemonBaseStats, side: SideState) => {
+      if (base.id === AEGISLASH_ID && side.form) {
+        return `${base.nameEn} (${side.form})`;
+      }
+      return base.nameEn;
+    };
+
+    const attackerPokemon = mapToSmogonPokemon(attacker, getFormName(atkBase, attacker), atkBase.type1, atkBase.type2);
+    const defenderPokemon = mapToSmogonPokemon(defender, getFormName(defBase, defender), defBase.type1, defBase.type2);
     
     const field = mapToSmogonField(
       state.weather, 
@@ -752,6 +788,7 @@ const DamageCalculatorPage: React.FC = () => {
           onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p1', slot, type } })}
           isTypeOverridden={state.p1.isTypeOverridden}
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' } })}
+          onToggleAegislashForm={() => dispatch({ type: 'TOGGLE_AEGISLASH_FORM', payload: { side: 'p1' } })}
           isReflect={state.p1.isReflect}
           isLightScreen={state.p1.isLightScreen}
           isAuroraVeil={state.p1.isAuroraVeil}
@@ -803,6 +840,7 @@ const DamageCalculatorPage: React.FC = () => {
           onTypeChange={(slot, type) => dispatch({ type: 'SET_TYPE', payload: { side: 'p2', slot, type } })}
           isTypeOverridden={state.p2.isTypeOverridden}
           onToggleTypeOverride={() => dispatch({ type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p2' } })}
+          onToggleAegislashForm={() => dispatch({ type: 'TOGGLE_AEGISLASH_FORM', payload: { side: 'p2' } })}
           isReflect={state.p2.isReflect}
           isLightScreen={state.p2.isLightScreen}
           isAuroraVeil={state.p2.isAuroraVeil}

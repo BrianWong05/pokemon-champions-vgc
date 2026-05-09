@@ -10,7 +10,7 @@ import MoveSearchSelect, { MoveData } from '@/components/molecules/MoveSearchSel
 import { REVERSE_TYPE_IDS, TYPE_IDS } from '@/utils/pokemon-types';
 import { POKEMON_PRESETS, PokemonPreset } from '@/utils/pokemon-presets';
 import { NATURES, getNatureStats } from '@/utils/pokemon-natures';
-import { PokemonConfig } from '@/hooks/usePokemonEditor';
+import { PokemonConfig, AEGISLASH_ID } from '@/hooks/usePokemonEditor';
 import ShowdownImportModal from './ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { TeamImportSelector } from '@/features/calculator/components/TeamImportSelector';
@@ -33,6 +33,7 @@ interface PokemonConfigFormProps {
   onItemChange: (item: string | null) => void;
   onTypeChange: (slot: 1 | 2, type: string | null) => void;
   onToggleTypeOverride: () => void;
+  onToggleAegislashForm?: () => void;
   // Context-specific props
   title?: string;
   sideColor?: string;
@@ -44,7 +45,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   config, pokemonList, moveList, 
   onSelectPokemon, onSelectPreset, onImportShowdown, onLoadConfig, onSpChange, onNatureChange, onToggleNature, onStageChange,
   onSelectMove, onClearMove, onAbilityChange, onItemChange,
-  onTypeChange, onToggleTypeOverride,
+  onTypeChange, onToggleTypeOverride, onToggleAegislashForm,
   title, sideColor, hideTypeOverride = false,
   renderMoveActions
 }) => {
@@ -187,7 +188,11 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
             <PokemonSearchSelect 
               label="" 
               pokemonList={pokemonList} 
-              selectedPokemonName={selectedPokemon?.nameEn}
+              selectedPokemonName={selectedPokemon 
+                ? (selectedPokemon.id === AEGISLASH_ID && config.form 
+                    ? `${selectedPokemon.nameEn} (${config.form})` 
+                    : selectedPokemon.nameEn)
+                : undefined}
               onSelect={onSelectPokemon}
             />
           </div>
@@ -281,9 +286,23 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
       {/* 5. Utility Section (Ability, Nature, Type) */}
       <div className="pt-4 border-t border-gray-50 flex flex-col gap-4">
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
-            Ability & Nature
-          </label>
+          <div className="flex justify-between items-center">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+              Ability & Nature
+            </label>
+            {config.selectedId === AEGISLASH_ID && onToggleAegislashForm && (
+              <button
+                onClick={onToggleAegislashForm}
+                className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border transition-all ${
+                  config.form === 'Blade' 
+                    ? 'bg-red-500 border-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
+                    : 'bg-blue-600 border-blue-700 text-white shadow-[0_0_8px_rgba(37,99,235,0.4)]'
+                }`}
+              >
+                Stance: {config.form || 'Shield'}
+              </button>
+            )}
+          </div>
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <select 

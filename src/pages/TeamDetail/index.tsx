@@ -19,6 +19,7 @@ import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportMo
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ParsedShowdownSet } from '@/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/utils/pokemon-natures';
+import { formatShowdownSet } from '@/utils/showdown-formatter';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +41,7 @@ const TeamDetailPage: React.FC = () => {
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,6 +178,17 @@ const TeamDetailPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to rename team:', err);
     }
+  };
+
+  const handleExportIndividual = (index: number) => {
+    if (!team) return;
+    const member = team.members[index];
+    const speciesName = pokemonList.find(p => p.id === member.configuration.selectedId)?.nameEn || 'Unknown';
+    const text = formatShowdownSet(member.configuration, speciesName);
+    
+    navigator.clipboard.writeText(text);
+    setCopiedIdx(index);
+    setTimeout(() => setCopiedIdx(null), 2000);
   };
 
   const handleRemovePokemon = async (orderToRemove: number) => {
@@ -530,13 +543,21 @@ const TeamDetailPage: React.FC = () => {
 
               <TeamMemberStatDisplay config={member.configuration} pokemonList={pokemonList} />
             </div>
-            <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between">
-              <button
-                onClick={() => handleEditPokemonClick(idx)}
-                className="text-blue-600 hover:text-blue-800 font-black text-xs uppercase tracking-widest transition-colors"
-              >
-                Edit
-              </button>
+            <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between gap-2">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleEditPokemonClick(idx)}
+                  className="text-blue-600 hover:text-blue-800 font-black text-xs uppercase tracking-widest transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleExportIndividual(idx)}
+                  className={`${copiedIdx === idx ? 'text-green-600' : 'text-purple-600 hover:text-purple-800'} font-black text-xs uppercase tracking-widest transition-colors`}
+                >
+                  {copiedIdx === idx ? 'Copied!' : 'Export'}
+                </button>
+              </div>
               <button
                 onClick={() => handleRemovePokemon(member.order)}
                 className="text-red-400 hover:text-red-600 font-black text-xs uppercase tracking-widest transition-colors"

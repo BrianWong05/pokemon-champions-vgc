@@ -34,6 +34,7 @@ export interface PokemonConfig {
   item: string | null;
   hpPercent: number;
   isTypeOverridden: boolean;
+  form?: 'Shield' | 'Blade';
 }
 
 type PokemonAction =
@@ -50,6 +51,7 @@ type PokemonAction =
   | { type: 'SET_HP_PERCENT', payload: { val: number } }
   | { type: 'SET_TYPE', payload: { slot: 1 | 2, type: string | null } }
   | { type: 'TOGGLE_TYPE_OVERRIDE' }
+  | { type: 'TOGGLE_AEGISLASH_FORM' }
   | { type: 'APPLY_PRESET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'LOAD_CONFIG', payload: PokemonConfig };
@@ -71,6 +73,8 @@ const initialPokemonState: PokemonConfig = {
   hpPercent: 100,
   isTypeOverridden: false,
 };
+
+export const AEGISLASH_ID = 681;
 
 function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonConfig {
   switch (action.type) {
@@ -136,6 +140,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         hpPercent: 100,
         isTypeOverridden: false,
         item: null,
+        form: p.id === AEGISLASH_ID ? 'Shield' : undefined,
       };
     }
     case 'SELECT_MOVE_FOR_SLOT': {
@@ -181,6 +186,18 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
     }
     case 'TOGGLE_TYPE_OVERRIDE': {
       return { ...state, isTypeOverridden: !state.isTypeOverridden };
+    }
+    case 'TOGGLE_AEGISLASH_FORM': {
+      if (state.selectedId !== AEGISLASH_ID) return state;
+      const newForm = state.form === 'Shield' ? 'Blade' : 'Shield';
+      return {
+        ...state,
+        form: newForm,
+        baseAtk: state.baseDef,
+        baseDef: state.baseAtk,
+        baseSpa: state.baseSpd,
+        baseSpd: state.baseSpa,
+      };
     }
     case 'APPLY_PRESET': {
       const { pokemon: p, abilities, movesData, preset, natureStats } = action.payload;
@@ -414,6 +431,10 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     dispatch({ type: 'TOGGLE_TYPE_OVERRIDE' });
   }, []);
 
+  const toggleAegislashForm = useCallback(() => {
+    dispatch({ type: 'TOGGLE_AEGISLASH_FORM' });
+  }, []);
+
   const loadConfig = useCallback((config: PokemonConfig) => {
     dispatch({ type: 'LOAD_CONFIG', payload: config });
   }, []);
@@ -434,6 +455,7 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     setHpPercent,
     setType,
     toggleTypeOverride,
+    toggleAegislashForm,
     loadConfig,
   };
 };

@@ -20,7 +20,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
 }) => {
   const { 
     state, handleSelectPokemon, handleSelectPreset, handleImportShowdown, setSp, setNature, toggleNature, 
-    setItem, setAbility, setMove, clearMove, setType, toggleTypeOverride, loadConfig 
+    setItem, setAbility, setMove, clearMove, setType, toggleTypeOverride, toggleAegislashForm, loadConfig 
   } = usePokemonEditor();
 
   useEffect(() => {
@@ -58,6 +58,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           onItemChange={setItem}
           onTypeChange={setType}
           onToggleTypeOverride={toggleTypeOverride}
+          onToggleAegislashForm={toggleAegislashForm}
           hideTypeOverride={true}
         />
         

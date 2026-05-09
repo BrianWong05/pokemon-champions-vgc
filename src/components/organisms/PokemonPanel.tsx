@@ -43,6 +43,7 @@ interface PokemonPanelProps {
   onTypeChange: (slot: 1 | 2, type: string | null) => void;
   isTypeOverridden: boolean;
   onToggleTypeOverride: () => void;
+  onToggleAegislashForm?: () => void;
   isReflect: boolean;
   isLightScreen: boolean;
   isAuroraVeil: boolean;
@@ -135,6 +136,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
           item: props.item,
           hpPercent: props.hpPercent,
           isTypeOverridden: props.isTypeOverridden,
+          form: props.stats.form,
         }}
         pokemonList={props.pokemonList}
         moveList={props.moveList}
@@ -152,6 +154,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         onItemChange={props.onItemChange}
         onTypeChange={props.onTypeChange}
         onToggleTypeOverride={props.onToggleTypeOverride}
+        onToggleAegislashForm={props.onToggleAegislashForm}
         title={title}
         sideColor={sideColor}
         renderMoveActions={renderMoveActions}

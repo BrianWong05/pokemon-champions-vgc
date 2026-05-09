@@ -161,6 +161,8 @@ export const normalizeSmogonName = (name: string): string => {
     'Mega Charizard Y': 'Charizard-Mega-Y',
     'Mega Mewtwo X': 'Mewtwo-Mega-X',
     'Mega Mewtwo Y': 'Mewtwo-Mega-Y',
+    'Aegislash (Shield)': 'Aegislash-Shield',
+    'Aegislash (Blade)': 'Aegislash-Blade',
   };
 
   if (fallbacks[name]) {
