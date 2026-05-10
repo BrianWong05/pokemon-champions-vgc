@@ -137,7 +137,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
           hpPercent: props.hpPercent,
           isTypeOverridden: props.isTypeOverridden,
           form: props.stats.form,
-        }}
+          stages: props.stages,
+        } as any}
         pokemonList={props.pokemonList}
         moveList={props.moveList}
         onSelectPokemon={props.onSelectPokemon}
