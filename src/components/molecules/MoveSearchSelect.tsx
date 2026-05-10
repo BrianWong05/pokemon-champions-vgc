@@ -29,17 +29,41 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const filteredMoves = useMemo(() => {
     if (!searchTerm) return [];
     const term = searchTerm.toLowerCase();
-    return moveList
+    const results = moveList
       .filter(m => 
         m.nameEn.toLowerCase().includes(term) || 
         (m.nameZh && m.nameZh.includes(term))
       )
       .slice(0, 15);
+    setActiveIndex(results.length > 0 ? 0 : -1);
+    return results;
   }, [searchTerm, moveList]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen || filteredMoves.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev < filteredMoves.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : filteredMoves.length - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        onSelect(filteredMoves[activeIndex]);
+        setSearchTerm(filteredMoves[activeIndex].nameEn);
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
 
   return (
     <div className={`relative ${className}`}>
@@ -56,11 +80,12 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
         />
         {isOpen && filteredMoves.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {filteredMoves.map((m) => (
+            {filteredMoves.map((m, index) => (
               <button
                 key={m.id}
                 onClick={() => {
@@ -68,15 +93,16 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
                   setSearchTerm(m.nameEn);
                   setIsOpen(false);
                 }}
-                className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 text-left transition-colors border-b last:border-0 border-gray-100"
+                onMouseEnter={() => setActiveIndex(index)}
+                className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-gray-900">{m.nameEn}</span>
-                  {m.nameZh && <span className="text-[10px] text-gray-500 font-medium">{m.nameZh}</span>}
-                  <span className="text-[10px] text-gray-400 uppercase font-black">{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
+                  <span className={`text-sm font-bold ${index === activeIndex ? 'text-blue-700' : 'text-gray-900'}`}>{m.nameEn}</span>
+                  {m.nameZh && <span className={`text-[10px] font-medium ${index === activeIndex ? 'text-blue-500' : 'text-gray-500'}`}>{m.nameZh}</span>}
+                  <span className={`text-[10px] uppercase font-black ${index === activeIndex ? 'text-blue-400' : 'text-gray-400'}`}>{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                   <span className="text-xs font-bold text-gray-400">Pwr: {m.power || '--'}</span>
+                   <span className={`text-xs font-bold ${index === activeIndex ? 'text-blue-500' : 'text-gray-400'}`}>Pwr: {m.power || '--'}</span>
                 </div>
               </button>
             ))}
