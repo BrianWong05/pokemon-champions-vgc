@@ -29,6 +29,8 @@ const ItemImage: React.FC<ItemImageProps> = ({ name, className = '', title }) =>
 
   return (
     <img 
+      loading="lazy"
+      decoding="async"
       src={`${import.meta.env.BASE_URL}${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`} 
       alt={name || 'Item'}
       title={title}

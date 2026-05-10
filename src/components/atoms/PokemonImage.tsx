@@ -9,6 +9,8 @@ interface PokemonImageProps {
 const PokemonImage: React.FC<PokemonImageProps> = ({ id, name, className = '' }) => {
   return (
     <img 
+      loading="lazy"
+      decoding="async"
       src={`${import.meta.env.BASE_URL}images/pokemon/thumbnails/${id}.png`} 
       alt={name}
       className={`object-contain ${className || 'w-16 h-16'}`}

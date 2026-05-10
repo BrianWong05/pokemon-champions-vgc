@@ -22,6 +22,8 @@ const TypeIcon: React.FC<TypeIconProps> = ({ type, className = 'w-4 h-4' }) => {
 
   return (
     <img 
+      loading="lazy"
+      decoding="async"
       src={iconUrl} 
       alt={`${type} icon`} 
       className={className} 
