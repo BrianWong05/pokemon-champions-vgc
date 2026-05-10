@@ -140,15 +140,27 @@ interface StatGridProps {
   pokemonTypes?: string[];
   role?: 'attacker' | 'defender';
   hpPercent?: number;
+  enforceSpLimit?: boolean;
   className?: string;
 }
 
 const StatGrid: React.FC<StatGridProps> = ({ 
   stats, boostedStat, hinderedStat, stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, onSpChange, onToggleNature, onStageChange, 
-  ability, weather, pokemonTypes, role, hpPercent, className = '' 
+  ability, weather, pokemonTypes, role, hpPercent, enforceSpLimit = false, className = '' 
 }) => {
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
-  const isOverLimit = totalSp > 66;
+  const isOverLimit = enforceSpLimit && totalSp > 66;
+
+  const handleSpChange = (key: string, val: number, currentSp: number) => {
+    if (enforceSpLimit) {
+      const currentTotalWithoutThis = totalSp - currentSp;
+      const maxAllowed = Math.max(0, 66 - currentTotalWithoutThis);
+      const cappedVal = Math.min(val, maxAllowed);
+      onSpChange(key, cappedVal);
+    } else {
+      onSpChange(key, val);
+    }
+  };
 
   const rowBaseProps = {
     boostedStat, hinderedStat, onToggleNature, onStageChange,
@@ -169,19 +181,21 @@ const StatGrid: React.FC<StatGridProps> = ({
       </div>
       
       <div className="space-y-1">
-        <StatRow statKey="hp" label="HP" base={stats.hp.base} sp={stats.hp.sp} onSpChange={(val) => onSpChange('spHp', val)} isHp {...rowBaseProps} />
-        <StatRow statKey="atk" label="Atk" base={stats.atk.base} sp={stats.atk.sp} stage={stages.atk} onSpChange={(val) => onSpChange('spAtk', val)} {...rowBaseProps} />
-        <StatRow statKey="def" label="Def" base={stats.def.base} sp={stats.def.sp} stage={stages.def} onSpChange={(val) => onSpChange('spDef', val)} {...rowBaseProps} />
-        <StatRow statKey="spa" label="SpA" base={stats.spa.base} sp={stats.spa.sp} stage={stages.spa} onSpChange={(val) => onSpChange('spSpa', val)} {...rowBaseProps} />
-        <StatRow statKey="spd" label="SpD" base={stats.spd.base} sp={stats.spd.sp} stage={stages.spd} onSpChange={(val) => onSpChange('spSpd', val)} {...rowBaseProps} />
-        <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} stage={stages.spe} onSpChange={(val) => onSpChange('spSpe', val)} {...rowBaseProps} />
+        <StatRow statKey="hp" label="HP" base={stats.hp.base} sp={stats.hp.sp} onSpChange={(val) => handleSpChange('spHp', val, stats.hp.sp)} isHp {...rowBaseProps} />
+        <StatRow statKey="atk" label="Atk" base={stats.atk.base} sp={stats.atk.sp} stage={stages.atk} onSpChange={(val) => handleSpChange('spAtk', val, stats.atk.sp)} {...rowBaseProps} />
+        <StatRow statKey="def" label="Def" base={stats.def.base} sp={stats.def.sp} stage={stages.def} onSpChange={(val) => handleSpChange('spDef', val, stats.def.sp)} {...rowBaseProps} />
+        <StatRow statKey="spa" label="SpA" base={stats.spa.base} sp={stats.spa.sp} stage={stages.spa} onSpChange={(val) => handleSpChange('spSpa', val, stats.spa.sp)} {...rowBaseProps} />
+        <StatRow statKey="spd" label="SpD" base={stats.spd.base} sp={stats.spd.sp} stage={stages.spd} onSpChange={(val) => handleSpChange('spSpd', val, stats.spd.sp)} {...rowBaseProps} />
+        <StatRow statKey="spe" label="Spe" base={stats.spe.base} sp={stats.spe.sp} stage={stages.spe} onSpChange={(val) => handleSpChange('spSpe', val, stats.spe.sp)} {...rowBaseProps} />
       </div>
 
       {/* Summary Footer */}
       <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
-        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total SP Used (Max 66)</span>
+        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          Total SP Used {enforceSpLimit && '(Max 66)'}
+        </span>
         <span className={`text-base font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
-          {totalSp} <span className="text-gray-300 font-bold">/ 66</span>
+          {totalSp} {enforceSpLimit && <span className="text-gray-300 font-bold">/ 66</span>}
         </span>
       </div>
     </div>
