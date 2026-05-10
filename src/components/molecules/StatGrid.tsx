@@ -62,7 +62,8 @@ const StatRow: React.FC<StatRowProps> = ({
           type="number" 
           min="0" 
           max="32" 
-          value={sp} 
+          value={sp === 0 ? '' : sp}
+          placeholder="0"
           onChange={(e) => onSpChange(Math.min(32, Math.max(0, parseInt(e.target.value, 10) || 0)))}
           className="w-10 bg-white border border-gray-200 text-center text-[11px] font-black text-blue-600 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all appearance-none"
         />
