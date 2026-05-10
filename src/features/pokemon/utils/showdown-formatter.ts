@@ -30,7 +30,8 @@ export const formatShowdownSet = (config: PokemonConfig, speciesName: string): s
   }
 
   // Nature
-  lines.push(`${config.nature} Nature`);
+  const baseNature = config.nature.split(' (')[0].trim();
+  lines.push(`${baseNature} Nature`);
 
   // Moves
   for (const move of config.moves) {
