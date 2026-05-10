@@ -33,18 +33,42 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   const filteredPokemon = useMemo(() => {
     if (!searchTerm) return [];
     const term = searchTerm.toLowerCase();
-    return pokemonList
+    const results = pokemonList
       .filter(p => 
         p.nameEn.toLowerCase().includes(term) || 
         (p.nameZh && p.nameZh.includes(term)) ||
         p.identifier.toLowerCase().includes(term)
       )
       .slice(0, 10);
+    setActiveIndex(results.length > 0 ? 0 : -1);
+    return results;
   }, [searchTerm, pokemonList]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen || filteredPokemon.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev < filteredPokemon.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : filteredPokemon.length - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        onSelect(filteredPokemon[activeIndex]);
+        setSearchTerm('');
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
 
   return (
     <div className={`relative ${className}`}>
@@ -64,11 +88,12 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
             className={`w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-medium text-sm ${!searchTerm && selectedPokemonName ? 'text-blue-700' : 'text-gray-900'}`}
           />
           {isOpen && filteredPokemon.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {filteredPokemon.map((p) => (
+              {filteredPokemon.map((p, index) => (
                 <button
                   key={p.id}
                   onClick={() => {
@@ -76,12 +101,13 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
                     setSearchTerm('');
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left transition-colors border-b last:border-0 border-gray-100"
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                 >
                   <PokemonImage id={p.id} name={p.nameEn} className="w-8 h-8" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-gray-900">{p.nameEn}</span>
-                    {p.nameZh && <span className="text-[10px] text-gray-500 leading-tight">{p.nameZh}</span>}
+                    <span className={`text-sm font-semibold ${index === activeIndex ? 'text-blue-700' : 'text-gray-900'}`}>{p.nameEn}</span>
+                    {p.nameZh && <span className={`text-[10px] leading-tight ${index === activeIndex ? 'text-blue-500' : 'text-gray-500'}`}>{p.nameZh}</span>}
                   </div>
                 </button>
               ))}
