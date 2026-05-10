@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 
 export interface MoveData {
   id: number;
@@ -30,6 +30,7 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredMoves = useMemo(() => {
     if (!searchTerm) return [];
@@ -65,6 +66,15 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (activeIndex >= 0 && scrollContainerRef.current) {
+      const activeElement = scrollContainerRef.current.children[activeIndex] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex]);
+
   return (
     <div className={`relative ${className}`}>
       <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">
@@ -84,7 +94,10 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
           className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
         />
         {isOpen && filteredMoves.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          <div 
+            ref={scrollContainerRef}
+            className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+          >
             {filteredMoves.map((m, index) => (
               <button
                 key={m.id}

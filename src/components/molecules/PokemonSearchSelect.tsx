@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
 
 export interface PokemonBaseStats {
@@ -34,6 +34,7 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredPokemon = useMemo(() => {
     if (!searchTerm) return [];
@@ -70,6 +71,15 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (activeIndex >= 0 && scrollContainerRef.current) {
+      const activeElement = scrollContainerRef.current.children[activeIndex] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex]);
+
   return (
     <div className={`relative ${className}`}>
       {label && (
@@ -92,7 +102,10 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
             className={`w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-medium text-sm ${!searchTerm && selectedPokemonName ? 'text-blue-700' : 'text-gray-900'}`}
           />
           {isOpen && filteredPokemon.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div 
+              ref={scrollContainerRef}
+              className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+            >
               {filteredPokemon.map((p, index) => (
                 <button
                   key={p.id}
