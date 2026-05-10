@@ -10,6 +10,7 @@ import { TeamImportSelector } from '@/features/calculator/components/TeamImportS
 
 import { MoveSection } from '@/components/organisms/PokemonConfigForm/MoveSection';
 import { MetadataSection } from '@/components/organisms/PokemonConfigForm/MetadataSection';
+import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { TopSection } from '@/components/organisms/PokemonConfigForm/TopSection';
 
 interface PokemonConfigFormProps {
@@ -56,6 +57,18 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
     ? POKEMON_PRESETS.filter(p => p.pokemonName === selectedPokemon.nameEn)
     : [];
 
+  const handleExportShowdown = () => {
+    if (!selectedPokemon) return;
+    const speciesName = config.form && selectedPokemon.id === AEGISLASH_ID
+      ? `${selectedPokemon.nameEn}-${config.form}`
+      : selectedPokemon.nameEn;
+    
+    const showdownText = formatShowdownSet(config, speciesName);
+    navigator.clipboard.writeText(showdownText)
+      .then(() => alert('Exported to clipboard!'))
+      .catch(err => console.error('Failed to copy: ', err));
+  };
+
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-6">
       <ShowdownImportModal 
@@ -68,21 +81,21 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
         }} 
       />
       {/* 1. Title Bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`w-1.5 h-7 ${sideColor || 'bg-blue-600'} rounded-full`} />
-          <h2 className="text-xl font-bold text-gray-800">{title || "Pokémon 1"}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <div className={`w-1.5 h-6 ${sideColor || 'bg-blue-600'} rounded-full`} />
+          <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">{title || "Pokémon 1"}</h2>
         </div>
         
         {/* Actions Selection moved to top right */}
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1.5 items-center justify-end shrink">
           {onLoadConfig && (
-            <div className="relative">
+            <div className="relative shrink-0">
               <button 
                 onClick={() => setIsTeamSelectorOpen(!isTeamSelectorOpen)}
-                className="text-[10px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-2"
+                className="text-[9px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap"
               >
-                My Teams
+                Teams
               </button>
               {isTeamSelectorOpen && (
                 <div className="absolute right-0 top-full mt-2 w-[400px] max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-30 overflow-hidden flex flex-col">
@@ -118,17 +131,27 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
           )}
 
           {onImportShowdown && (
-            <button 
-              onClick={() => setIsImportModalOpen(true)}
-              className="text-[10px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full transition-colors"
-            >
-              Import Showdown
-            </button>
+            <div className="flex gap-1.5 shrink-0">
+              <button 
+                onClick={() => setIsImportModalOpen(true)}
+                className="text-[9px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
+              >
+                Import
+              </button>
+              {selectedPokemon && (
+                <button 
+                  onClick={handleExportShowdown}
+                  className="text-[9px] font-black text-green-500 hover:text-green-600 uppercase tracking-widest bg-green-50 hover:bg-green-100 px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
+                >
+                  Export
+                </button>
+              )}
+            </div>
           )}
 
           {selectedPokemon && availablePresets.length > 0 ? (
-            <div className="relative group">
-              <button className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-2">
+            <div className="relative group shrink-0">
+              <button className="text-[9px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap">
                 Presets <span className="bg-blue-200 text-blue-700 px-1.5 rounded-full text-[9px] leading-tight">{availablePresets.length}</span>
               </button>
               <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
@@ -159,8 +182,6 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
                 </div>
               </div>
             </div>
-          ) : selectedPokemon ? (
-            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-full">No Presets</span>
           ) : null}
         </div>
       </div>
