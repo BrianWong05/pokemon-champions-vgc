@@ -22,12 +22,14 @@ export function useTeamDetail(id: string | undefined) {
   const modals = useModalRegistry({
     editor: false,
     export: false,
+    exportSingle: false,
     importTeam: false,
     importSingle: false
   });
   
   const [editingMemberIndex, setEditingMemberIndex] = useState<number | null>(null);
   const [currentConfig, setCurrentConfig] = useState<PokemonConfig | null>(null);
+  const [exportText, setExportText] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,8 +146,9 @@ export function useTeamDetail(id: string | undefined) {
     const member = team.members[index];
     const speciesName = pokemonList.find(p => p.id === member.configuration.selectedId)?.nameEn || 'Unknown';
     const text = formatShowdownSet(member.configuration, speciesName);
-    navigator.clipboard.writeText(text);
-  }, [team, pokemonList]);
+    setExportText(text);
+    modals.openModal('exportSingle');
+  }, [team, pokemonList, modals]);
 
   const handleRemovePokemon = useCallback(async (orderToRemove: number) => {
     if (!team) return;
@@ -334,6 +337,7 @@ export function useTeamDetail(id: string | undefined) {
     moveList,
     modals,
     currentConfig,
+    exportText,
     handleAddPokemonClick,
     handleEditPokemonClick,
     handleSaveMember,

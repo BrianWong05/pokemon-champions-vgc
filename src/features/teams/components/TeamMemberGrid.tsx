@@ -26,14 +26,6 @@ export const TeamMemberGrid: React.FC<TeamMemberGridProps> = ({
   onAddPokemon,
   onImportSingle,
 }) => {
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-
-  const handleExportClick = (index: number) => {
-    onExportIndividual(index);
-    setCopiedIdx(index);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  };
-
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
       {team.members.map((member, idx) => (
@@ -96,10 +88,10 @@ export const TeamMemberGrid: React.FC<TeamMemberGridProps> = ({
                 Edit
               </button>
               <button
-                onClick={() => handleExportClick(idx)}
-                className={`${copiedIdx === idx ? 'text-green-600' : 'text-purple-600 hover:text-purple-800'} font-black text-xs uppercase tracking-widest transition-colors`}
+                onClick={() => onExportIndividual(idx)}
+                className="text-purple-600 hover:text-purple-800 font-black text-xs uppercase tracking-widest transition-colors"
               >
-                {copiedIdx === idx ? 'Copied!' : 'Export'}
+                Export
               </button>
             </div>
             <button

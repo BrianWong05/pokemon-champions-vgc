@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import TeamMemberEditorModal from '@/components/organisms/TeamMemberEditorModal';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
+import ShowdownExportModal from '@/components/organisms/ShowdownExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 
@@ -19,6 +20,7 @@ const TeamDetailPage: React.FC = () => {
     moveList,
     modals,
     currentConfig,
+    exportText,
     handleAddPokemonClick,
     handleEditPokemonClick,
     handleSaveMember,
@@ -83,6 +85,12 @@ const TeamDetailPage: React.FC = () => {
           configuration: m.configuration,
           speciesName: pokemonList.find(p => p.id === m.configuration.selectedId)?.nameEn || 'Unknown'
         }))}
+      />
+
+      <ShowdownExportModal
+        isOpen={modals.isModalOpen('exportSingle')}
+        onClose={() => modals.closeModal('exportSingle')}
+        exportText={exportText}
       />
 
       <TeamShowdownImportModal
