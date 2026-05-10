@@ -33,7 +33,7 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
     } else {
       results = allItems
         .filter(name => name.toLowerCase().includes(term))
-        .slice(0, 15);
+        .slice(0, 50);
     }
     setActiveIndex(results.length > 0 ? 0 : -1);
     return results;

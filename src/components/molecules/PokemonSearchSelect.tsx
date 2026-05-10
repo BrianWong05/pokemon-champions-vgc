@@ -45,7 +45,7 @@ const PokemonSearchSelect: React.FC<PokemonSearchSelectProps> = ({
         (p.nameZh && p.nameZh.includes(term)) ||
         p.identifier.toLowerCase().includes(term)
       )
-      .slice(0, 10);
+      .slice(0, 50);
     setActiveIndex(results.length > 0 ? 0 : -1);
     return results;
   }, [searchTerm, pokemonList]);
