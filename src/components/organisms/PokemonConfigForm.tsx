@@ -5,6 +5,7 @@ import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { POKEMON_PRESETS, PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import { PokemonConfig, AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
+import ShowdownExportModal from '@/components/organisms/ShowdownExportModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { TeamImportSelector } from '@/features/calculator/components/TeamImportSelector';
 
@@ -49,6 +50,8 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
 }) => {
   const [lastAppliedPreset, setLastAppliedPreset] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportText, setExportText] = useState('');
   const [isTeamSelectorOpen, setIsTeamSelectorOpen] = useState(false);
   const selectedPokemon = pokemonList.find(p => p.id === config.selectedId);
   const pokemonTypes = [config.type1, config.type2].filter((t): t is string => !!t).map(t => t.toLowerCase());
@@ -64,9 +67,8 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
       : selectedPokemon.nameEn;
     
     const showdownText = formatShowdownSet(config, speciesName);
-    navigator.clipboard.writeText(showdownText)
-      .then(() => alert('Exported to clipboard!'))
-      .catch(err => console.error('Failed to copy: ', err));
+    setExportText(showdownText);
+    setIsExportModalOpen(true);
   };
 
   return (
@@ -79,6 +81,11 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
             onImportShowdown(set);
           }
         }} 
+      />
+      <ShowdownExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        exportText={exportText}
       />
       {/* 1. Title Bar */}
       <div className="flex items-center justify-between gap-2">
