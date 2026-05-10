@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Generations } from '@smogon/calc';
 
 // Extract all valid items for Generation 9
@@ -20,18 +20,53 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = useMemo(() => {
     const term = searchTerm.toLowerCase();
     // Prioritize popular items if search is empty
+    let results;
     if (!term) {
-      const popular = ['Choice Band', 'Choice Specs', 'Choice Scarf', 'Life Orb', 'Assault Vest', 'Focus Sash', 'Leftovers', 'Sitrus Berry', 'Booster Energy'];
-      return popular;
+      results = ['Choice Band', 'Choice Specs', 'Choice Scarf', 'Life Orb', 'Assault Vest', 'Focus Sash', 'Leftovers', 'Sitrus Berry', 'Booster Energy'];
+    } else {
+      results = allItems
+        .filter(name => name.toLowerCase().includes(term))
+        .slice(0, 15);
     }
-    return allItems
-      .filter(name => name.toLowerCase().includes(term))
-      .slice(0, 15);
+    setActiveIndex(results.length > 0 ? 0 : -1);
+    return results;
   }, [searchTerm]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen || filteredItems.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev < filteredItems.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : filteredItems.length - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0) {
+        e.preventDefault();
+        onSelect(filteredItems[activeIndex]);
+        setSearchTerm('');
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeIndex >= 0 && scrollContainerRef.current) {
+      const activeElement = scrollContainerRef.current.children[activeIndex] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex]);
 
   return (
     <div className={`relative ${className}`}>
@@ -69,11 +104,15 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
               setIsOpen(true);
             }}
             onFocus={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
             className={`w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-medium text-sm ${selectedItem ? 'text-blue-700' : 'text-gray-900'}`}
           />
           {isOpen && filteredItems.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {filteredItems.map((name) => (
+            <div 
+              ref={scrollContainerRef}
+              className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+            >
+              {filteredItems.map((name, index) => (
                 <button
                   key={name}
                   type="button"
@@ -82,9 +121,10 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
                     setSearchTerm('');
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center px-3 py-2 hover:bg-gray-50 text-left transition-colors border-b last:border-0 border-gray-100"
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`w-full flex items-center px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-900'}`}
                 >
-                  <span className="text-sm font-semibold text-gray-900">{name}</span>
+                  <span className="text-sm font-semibold">{name}</span>
                 </button>
               ))}
             </div>
