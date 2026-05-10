@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Generations } from '@smogon/calc';
+import ItemImage from '@/components/atoms/ItemImage';
 
 // Extract all valid items for Generation 9
 const gen = Generations.get(9);
@@ -122,8 +123,9 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
                     setIsOpen(false);
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`w-full flex items-center px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-900'}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-900'}`}
                 >
+                  <ItemImage name={name} className="w-6 h-6" />
                   <span className="text-sm font-semibold">{name}</span>
                 </button>
               ))}
