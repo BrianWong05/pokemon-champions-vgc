@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
-import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
+import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 import Typography from '@/components/atoms/Typography';
 
 const EvSpConverterPage: React.FC = () => {
@@ -41,7 +41,7 @@ const EvSpConverterPage: React.FC = () => {
   const totals = useMemo(() => {
     const values = Object.values(spread);
     const totalEvs = values.reduce((sum, val) => sum + val, 0);
-    const totalSp = values.reduce((sum, val) => sum + calculateSP(val), 0);
+    const totalSp = values.reduce((sum, val) => sum + convertEvToSp(val), 0);
     
     return { totalEvs, totalSp };
   }, [spread]);

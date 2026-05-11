@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { calculateHP, calculateStat, getStatModifier } from '@/features/damage-calculator/utils/damage-calc';
+import { convertSpToEv, convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 
 interface StatRowProps {
   statKey: 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe';
@@ -18,6 +19,7 @@ interface StatRowProps {
   pokemonTypes?: string[];
   role?: 'attacker' | 'defender';
   hpPercent?: number;
+  isEvMode?: boolean;
 }
 
 const StatRow: React.FC<StatRowProps> = ({ 
@@ -25,7 +27,7 @@ const StatRow: React.FC<StatRowProps> = ({
   isHp = false, boostedStat, hinderedStat, onToggleNature,
   stage = 0, onStageChange,
   ability = null, weather = 'None', pokemonTypes = [], role = 'attacker',
-  hpPercent = 100
+  hpPercent = 100, isEvMode = false
 }) => {
   const isBoosted = boostedStat === statKey;
   const isHindered = hinderedStat === statKey;
@@ -49,9 +51,10 @@ const StatRow: React.FC<StatRowProps> = ({
         <input 
           type="range" 
           min="0" 
-          max="32" 
-          value={sp} 
-          onChange={(e) => onSpChange(parseInt(e.target.value, 10))}
+          max={isEvMode ? 252 : 32}
+          step={isEvMode ? 4 : 1}
+          value={isEvMode ? convertSpToEv(sp) : sp} 
+          onChange={(e) => onSpChange(isEvMode ? convertEvToSp(parseInt(e.target.value, 10)) : parseInt(e.target.value, 10))}
           className="w-full h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
         />
       </div>
@@ -61,10 +64,19 @@ const StatRow: React.FC<StatRowProps> = ({
         <input 
           type="number" 
           min="0" 
-          max="32" 
-          value={sp === 0 ? '' : sp}
+          max={isEvMode ? 252 : 32}
+          step={isEvMode ? 4 : 1}
+          value={sp === 0 ? '' : (isEvMode ? convertSpToEv(sp) : sp)}
           placeholder="0"
-          onChange={(e) => onSpChange(Math.min(32, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+          onChange={(e) => {
+            const rawVal = parseInt(e.target.value, 10);
+            if (isNaN(rawVal)) {
+              onSpChange(0);
+              return;
+            }
+            const val = Math.min(isEvMode ? 252 : 32, Math.max(0, rawVal));
+            onSpChange(isEvMode ? convertEvToSp(val) : val);
+          }}
           className="w-10 bg-white border border-gray-200 text-center text-[11px] font-black text-blue-600 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all appearance-none"
         />
       </div>
@@ -148,7 +160,9 @@ const StatGrid: React.FC<StatGridProps> = ({
   stats, boostedStat, hinderedStat, stages = { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, onSpChange, onToggleNature, onStageChange, 
   ability, weather, pokemonTypes, role, hpPercent, enforceSpLimit = false, className = '' 
 }) => {
+  const [isEvMode, setIsEvMode] = useState(false);
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
+  const totalEv = Object.values(stats).reduce((sum, s) => sum + convertSpToEv(s.sp), 0);
   const isOverLimit = enforceSpLimit && totalSp > 66;
 
   const handleSpChange = (key: string, val: number, currentSp: number) => {
@@ -164,16 +178,25 @@ const StatGrid: React.FC<StatGridProps> = ({
 
   const rowBaseProps = {
     boostedStat, hinderedStat, onToggleNature, onStageChange,
-    ability, weather, pokemonTypes, role, hpPercent
+    ability, weather, pokemonTypes, role, hpPercent, isEvMode
   };
 
   return (
     <div className={`space-y-1 ${className}`}>
       {/* Header Row */}
-      <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-2">
+      <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-2 items-center">
         <div className="col-span-2">Stat</div>
         <div className="col-span-1 text-center">Base</div>
-        <div className="col-span-3 text-center">SP</div>
+        <div className="col-span-3 flex justify-center items-center">
+          <button 
+            onClick={() => setIsEvMode(!isEvMode)}
+            className="flex items-center gap-1 bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded transition-colors border border-gray-200"
+          >
+            <span className={isEvMode ? 'text-gray-400' : 'text-blue-600 font-black'}>SP</span>
+            <span className="text-gray-300">/</span>
+            <span className={isEvMode ? 'text-blue-600 font-black' : 'text-gray-400'}>EV</span>
+          </button>
+        </div>
         <div className="col-span-1 text-center"></div>
         <div className="col-span-2 text-center">Nature</div>
         <div className="col-span-2 text-center">Stage</div>
@@ -192,10 +215,10 @@ const StatGrid: React.FC<StatGridProps> = ({
       {/* Summary Footer */}
       <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-          Total SP Used {enforceSpLimit && '(Max 66)'}
+          {isEvMode ? `Total EV Used ${enforceSpLimit ? '(Max 508)' : ''}` : `Total SP Used ${enforceSpLimit ? '(Max 66)' : ''}`}
         </span>
         <span className={`text-base font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
-          {totalSp} {enforceSpLimit && <span className="text-gray-300 font-bold">/ 66</span>}
+          {isEvMode ? totalEv : totalSp} {enforceSpLimit && <span className="text-gray-300 font-bold">/ {isEvMode ? 508 : 66}</span>}
         </span>
       </div>
     </div>
