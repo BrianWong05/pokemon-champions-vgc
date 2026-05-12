@@ -38,6 +38,17 @@ const EvSpConverterPage: React.FC = () => {
     });
   };
 
+  const handleReset = () => {
+    setSpread({
+      hp: 0,
+      atk: 0,
+      def: 0,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+    });
+  };
+
   const totals = useMemo(() => {
     const values = Object.values(spread);
     const totalEvs = values.reduce((sum, val) => sum + val, 0);
@@ -62,6 +73,7 @@ const EvSpConverterPage: React.FC = () => {
       <EvSpForm 
         spread={spread} 
         onSpreadChange={handleSpreadChange} 
+        onReset={handleReset}
         totalEvs={totals.totalEvs} 
         totalSp={totals.totalSp} 
       />

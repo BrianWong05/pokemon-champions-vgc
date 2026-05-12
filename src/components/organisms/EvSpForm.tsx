@@ -14,6 +14,7 @@ export interface EvSpread {
 interface EvSpFormProps {
   spread: EvSpread;
   onSpreadChange: (spread: EvSpread) => void;
+  onReset: () => void;
   totalEvs: number;
   totalSp: number;
   className?: string;
@@ -22,6 +23,7 @@ interface EvSpFormProps {
 const EvSpForm: React.FC<EvSpFormProps> = ({ 
   spread, 
   onSpreadChange, 
+  onReset,
   totalEvs, 
   totalSp,
   className = '' 
@@ -63,6 +65,15 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
           current={totalSp} 
           max={66} 
         />
+        
+        <div className="flex justify-center pt-4">
+          <button
+            onClick={onReset}
+            className="px-8 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-red-100 hover:text-red-700 transition-all shadow-sm"
+          >
+            Reset All
+          </button>
+        </div>
       </div>
     </div>
   );
