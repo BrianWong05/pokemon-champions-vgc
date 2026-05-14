@@ -162,12 +162,19 @@ const StatGrid: React.FC<StatGridProps> = ({
   ability, weather, pokemonTypes, role, hpPercent, enforceSpLimit = false, onResetStats, className = '' 
 }) => {
   const [isEvMode, setIsEvMode] = useState(false);
+  const [isLimitEnforced, setIsLimitEnforced] = useState(enforceSpLimit);
+  
+  // Keep local state synced if prop changes
+  React.useEffect(() => {
+    setIsLimitEnforced(enforceSpLimit);
+  }, [enforceSpLimit]);
+
   const totalSp = Object.values(stats).reduce((sum, s) => sum + s.sp, 0);
   const totalEv = Object.values(stats).reduce((sum, s) => sum + convertSpToEv(s.sp), 0);
-  const isOverLimit = enforceSpLimit && totalSp > 66;
+  const isOverLimit = isLimitEnforced && totalSp > 66;
 
   const handleSpChange = (key: string, val: number, currentSp: number) => {
-    if (enforceSpLimit) {
+    if (isLimitEnforced) {
       const currentTotalWithoutThis = totalSp - currentSp;
       const maxAllowed = Math.max(0, 66 - currentTotalWithoutThis);
       const cappedVal = Math.min(val, maxAllowed);
@@ -216,8 +223,12 @@ const StatGrid: React.FC<StatGridProps> = ({
       {/* Summary Footer */}
       <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {isEvMode ? `Total EV Used ${enforceSpLimit ? '(Max 508)' : ''}` : `Total SP Used ${enforceSpLimit ? '(Max 66)' : ''}`}
+          <span 
+            onClick={() => setIsLimitEnforced(!isLimitEnforced)}
+            className={`text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors ${isLimitEnforced ? 'text-gray-400 hover:text-red-500' : 'text-gray-300 hover:text-blue-500'}`}
+            title={isLimitEnforced ? "Click to disable SP/EV limit" : "Click to enable SP/EV limit (Max 66/508)"}
+          >
+            {isEvMode ? `Total EV Used ${isLimitEnforced ? '(Max 508)' : ''}` : `Total SP Used ${isLimitEnforced ? '(Max 66)' : ''}`}
           </span>
           {onResetStats && (
             <button
@@ -228,8 +239,12 @@ const StatGrid: React.FC<StatGridProps> = ({
             </button>
           )}
         </div>
-        <span className={`text-base font-black ${isOverLimit ? 'text-red-600' : 'text-blue-600'}`}>
-          {isEvMode ? totalEv : totalSp} {enforceSpLimit && <span className="text-gray-300 font-bold">/ {isEvMode ? 508 : 66}</span>}
+        <span 
+          onClick={() => setIsLimitEnforced(!isLimitEnforced)}
+          className={`text-base font-black cursor-pointer transition-colors ${isOverLimit ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700'}`}
+          title={isLimitEnforced ? "Click to disable SP/EV limit" : "Click to enable SP/EV limit (Max 66/508)"}
+        >
+          {isEvMode ? totalEv : totalSp} {isLimitEnforced && <span className="text-gray-300 font-bold">/ {isEvMode ? 508 : 66}</span>}
         </span>
       </div>
     </div>
