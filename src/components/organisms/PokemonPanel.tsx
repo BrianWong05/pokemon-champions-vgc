@@ -44,6 +44,7 @@ interface PokemonPanelProps {
   isTypeOverridden: boolean;
   onToggleTypeOverride: () => void;
   onToggleAegislashForm?: () => void;
+  onResetStats?: () => void;
   isReflect: boolean;
   isLightScreen: boolean;
   isAuroraVeil: boolean;
@@ -156,6 +157,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         onTypeChange={props.onTypeChange}
         onToggleTypeOverride={props.onToggleTypeOverride}
         onToggleAegislashForm={props.onToggleAegislashForm}
+        onResetStats={props.onResetStats}
         title={title}
         sideColor={sideColor}
         renderMoveActions={renderMoveActions}

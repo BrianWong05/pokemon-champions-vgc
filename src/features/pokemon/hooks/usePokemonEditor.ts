@@ -54,7 +54,8 @@ type PokemonAction =
   | { type: 'TOGGLE_AEGISLASH_FORM' }
   | { type: 'APPLY_PRESET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'LOAD_CONFIG', payload: PokemonConfig };
+  | { type: 'LOAD_CONFIG', payload: PokemonConfig }
+  | { type: 'RESET_STATS' };
 
 const initialPokemonState: PokemonConfig = {
   selectedId: null,
@@ -249,6 +250,17 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
         nature: getFormattedNature(action.payload.nature)
       };
     }
+    case 'RESET_STATS': {
+      return {
+        ...state,
+        spHp: 0,
+        spAtk: 0,
+        spDef: 0,
+        spSpa: 0,
+        spSpd: 0,
+        spSpe: 0,
+      };
+    }
     default: return state;
   }
 }
@@ -422,6 +434,10 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     dispatch({ type: 'LOAD_CONFIG', payload: config });
   }, []);
 
+  const handleResetStats = useCallback(() => {
+    dispatch({ type: 'RESET_STATS' });
+  }, []);
+
   return {
     state,
     handleSelectPokemon,
@@ -440,5 +456,6 @@ export const usePokemonEditor = (initialConfig?: PokemonConfig) => {
     toggleTypeOverride,
     toggleAegislashForm,
     loadConfig,
+    handleResetStats,
   };
 };

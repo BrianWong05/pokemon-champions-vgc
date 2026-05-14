@@ -60,6 +60,7 @@ export const AttackerPanel: React.FC<Props> = ({ state, dispatch, pokemonList, m
       isFriendGuard={state[side].isFriendGuard}
       isTailwind={state[side].isTailwind}
       onToggleSideEffect={(effect) => dispatch({ type: 'TOGGLE_SIDE_EFFECT', payload: { side, effect } })}
+      onResetStats={() => dispatch({ type: 'RESET_STATS', payload: { side } })}
       movesForceCrit={state[side].movesForceCrit}
       onToggleMoveCrit={(index) => dispatch({ type: 'TOGGLE_MOVE_CRIT', payload: { side, index } })}
       movesHits={state[side].movesHits}

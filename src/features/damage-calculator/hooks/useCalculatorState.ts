@@ -83,7 +83,8 @@ export type SideAction =
   | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
-  | { type: 'SET_FAINTED_COUNT', payload: { side: 'p1' | 'p2', val: number } };
+  | { type: 'SET_FAINTED_COUNT', payload: { side: 'p1' | 'p2', val: number } }
+  | { type: 'RESET_STATS', payload: { side: 'p1' | 'p2' } };
 
 export type FieldAction = 
   | { type: 'SET_WEATHER', payload: 'None' | 'Sun' | 'Rain' | 'Sandstorm' | 'Snow' }
@@ -196,6 +197,17 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
       const { stat, val } = action.payload;
       const newStages = { ...state.stages, [stat]: Math.min(6, Math.max(-6, val)) };
       return { ...state, stages: newStages };
+    }
+    case 'RESET_STATS': {
+      return {
+        ...state,
+        spHp: 0,
+        spAtk: 0,
+        spDef: 0,
+        spSpa: 0,
+        spSpd: 0,
+        spSpe: 0,
+      };
     }
     case 'SELECT_POKEMON': {
       const { pokemon: p } = action.payload;

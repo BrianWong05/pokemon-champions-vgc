@@ -38,6 +38,7 @@ interface PokemonConfigFormProps {
   sideColor?: string;
   hideTypeOverride?: boolean;
   enforceSpLimit?: boolean;
+  onResetStats?: () => void;
   renderMoveActions?: (move: MoveData | null, index: number) => React.ReactNode;
 }
 
@@ -46,7 +47,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   onSelectPokemon, onSelectPreset, onImportShowdown, onLoadConfig, onSpChange, onNatureChange, onToggleNature, onStageChange,
   onSelectMove, onClearMove, onAbilityChange, onItemChange,
   onTypeChange, onToggleTypeOverride, onToggleAegislashForm,
-  title, sideColor, hideTypeOverride = false, enforceSpLimit = false,
+  title, sideColor, hideTypeOverride = false, enforceSpLimit = false, onResetStats,
   renderMoveActions
 }) => {
   const [lastAppliedPreset, setLastAppliedPreset] = useState<string | null>(null);
@@ -225,6 +226,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
           ability={config.activeAbility}
           pokemonTypes={pokemonTypes}
           enforceSpLimit={enforceSpLimit}
+          onResetStats={onResetStats}
         />
       </div>
 
