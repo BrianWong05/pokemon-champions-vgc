@@ -1,4 +1,4 @@
-import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
+import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 
 export interface ParsedShowdownSet {
   species: string;
@@ -98,7 +98,7 @@ export const parseShowdownSet = (exportText: string): ParsedShowdownSet | null =
         if (isAlreadySP) {
           parsed.evs[key] = tempVals[key];
         } else {
-          parsed.evs[key] = calculateSP(tempVals[key]);
+          parsed.evs[key] = convertEvToSp(tempVals[key]);
         }
       }
       continue;

@@ -20,9 +20,9 @@ IVs: 0 Atk / 0 Spe
     expect(parsed!.item).toBe('Sitrus Berry');
     expect(parsed!.ability).toBe('Regenerator');
     expect(parsed!.nature).toBe('Quiet');
-    // EVs: 252 -> calculateSP(252) = 32
-    // 156 -> calculateSP(156) = 20
-    // 100 -> calculateSP(100) = 13
+    // EVs: 252 -> convertEvToSp(252) = 32
+    // 156 -> convertEvToSp(156) = 20
+    // 100 -> convertEvToSp(100) = 13
     expect(parsed!.evs.hp).toBe(32);
     expect(parsed!.evs.def).toBe(20);
     expect(parsed!.evs.spd).toBe(13);
@@ -70,7 +70,7 @@ Jolly Nature
 
     const parsed = parseShowdownSet(text);
     expect(parsed).not.toBeNull();
-    // Total is 160. So it should be treated as EVs: calculateSP(32) = 4
+    // Total is 160. So it should be treated as EVs: convertEvToSp(32) = 4
     expect(parsed!.evs.hp).toBe(4);
     expect(parsed!.evs.atk).toBe(4);
     expect(parsed!.evs.def).toBe(4);
