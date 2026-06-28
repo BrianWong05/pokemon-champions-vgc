@@ -1,4 +1,5 @@
-import { parseShowdownSet } from '@/hooks/showdown-parser';
+import { describe, it, expect } from 'vitest';
+import { parseShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
 describe('parseShowdownSet', () => {
   it('parses a standard Showdown export with EVs (values > 32)', () => {
@@ -19,9 +20,9 @@ IVs: 0 Atk / 0 Spe
     expect(parsed!.item).toBe('Sitrus Berry');
     expect(parsed!.ability).toBe('Regenerator');
     expect(parsed!.nature).toBe('Quiet');
-    // EVs: 252 -> calculateSP(252) = 32
-    // 156 -> calculateSP(156) = 20
-    // 100 -> calculateSP(100) = 13
+    // EVs: 252 -> convertEvToSp(252) = 32
+    // 156 -> convertEvToSp(156) = 20
+    // 100 -> convertEvToSp(100) = 13
     expect(parsed!.evs.hp).toBe(32);
     expect(parsed!.evs.def).toBe(20);
     expect(parsed!.evs.spd).toBe(13);
@@ -35,10 +36,13 @@ IVs: 0 Atk / 0 Spe
   });
 
   it('parses a set with SPs (values <= 32)', () => {
+    // Showdown labels the line "EVs:" even for Champions SP numbers, so the
+    // heuristic decides. Total is 66 (the legal SP cap) with max 32, so the
+    // values are kept as SP rather than converted.
     const text = `Urshifu-Rapid-Strike (Urshifu-Rapid-Strike) (M) @ Mystic Water
 Ability: Unseen Fist
 Level: 50
-EVs: 32 HP / 32 Atk / 4 Spe
+EVs: 32 HP / 32 Atk / 2 Spe
 Jolly Nature
 - Surging Strikes
 - Close Combat
@@ -51,7 +55,7 @@ Jolly Nature
     expect(parsed!.item).toBe('Mystic Water');
     expect(parsed!.evs.hp).toBe(32);
     expect(parsed!.evs.atk).toBe(32);
-    expect(parsed!.evs.spe).toBe(4);
+    expect(parsed!.evs.spe).toBe(2);
     expect(parsed!.moves.length).toBe(4);
   });
 
@@ -68,7 +72,7 @@ Jolly Nature
 
     const parsed = parseShowdownSet(text);
     expect(parsed).not.toBeNull();
-    // Total is 160. So it should be treated as EVs: calculateSP(32) = 4
+    // Total is 160. So it should be treated as EVs: convertEvToSp(32) = 4
     expect(parsed!.evs.hp).toBe(4);
     expect(parsed!.evs.atk).toBe(4);
     expect(parsed!.evs.def).toBe(4);

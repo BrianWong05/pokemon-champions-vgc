@@ -1,4 +1,4 @@
-import { calculateSP } from '@/features/pokemon/utils/ev-conversion';
+import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 
 export interface ParsedShowdownSet {
   species: string;
@@ -71,6 +71,7 @@ export const parseShowdownSet = (exportText: string): ParsedShowdownSet | null =
     }
 
     if (line.startsWith('EVs:') || line.startsWith('SPs:')) {
+      const isSpPrefix = line.startsWith('SPs:');
       const statsStr = line.replace(/^(EVs|SPs):/, '').trim();
       const statParts = statsStr.split('/').map(s => s.trim());
       
@@ -90,15 +91,18 @@ export const parseShowdownSet = (exportText: string): ParsedShowdownSet | null =
         }
       }
 
-      // Heuristic: If all values are <= 32 and total is <= 66, assume they are already SP.
-      // Standard Showdown EVs go up to 252. If we see 32, it could be 32 EVs or 32 SP.
-      const isAlreadySP = maxValue <= 32 && totalValue <= 66;
+      // An explicit "SPs:" prefix declares the units, so honor it directly.
+      // Showdown always labels the line "EVs:" even when the numbers are SP, so
+      // the "EVs:" prefix is ambiguous — fall back to the numeric heuristic there:
+      // if all values are <= 32 and total is <= 66, assume they are already SP
+      // (standard Showdown EVs go up to 252; a 32 could be 32 EVs or 32 SP).
+      const isAlreadySP = isSpPrefix || (maxValue <= 32 && totalValue <= 66);
 
       for (const key of Object.keys(tempVals) as Array<keyof typeof parsed.evs>) {
         if (isAlreadySP) {
           parsed.evs[key] = tempVals[key];
         } else {
-          parsed.evs[key] = calculateSP(tempVals[key]);
+          parsed.evs[key] = convertEvToSp(tempVals[key]);
         }
       }
       continue;
