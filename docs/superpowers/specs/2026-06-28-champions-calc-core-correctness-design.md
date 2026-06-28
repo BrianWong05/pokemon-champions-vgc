@@ -1,7 +1,7 @@
 # Pokémon Champions damage calculator — program direction & Spec 1: calc-core correctness
 
 Date: 2026-06-28
-Status: Spec 1 implemented (calc-core correctness) — automated tests + type-check + build green (2026-06-29). Manual ChampDex/NCP parity check still pending (human step).
+Status: Spec 1 complete (calc-core correctness) — automated tests + type-check + build green, and manual ChampDex/NCP parity check passed (identical damage % on the reference matchups). Merged to main 2026-06-29.
 
 This document records the design agreed during brainstorming. Part A captures the
 overall program direction (so later slices share context). Part B is the first
