@@ -4,7 +4,7 @@
 
 **Goal:** Make the Pokémon Champions damage engine correct and verifiable — a working test suite, one source of truth for SP/stat math, and `@smogon/calc` fed correct Champions final stats — pinned by tests.
 
-**Architecture:** Champions is Gen 9 mechanically but uses Stat Points (SP) instead of EVs (66 total, cap 32/stat, IVs fixed 31, level 50). The app's stat formulas (`base+20+sp` non-HP, `base+75+sp` HP, ×nature) are already correct, but `mapToSmogonPokemon` mistakenly feeds raw SP to `@smogon/calc` as EVs, so the engine computes wrong stats. We make the Champions stat formula canonical in one module and, after constructing each `@smogon/calc` `Pokemon`, overwrite its `rawStats`/`stats` with clean Champions-computed stats (no boosts/abilities — the engine applies those itself, reading `rawStats` at gen789.js:946/1105). SP↔EV conversion is kept only for Showdown paste interop.
+**Architecture:** Champions is Gen 9 mechanically but uses Stat Points (SP) instead of EVs (66 total, cap 32/stat, IVs fixed 31, level 50). The app's stat formulas (`base+20+sp` non-HP, `base+75+sp` HP, ×nature) are already correct, but `mapToSmogonPokemon` mistakenly feeds raw SP to `@smogon/calc` as EVs, so the engine computes wrong stats. We make the Champions stat formula canonical in one module and feed `@smogon/calc` correct stats by encoding SP into the overridden base stat (`base + SP`, with `evs = 0`): at Lv50/IV31 the engine computes `(base + SP + 20) × nature` = the exact Champions stat. This is **clone-safe** — `calculate()` clones each Pokémon (calc.js:23) and `clone()` rebuilds from `evs` + `species.baseStats` (not `rawStats`), so a post-construction `rawStats` mutation would be silently discarded. SP↔EV conversion is kept only for Showdown paste interop. *(Correction applied during execution: an earlier draft mutated `rawStats`/`stats`; that does not survive the clone, hence the base-stat encoding.)*
 
 **Tech Stack:** TypeScript, React 19, Vite 8, `@smogon/calc` ^0.11.0, Vitest (added here), SQLite/Drizzle (untouched in this slice).
 
@@ -26,7 +26,7 @@
 | `src/features/pokemon/utils/sp-ev-converter.test.ts` | Unit tests for SP↔EV | Create |
 | `src/features/pokemon/utils/ev-conversion.ts` | Duplicate `calculateSP` | Delete |
 | `src/features/pokemon/utils/showdown-parser.ts` | Repoint `calculateSP` → `convertEvToSp` | Modify (`:1`, `:101`) |
-| `src/features/damage-calculator/utils/damage-calc.ts` | Delegate stat fns to canonical module; remove dead `spToEv`; override `rawStats`/`stats` in `mapToSmogonPokemon` | Modify |
+| `src/features/damage-calculator/utils/damage-calc.ts` | Delegate stat fns to canonical module; remove dead `spToEv`; encode SP into base stats (clone-safe) in `mapToSmogonPokemon` | Modify |
 | `src/features/damage-calculator/utils/champions-stats-override.test.ts` | Integration tests: override wires correct stats + damage responds to SP | Create |
 | `src/features/pokemon/utils/damage.test.ts` | Fix stale `@/hooks/damage` import | Modify (`:1`) |
 | `src/features/pokemon/utils/showdown-parser.test.ts` | Fix stale `@/hooks/showdown-parser` import | Modify (`:1`) |
@@ -322,7 +322,7 @@ git commit -m "refactor: consolidate SP/EV conversion, remove duplicate ev-conve
 
 ## Task 4: Fix the damage path — feed @smogon/calc correct Champions stats
 
-This is the core correctness fix. `mapToSmogonPokemon` currently passes raw SP (0–32) as `evs`, so `@smogon/calc` computes stats from `mainline(base, SP-as-EV, nature)` — wrong. We overwrite the constructed `Pokemon`'s `rawStats`/`stats` with clean Champions stats. The gen789 mechanics read `rawStats[stat]` and apply boosts themselves, so the override must exclude boosts/abilities. Also delegate the existing display helpers to the canonical module and remove the dead `spToEv`.
+This is the core correctness fix. `mapToSmogonPokemon` currently passes raw SP (0–32) as `evs`, so `@smogon/calc` computes stats from `mainline(base, SP-as-EV, nature)` — wrong (32 SP moves the stat by ~+4 instead of +32). We zero the `evs` and encode SP into the overridden base stats (`base + SP`); `@smogon/calc` then computes `(base + SP + 20) × nature` = the Champions stat, and because `calculate()` clones the Pokémon and `clone()` rebuilds from `evs` + `species.baseStats`, the value survives. Also delegate the existing display helpers to the canonical module and remove the dead `spToEv`.
 
 **Files:**
 - Modify: `src/features/damage-calculator/utils/damage-calc.ts`
@@ -432,32 +432,32 @@ export const spToEv = (sp: number): number => {
 ```
 (Verified: no file imports `spToEv`.)
 
-- [ ] **Step 5: Override `rawStats`/`stats` inside `mapToSmogonPokemon`**
+- [ ] **Step 5: Encode SP into the base stat inside `mapToSmogonPokemon` (clone-safe)**
 
-In `src/features/damage-calculator/utils/damage-calc.ts`, in `mapToSmogonPokemon`, immediately before the final `return p;` (currently line 275), insert:
+Mutating `p.rawStats`/`p.stats` does NOT work: `calculate()` clones each Pokémon and `clone()` rebuilds stats from `evs` + `species.baseStats`, discarding the mutation. Instead, zero the `evs` and add SP into the overridden base stats — `@smogon/calc` then computes `(base + SP + 20) × nature` at Lv50/IV31, which equals the Champions stat, and the clone reproduces it.
+
+In `src/features/damage-calculator/utils/damage-calc.ts`, in `mapToSmogonPokemon`, change the `evs` object to all zeros:
 ```ts
-  // Champions correctness: @smogon/calc otherwise computes stats from the
-  // mainline EV formula using raw SP as EVs, which is wrong. Overwrite with the
-  // clean Champions stats (base + SP + nature, no boosts/abilities). The gen9
-  // mechanics read rawStats and apply boosts/abilities/items themselves
-  // (gen789.js:946,1105), so excluding them here avoids double-counting.
-  const natureMult = (statKey: 'atk' | 'def' | 'spa' | 'spd' | 'spe'): number => {
-    if (stateSide.boostedStat === statKey) return 1.1;
-    if (stateSide.hinderedStat === statKey) return 0.9;
-    return 1.0;
+  // Champions correctness: SP is encoded into the base stat below (base + SP),
+  // so EVs are zeroed. @smogon/calc then computes (base + SP + 20) * nature at
+  // Lv50/IV31 — the exact Champions stat — and this survives the clone() inside
+  // calculate(), which rebuilds stats from evs + species.baseStats (not rawStats).
+  const evs = {
+    hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0,
   };
-  const championsStats = {
-    hp: championsHP(stateSide.baseHp, stateSide.spHp || 0),
-    atk: championsStat(stateSide.baseAtk, stateSide.spAtk || 0, natureMult('atk')),
-    def: championsStat(stateSide.baseDef, stateSide.spDef || 0, natureMult('def')),
-    spa: championsStat(stateSide.baseSpa, stateSide.spSpa || 0, natureMult('spa')),
-    spd: championsStat(stateSide.baseSpd, stateSide.spSpd || 0, natureMult('spd')),
-    spe: championsStat(stateSide.baseSpe, stateSide.spSpe || 0, natureMult('spe')),
-  };
-  p.rawStats = { ...championsStats } as typeof p.rawStats;
-  p.stats = { ...championsStats } as typeof p.stats;
-  p.originalCurHP = Math.floor(championsStats.hp * (stateSide.hpPercent / 100));
 ```
+and change the `overrides.baseStats` block to add SP per stat:
+```ts
+      baseStats: {
+        hp: stateSide.baseHp + (stateSide.spHp || 0),
+        atk: stateSide.baseAtk + (stateSide.spAtk || 0),
+        def: stateSide.baseDef + (stateSide.spDef || 0),
+        spa: stateSide.baseSpa + (stateSide.spSpa || 0),
+        spd: stateSide.baseSpd + (stateSide.spSpd || 0),
+        spe: stateSide.baseSpe + (stateSide.spSpe || 0),
+      }
+```
+The existing `curHP` line stays correct: `calculateHP` (now delegating to `championsHP`) gives `base+75+sp`, matching `maxHP()` from the inflated `baseStats.hp`. Nature is still applied by `@smogon/calc` via the `getNatureName` name, so it lands on the boosted/hindered stat correctly.
 
 - [ ] **Step 6: Run the new tests to verify they pass**
 
