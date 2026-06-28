@@ -1,11 +1,12 @@
 import { calculate, Pokemon, Move, Field, Generations, Result } from '@smogon/calc';
+import { championsHP, championsStat } from '@/features/pokemon/utils/champions-stats';
 
 /**
  * Pokémon Champions Stat and Damage Formulas (Level 50 VGC)
  */
 
 export const calculateHP = (base: number, sp: number): number => {
-  return base + 75 + sp;
+  return championsHP(base, sp);
 };
 
 export const calculateStat = (
@@ -15,7 +16,7 @@ export const calculateStat = (
   stage: number = 0,
   abilityMultiplier: number = 1.0
 ): number => {
-  const raw = Math.floor((base + 20 + sp) * nature);
+  const raw = championsStat(base, sp, nature);
   const withStage = Math.floor(raw * getStageMultiplier(stage));
   return Math.floor(withStage * abilityMultiplier);
 };
@@ -75,11 +76,6 @@ export const getNatureName = (boosted: string | null, hindered: string | null): 
   };
   
   return natures[boosted]?.[hindered] || 'Serious';
-};
-
-export const spToEv = (sp: number): number => {
-  if (sp === 0) return 0;
-  return Math.min(252, sp * 8 - 4);
 };
 
 
@@ -204,13 +200,12 @@ export const mapToSmogonPokemon = (
 ): Pokemon => {
   const gen = Generations.get(9);
   
+  // Champions correctness: SP is encoded into the base stat below (base + SP),
+  // so EVs are zeroed. @smogon/calc then computes (base + SP + 20) * nature at
+  // Lv50/IV31 — the exact Champions stat — and this survives the clone() inside
+  // calculate(), which rebuilds stats from evs + species.baseStats (not rawStats).
   const evs = {
-    hp: stateSide.spHp || 0,
-    atk: stateSide.spAtk || 0,
-    def: stateSide.spDef || 0,
-    spa: stateSide.spSpa || 0,
-    spd: stateSide.spSpd || 0,
-    spe: stateSide.spSpe || 0,
+    hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0,
   };
 
   const currentHp = Math.floor(calculateHP(stateSide.baseHp, stateSide.spHp) * (stateSide.hpPercent / 100));
@@ -248,12 +243,12 @@ export const mapToSmogonPokemon = (
       types: types as any,
       weightkg: 100,
       baseStats: {
-        hp: stateSide.baseHp,
-        atk: stateSide.baseAtk,
-        def: stateSide.baseDef,
-        spa: stateSide.baseSpa,
-        spd: stateSide.baseSpd,
-        spe: stateSide.baseSpe,
+        hp: stateSide.baseHp + (stateSide.spHp || 0),
+        atk: stateSide.baseAtk + (stateSide.spAtk || 0),
+        def: stateSide.baseDef + (stateSide.spDef || 0),
+        spa: stateSide.baseSpa + (stateSide.spSpa || 0),
+        spd: stateSide.baseSpd + (stateSide.spSpd || 0),
+        spe: stateSide.baseSpe + (stateSide.spSpe || 0),
       }
     }
   });
