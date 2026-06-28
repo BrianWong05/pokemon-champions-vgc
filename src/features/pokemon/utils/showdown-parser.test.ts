@@ -35,12 +35,14 @@ IVs: 0 Atk / 0 Spe
     expect(parsed!.moves).toEqual(['Spore', 'Rage Powder', 'Pollen Puff', 'Protect']);
   });
 
-  // TODO(showdown-parser): pre-existing SP/EV heuristic bug — a spread totalling >66 (illegal SP total) is re-converted as EVs. Skipped pending a dedicated parser fix; out of scope for the calc-core slice.
-  it.skip('parses a set with SPs (values <= 32)', () => {
+  it('parses a set with SPs (values <= 32)', () => {
+    // Showdown labels the line "EVs:" even for Champions SP numbers, so the
+    // heuristic decides. Total is 66 (the legal SP cap) with max 32, so the
+    // values are kept as SP rather than converted.
     const text = `Urshifu-Rapid-Strike (Urshifu-Rapid-Strike) (M) @ Mystic Water
 Ability: Unseen Fist
 Level: 50
-EVs: 32 HP / 32 Atk / 4 Spe
+EVs: 32 HP / 32 Atk / 2 Spe
 Jolly Nature
 - Surging Strikes
 - Close Combat
@@ -53,7 +55,7 @@ Jolly Nature
     expect(parsed!.item).toBe('Mystic Water');
     expect(parsed!.evs.hp).toBe(32);
     expect(parsed!.evs.atk).toBe(32);
-    expect(parsed!.evs.spe).toBe(4);
+    expect(parsed!.evs.spe).toBe(2);
     expect(parsed!.moves.length).toBe(4);
   });
 
@@ -78,8 +80,7 @@ Jolly Nature
     expect(parsed!.evs.spe).toBe(4);
   });
 
-  // TODO(showdown-parser): an explicit "SPs:" prefix is ignored by the heuristic and re-converted. Skipped pending a dedicated parser fix; out of scope for the calc-core slice.
-  it.skip('handles SPs: prefix directly', () => {
+  it('handles SPs: prefix directly', () => {
     const text = `Incineroar @ Focus Sash
 Ability: Intimidate
 SPs: 32 HP / 32 Atk / 4 Spe
