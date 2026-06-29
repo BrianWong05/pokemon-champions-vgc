@@ -3,9 +3,10 @@ import { pokemon, formatPokemon, formats, moves, pokemonAbilities, abilities } f
 import { eq, inArray } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { DEFAULT_FORMAT } from '@/features/formats/format-utils';
 
 export const pokemonRepository = {
-  async getPokemonListByFormat(formatName: string = 'Regulation M-A'): Promise<PokemonBaseStats[]> {
+  async getPokemonListByFormat(formatName: string = DEFAULT_FORMAT): Promise<PokemonBaseStats[]> {
     const db = await getDb();
     const result = await db.select({
       id: pokemon.id,
