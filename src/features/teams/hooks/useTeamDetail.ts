@@ -8,9 +8,11 @@ import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { useModalRegistry } from '@/hooks/useModalRegistry';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
+import { useFormat } from '@/features/formats/FormatContext';
 
 export function useTeamDetail(id: string | undefined) {
   const { getTeam, updateTeam, loading: teamsLoading } = useTeams();
+  const { format } = useFormat();
   
   const [team, setTeam] = useState<TeamWithMembers | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,7 @@ export function useTeamDetail(id: string | undefined) {
     const fetchData = async () => {
       try {
         const [pokeResult, moveResult] = await Promise.all([
-          pokemonRepository.getPokemonListByFormat('Regulation M-A'),
+          pokemonRepository.getPokemonListByFormat(format),
           pokemonRepository.getAllMoves()
         ]);
         setPokemonList(pokeResult);
@@ -45,7 +47,7 @@ export function useTeamDetail(id: string | undefined) {
       }
     };
     fetchData();
-  }, []);
+  }, [format]);
 
   useEffect(() => {
     const loadTeam = async () => {

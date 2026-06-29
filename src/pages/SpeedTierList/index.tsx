@@ -5,6 +5,7 @@ import { eq, desc, sql } from 'drizzle-orm';
 import SpeedTierTemplate from '@/components/templates/SpeedTierTemplate';
 import TierSection from '@/components/organisms/TierSection';
 import PokemonDetailModal, { FullPokemonDetail } from '@/components/organisms/PokemonDetailModal';
+import { useFormat } from '@/features/formats/FormatContext';
 
 interface PokemonWithSpeeds {
   id: number;
@@ -18,6 +19,7 @@ interface PokemonWithSpeeds {
 }
 
 const SpeedTierPage: React.FC = () => {
+  const { format } = useFormat();
   const [pokemonData, setPokemonData] = useState<PokemonWithSpeeds[]>([]);
   const [selectedPokemonId, setSelectedPokemonId] = useState<number | null>(null);
   const [detailedPokemon, setDetailedPokemon] = useState<FullPokemonDetail | null>(null);
@@ -110,7 +112,7 @@ const SpeedTierPage: React.FC = () => {
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
           .innerJoin(calculatedSpeeds, eq(pokemon.id, calculatedSpeeds.pokemonId))
-          .where(eq(formats.name, 'Regulation M-A'))
+          .where(eq(formats.name, format))
           .orderBy(desc(pokemon.baseSpeed));
 
         setPokemonData(result.map((row: any) => ({
@@ -125,7 +127,7 @@ const SpeedTierPage: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [format]);
 
   const groupedPokemon = useMemo(() => {
     const groups: Record<number, PokemonWithSpeeds[]> = {};
@@ -146,11 +148,11 @@ const SpeedTierPage: React.FC = () => {
   }, [pokemonData]);
 
   return (
-    <SpeedTierTemplate 
-      title="Regulation M-A Speed Tiers"
+    <SpeedTierTemplate
+      title={`${format} Speed Tiers`}
       isLoading={isLoading}
       isEmpty={groupedPokemon.length === 0}
-      emptyMessage="No speed data found for Regulation M-A."
+      emptyMessage={`No speed data found for ${format}.`}
     >
       {groupedPokemon.map((group) => (
         <TierSection 
