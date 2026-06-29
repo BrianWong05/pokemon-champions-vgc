@@ -29,6 +29,14 @@ describe('Champions dataset sanity', () => {
   it('no format_pokemon row points at a missing pokemon', () => {
     expect(q("SELECT COUNT(*) FROM format_pokemon fp LEFT JOIN pokemon p ON p.id=fp.pokemon_id WHERE p.id IS NULL")[0][0]).toBe(0)
   })
+
+  it('every format-legal pokemon has a calculated_speeds row (so speed tiers list all legal mons)', () => {
+    const missing = q(`SELECT DISTINCT p.identifier FROM pokemon p
+      JOIN format_pokemon fp ON fp.pokemon_id = p.id
+      LEFT JOIN calculated_speeds cs ON cs.pokemon_id = p.id
+      WHERE cs.pokemon_id IS NULL`)
+    expect(missing).toEqual([])
+  })
 })
 
 // Mega Raichu Y is a Champions-original Mega @smogon/calc has NO species data for, so these
