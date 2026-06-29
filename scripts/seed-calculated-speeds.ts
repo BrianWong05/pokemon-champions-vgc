@@ -1,6 +1,6 @@
 import { db } from '../src/db/node';
-import { pokemon, formatPokemon, formats, calculatedSpeeds } from '../src/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { pokemon, formatPokemon, calculatedSpeeds } from '../src/db/schema';
+import { eq } from 'drizzle-orm';
 
 const calculateBenchmarks = (baseSpeed: number) => {
   return {
@@ -12,22 +12,20 @@ const calculateBenchmarks = (baseSpeed: number) => {
 };
 
 async function seedCalculatedSpeeds() {
-  console.log('--- Starting Pre-calculation for Regulation M-A Speed Benchmarks ---');
+  console.log('--- Starting Pre-calculation for Speed Benchmarks (all format-legal Pokemon) ---');
 
   try {
-    // 1. Fetch all Pokemon legal in Regulation M-A
+    // 1. Fetch every Pokemon legal in at least one format (distinct across formats)
     const result = await db
-      .select({
+      .selectDistinct({
         id: pokemon.id,
         identifier: pokemon.identifier,
         baseSpeed: pokemon.baseSpeed,
       })
       .from(pokemon)
-      .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
-      .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-      .where(eq(formats.name, 'Regulation M-A'));
+      .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId));
 
-    console.log(`Found ${result.length} legal Pokemon for Regulation M-A.`);
+    console.log(`Found ${result.length} format-legal Pokemon.`);
 
     // 2. Map results to calculate benchmarks
     const insertData = result.map((p) => {

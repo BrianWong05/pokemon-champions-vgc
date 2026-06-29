@@ -1,6 +1,7 @@
 import { getDb } from '@/db';
 import { pokemon, formatPokemon, formats, calculatedSpeeds } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { DEFAULT_FORMAT } from '@/features/formats/format-utils';
 
 export interface SpeedBenchmarks {
   maxPlus: number;
@@ -16,7 +17,9 @@ export interface PokemonWithSpeeds {
   speeds: SpeedBenchmarks;
 }
 
-export const fetchRegulationMAPokemonSpeed = async (): Promise<PokemonWithSpeeds[]> => {
+export const fetchPokemonSpeedByFormat = async (
+  formatName: string = DEFAULT_FORMAT
+): Promise<PokemonWithSpeeds[]> => {
   const db = await getDb();
   const result = await db
     .select({
@@ -32,7 +35,7 @@ export const fetchRegulationMAPokemonSpeed = async (): Promise<PokemonWithSpeeds
     .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
     .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
     .innerJoin(calculatedSpeeds, eq(pokemon.id, calculatedSpeeds.pokemonId))
-    .where(eq(formats.name, 'Regulation M-A'))
+    .where(eq(formats.name, formatName))
     .orderBy(desc(pokemon.baseSpeed));
 
   return result.map((row: any) => ({

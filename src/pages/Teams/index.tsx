@@ -13,9 +13,11 @@ import { eq } from 'drizzle-orm';
 import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { useFormat } from '@/features/formats/FormatContext';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
+  const { format } = useFormat();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
@@ -47,10 +49,10 @@ const TeamsPage: React.FC = () => {
           .from(pokemon)
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, 'Regulation M-A')),
+          .where(eq(formats.name, format)),
           db.select().from(moves)
         ]);
-        
+
         setPokemonList(pokeResult as PokemonBaseStats[]);
         setMoveList(moveResult as MoveData[]);
       } catch (error) {
@@ -58,7 +60,7 @@ const TeamsPage: React.FC = () => {
       }
     };
     fetchMetadata();
-  }, []);
+  }, [format]);
 
   const handleImportTeam = async (sets: ParsedShowdownSet[]) => {
     const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');

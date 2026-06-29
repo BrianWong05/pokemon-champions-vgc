@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useFormat } from '@/features/formats/FormatContext';
 
 const Layout: React.FC = () => {
   const location = useLocation();
+  const { format, setFormat, availableFormats } = useFormat();
+  const formatOptions = availableFormats.length ? availableFormats : [format];
 
   const getLinkClass = (path: string, exact: boolean = true) => {
     const baseClass = "px-4 py-2 rounded-md transition-colors";
@@ -33,6 +36,18 @@ const Layout: React.FC = () => {
             <Link to="/speed-tiers" className={getLinkClass('/speed-tiers')}>
               Speed Tiers
             </Link>
+            <label className="flex items-center gap-2 ml-2 text-sm text-blue-100">
+              Regulation
+              <select
+                value={format}
+                onChange={(e) => setFormat(e.target.value)}
+                className="rounded-md px-2 py-1 text-gray-800 bg-white"
+              >
+                {formatOptions.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </label>
           </nav>
         </div>
       </header>

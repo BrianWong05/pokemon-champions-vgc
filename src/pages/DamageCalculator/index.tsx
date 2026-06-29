@@ -15,6 +15,7 @@ import { getNatureStats, getNatureFromStats, getFormattedNature } from '@/featur
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
+import { useFormat } from '@/features/formats/FormatContext';
 import { useCalculatorState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
 import { useDamageCalc } from '@/features/damage-calculator/hooks/useDamageCalc';
 import { AttackerPanel } from '@/features/damage-calculator/components/AttackerPanel';
@@ -23,6 +24,7 @@ import { ResultSummary } from '@/features/damage-calculator/components/ResultSum
 
 const DamageCalculatorPage: React.FC = () => {
   const { state, dispatch } = useCalculatorState();
+  const { format } = useFormat();
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
@@ -49,11 +51,11 @@ const DamageCalculatorPage: React.FC = () => {
           .from(pokemon)
           .innerJoin(formatPokemon, eq(pokemon.id, formatPokemon.pokemonId))
           .innerJoin(formats, eq(formatPokemon.formatId, formats.id))
-          .where(eq(formats.name, 'Regulation M-A')),
+          .where(eq(formats.name, format)),
           db.select().from(moves),
           fetchTypeEfficacy()
         ]);
-        
+
         setPokemonList(pokeResult as PokemonBaseStats[]);
         setMoveList(moveResult as MoveData[]);
         setEfficacyMap(efficacyResult);
@@ -62,7 +64,7 @@ const DamageCalculatorPage: React.FC = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [format]);
 
   const { p1MaxHp, p2MaxHp, p1Results, p2Results } = useDamageCalc(state, pokemonList, efficacyMap);
 
