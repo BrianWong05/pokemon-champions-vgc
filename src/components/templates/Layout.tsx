@@ -54,6 +54,9 @@ const Layout: React.FC = () => {
       <main className="flex-1 p-4">
         <Outlet />
       </main>
+      <footer className="text-center text-xs text-gray-400 py-3 px-4">
+        Not affiliated with Nintendo, Game Freak, or The Pokémon Company.
+      </footer>
     </div>
   );
 };
