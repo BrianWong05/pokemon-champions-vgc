@@ -55,7 +55,129 @@ export function connectedComponents(mask: Uint8Array, width: number, height: num
   return boxes;
 }
 
+interface Band { y1: number; y2: number; total: number; rows: number }
+
+function isOpponentPanelColumnPixel(r: number, g: number, b: number): boolean {
+  return r > 90 && b > 55 && g < 130 && r > g + 25 && b > g + 5;
+}
+
+function isOpponentPanelRowPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  const darkRed = (h <= 22 || h >= 338) && s >= 0.32 && v >= 0.18;
+  return darkRed || isOpponentPanelColumnPixel(r, g, b);
+}
+
+function findRightmostPanelColumn(img: RgbaImage): TileBox | null {
+  const y0 = Math.floor(img.height * 0.06);
+  const y1 = Math.floor(img.height * 0.9);
+  const minCount = img.height * 0.08;
+  const runs: Array<{ x1: number; x2: number; total: number; cols: number }> = [];
+  let current: { x1: number; x2: number; total: number; cols: number } | null = null;
+
+  for (let x = 0; x < img.width; x++) {
+    let count = 0;
+    for (let y = y0; y < y1; y++) {
+      const i = (y * img.width + x) * 4;
+      if (isOpponentPanelColumnPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
+    }
+    if (count <= minCount) continue;
+    if (!current || x > current.x2 + 3) {
+      if (current) runs.push(current);
+      current = { x1: x, x2: x, total: count, cols: 1 };
+    } else {
+      current.x2 = x;
+      current.total += count;
+      current.cols++;
+    }
+  }
+  if (current) runs.push(current);
+
+  const candidates = runs
+    .map((r) => ({ x: r.x1, y: 0, w: r.x2 - r.x1 + 1, h: img.height }))
+    .filter((b) => b.w > img.width * 0.1)
+    .sort((a, b) => b.x + b.w - (a.x + a.w));
+
+  return candidates[0] ?? null;
+}
+
+function findPanelRowBands(img: RgbaImage, column: TileBox): Band[] {
+  const minCount = column.w * 0.12;
+  const bands: Band[] = [];
+  let current: Band | null = null;
+
+  for (let y = 0; y < img.height; y++) {
+    let count = 0;
+    for (let x = column.x; x < column.x + column.w; x++) {
+      const i = (y * img.width + x) * 4;
+      if (isOpponentPanelRowPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
+    }
+    if (count <= minCount) continue;
+    if (!current || y > current.y2 + 3) {
+      if (current) bands.push(current);
+      current = { y1: y, y2: y, total: count, rows: 1 };
+    } else {
+      current.y2 = y;
+      current.total += count;
+      current.rows++;
+    }
+  }
+  if (current) bands.push(current);
+  return bands;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+function detectOpponentTilesFromPanelColumn(img: RgbaImage): TileBox[] {
+  const column = findRightmostPanelColumn(img);
+  if (!column) return [];
+
+  const bands = findPanelRowBands(img, column);
+  const eligible = bands.filter((b) => {
+    const center = (b.y1 + b.y2 + 1) / 2;
+    const h = b.y2 - b.y1 + 1;
+    return center > img.height * 0.08 && center < img.height * 0.98 && h > img.height * 0.015;
+  });
+  const tileH = median(
+    eligible
+      .map((b) => b.y2 - b.y1 + 1)
+      .filter((h) => h > img.height * 0.04 && h < img.height * 0.18)
+  ) ?? Math.round(img.height * 0.11);
+  const minTileH = tileH * 0.6;
+  const expandedX = Math.max(0, column.x - Math.round(column.w * 0.02));
+  const expandedRight = Math.min(img.width - 1, column.x + column.w - 1 + Math.round(column.w * 0.25));
+  const boxes: TileBox[] = [];
+
+  for (const band of eligible) {
+    const bandH = band.y2 - band.y1 + 1;
+    if (bandH < minTileH) continue;
+    const count = Math.max(1, Math.round(bandH / tileH));
+    if (count === 1) {
+      boxes.push({ x: expandedX, y: band.y1, w: expandedRight - expandedX + 1, h: bandH });
+      continue;
+    }
+    const gap = Math.max(0, (bandH - count * tileH) / Math.max(1, count - 1));
+    for (let i = 0; i < count; i++) {
+      boxes.push({
+        x: expandedX,
+        y: Math.round(band.y1 + i * (tileH + gap)),
+        w: expandedRight - expandedX + 1,
+        h: tileH,
+      });
+    }
+  }
+
+  boxes.sort((a, b) => a.y - b.y);
+  return boxes.slice(0, 6);
+}
+
 export function detectOpponentTiles(img: RgbaImage, opts: RedOpts = RED): TileBox[] {
+  const panelBoxes = detectOpponentTilesFromPanelColumn(img);
+  if (panelBoxes.length >= 4) return panelBoxes;
+
   const minArea = Math.max(50, Math.floor(img.width * img.height * 0.0005));
   let boxes = connectedComponents(redMask(img, opts), img.width, img.height, minArea)
     .filter((b) => b.w > img.width * 0.08 && b.h > img.height * 0.03 && b.w / b.h > 1.1 && b.w / b.h < 8)

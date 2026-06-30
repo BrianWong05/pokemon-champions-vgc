@@ -31,6 +31,7 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
       setSlots(deps.scanTeamImage(image, refs, 3));
       setStatus('done');
     } catch (e) {
+      console.error('[scan] failed', e);
       setError((e as Error).message); setStatus('error');
     }
   }, [legalIds, deps]);

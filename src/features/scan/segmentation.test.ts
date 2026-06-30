@@ -40,6 +40,44 @@ describe('detectOpponentTiles', () => {
     // returned top-to-bottom
     for (let k = 1; k < boxes.length; k++) expect(boxes[k].y).toBeGreaterThan(boxes[k - 1].y);
   });
+
+  it('merges fragmented selection panels into full opponent tile crops', () => {
+    const img = blank(1200, 700);
+    fillRect(img, 980, 40, 180, 35, 210, 45, 120); // opponent name banner
+    fillRect(img, 980, 590, 180, 45, 210, 45, 120); // waiting button
+    for (let k = 0; k < 6; k++) {
+      const y = 80 + k * 82;
+      fillRect(img, 960, y, 200, 72, 180, 18, 85);
+      fillRect(img, 1010, y + 8, 70, 56, 10, 10, 10); // sprite cuts through panel mask
+      fillRect(img, 1105, y + 10, 36, 36, 40, 160, 220); // type icon cuts through panel mask
+    }
+
+    const boxes = detectOpponentTiles(img);
+    expect(boxes.length).toBe(6);
+    boxes.forEach((box, index) => {
+      expect(box.x).toBeLessThanOrEqual(960);
+      expect(box.x + box.w).toBeGreaterThanOrEqual(1160);
+      expect(box.y).toBeGreaterThanOrEqual(78 + index * 82);
+      expect(box.y).toBeLessThanOrEqual(82 + index * 82);
+      expect(box.h).toBeGreaterThanOrEqual(70);
+    });
+  });
+
+  it('handles screenshots cropped to just the opponent column', () => {
+    const img = blank(430, 1024);
+    fillRect(img, 40, 25, 360, 60, 210, 45, 120); // opponent name banner
+    for (let k = 0; k < 6; k++) {
+      const y = 100 + k * 152;
+      fillRect(img, 40, y, 360, 140, 165, 12, 78);
+      fillRect(img, 145, y + 24, 90, 90, 10, 10, 10);
+      fillRect(img, 300, y + 22, 70, 70, 30, 170, 220);
+    }
+
+    const boxes = detectOpponentTiles(img);
+    expect(boxes.length).toBe(6);
+    expect(boxes[0].y).toBeGreaterThanOrEqual(96);
+    expect(boxes[5].y).toBeGreaterThanOrEqual(855);
+  });
 });
 
 describe('cropImage', () => {
