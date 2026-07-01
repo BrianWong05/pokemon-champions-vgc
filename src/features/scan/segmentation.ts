@@ -1,4 +1,5 @@
 // src/features/scan/segmentation.ts
+import { spriteBoxFromTile } from './cropMath';
 import type { RgbaImage, TileBox } from './types';
 
 export function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
@@ -58,7 +59,10 @@ export function connectedComponents(mask: Uint8Array, width: number, height: num
 interface Band { y1: number; y2: number; total: number; rows: number }
 
 function isOpponentPanelColumnPixel(r: number, g: number, b: number): boolean {
-  return r > 90 && b > 55 && g < 130 && r > g + 25 && b > g + 5;
+  // Opponent panels are RED-dominant. Require r clearly above BOTH g and b so the
+  // blue/purple PLAYER column (high blue) is excluded — otherwise the detector
+  // locks onto the player's team instead of the opponent's.
+  return r > 90 && g < 120 && r > g + 40 && r > b + 20;
 }
 
 function isOpponentPanelRowPixel(r: number, g: number, b: number): boolean {
@@ -67,10 +71,24 @@ function isOpponentPanelRowPixel(r: number, g: number, b: number): boolean {
   return darkRed || isOpponentPanelColumnPixel(r, g, b);
 }
 
-function findRightmostPanelColumn(img: RgbaImage): TileBox | null {
+function isEmbeddedPanelRowPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  const darkRed = (h <= 25 || h >= 335) && s >= 0.24 && v >= 0.14;
+  const darkPanel = r > 85 && g < 85 && b < 120 && r > g + 15;
+  return darkRed || darkPanel || isOpponentPanelColumnPixel(r, g, b);
+}
+
+function findPanelColumn(
+  img: RgbaImage,
+  minCountRatio: number,
+  minWidthRatio: number,
+  maxGap: number,
+  preferSide: 'left' | 'right',
+  isColumnPixel: (r: number, g: number, b: number) => boolean,
+): TileBox | null {
   const y0 = Math.floor(img.height * 0.06);
   const y1 = Math.floor(img.height * 0.9);
-  const minCount = img.height * 0.08;
+  const minCount = img.height * minCountRatio;
   const runs: Array<{ x1: number; x2: number; total: number; cols: number }> = [];
   let current: { x1: number; x2: number; total: number; cols: number } | null = null;
 
@@ -78,10 +96,10 @@ function findRightmostPanelColumn(img: RgbaImage): TileBox | null {
     let count = 0;
     for (let y = y0; y < y1; y++) {
       const i = (y * img.width + x) * 4;
-      if (isOpponentPanelColumnPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
+      if (isColumnPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
     }
     if (count <= minCount) continue;
-    if (!current || x > current.x2 + 3) {
+    if (!current || x > current.x2 + maxGap) {
       if (current) runs.push(current);
       current = { x1: x, x2: x, total: count, cols: 1 };
     } else {
@@ -92,15 +110,29 @@ function findRightmostPanelColumn(img: RgbaImage): TileBox | null {
   }
   if (current) runs.push(current);
 
-  const candidates = runs
-    .map((r) => ({ x: r.x1, y: 0, w: r.x2 - r.x1 + 1, h: img.height }))
-    .filter((b) => b.w > img.width * 0.1)
-    .sort((a, b) => b.x + b.w - (a.x + a.w));
+  let candidates = runs
+    .map((r) => ({ x: r.x1, y: 0, w: r.x2 - r.x1 + 1, h: img.height, score: r.total * (r.x2 - r.x1 + 1) }))
+    .filter((b) => b.w > Math.max(80, img.width * minWidthRatio));
 
-  return candidates[0] ?? null;
+  const preferred = candidates.filter((b) =>
+    preferSide === 'right' ? b.x + b.w / 2 > img.width * 0.5 : b.x + b.w / 2 < img.width * 0.5,
+  );
+  if (preferred.length > 0) candidates = preferred;
+
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+  return best ? { x: best.x, y: best.y, w: best.w, h: best.h } : null;
 }
 
-function findPanelRowBands(img: RgbaImage, column: TileBox): Band[] {
+function findRightmostPanelColumn(img: RgbaImage): TileBox | null {
+  return findPanelColumn(img, 0.08, 0.1, 3, 'right', isOpponentPanelColumnPixel);
+}
+
+function findEmbeddedPanelColumn(img: RgbaImage): TileBox | null {
+  return findPanelColumn(img, 0.03, 0.055, Math.max(3, Math.round(img.width * 0.025)), 'right', isOpponentPanelColumnPixel);
+}
+
+function findPanelRowBands(img: RgbaImage, column: TileBox, isRowPixel = isOpponentPanelRowPixel): Band[] {
   const minCount = column.w * 0.12;
   const bands: Band[] = [];
   let current: Band | null = null;
@@ -109,7 +141,7 @@ function findPanelRowBands(img: RgbaImage, column: TileBox): Band[] {
     let count = 0;
     for (let x = column.x; x < column.x + column.w; x++) {
       const i = (y * img.width + x) * 4;
-      if (isOpponentPanelRowPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
+      if (isRowPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
     }
     if (count <= minCount) continue;
     if (!current || y > current.y2 + 3) {
@@ -131,11 +163,13 @@ function median(values: number[]): number | null {
   return sorted[Math.floor(sorted.length / 2)];
 }
 
-function detectOpponentTilesFromPanelColumn(img: RgbaImage): TileBox[] {
-  const column = findRightmostPanelColumn(img);
-  if (!column) return [];
-
-  const bands = findPanelRowBands(img, column);
+function boxesFromPanelColumn(
+  img: RgbaImage,
+  column: TileBox,
+  isRowPixel = isOpponentPanelRowPixel,
+  expandSide: 'left' | 'right' = 'right',
+): TileBox[] {
+  const bands = findPanelRowBands(img, column, isRowPixel);
   const eligible = bands.filter((b) => {
     const center = (b.y1 + b.y2 + 1) / 2;
     const h = b.y2 - b.y1 + 1;
@@ -147,8 +181,10 @@ function detectOpponentTilesFromPanelColumn(img: RgbaImage): TileBox[] {
       .filter((h) => h > img.height * 0.04 && h < img.height * 0.18)
   ) ?? Math.round(img.height * 0.11);
   const minTileH = tileH * 0.6;
-  const expandedX = Math.max(0, column.x - Math.round(column.w * 0.02));
-  const expandedRight = Math.min(img.width - 1, column.x + column.w - 1 + Math.round(column.w * 0.25));
+  const bigPad = Math.round(column.w * 0.25);
+  const smallPad = Math.round(column.w * 0.02);
+  const expandedX = Math.max(0, column.x - (expandSide === 'left' ? bigPad : smallPad));
+  const expandedRight = Math.min(img.width - 1, column.x + column.w - 1 + (expandSide === 'right' ? bigPad : smallPad));
   const boxes: TileBox[] = [];
 
   for (const band of eligible) {
@@ -171,19 +207,86 @@ function detectOpponentTilesFromPanelColumn(img: RgbaImage): TileBox[] {
   }
 
   boxes.sort((a, b) => a.y - b.y);
+  if (boxes.length >= 4 && boxes[0].y > img.height * 0.35) return [];
   return boxes.slice(0, 6);
+}
+
+function detectOpponentTilesFromPanelColumn(img: RgbaImage): TileBox[] {
+  const column = findRightmostPanelColumn(img);
+  return column ? boxesFromPanelColumn(img, column) : [];
+}
+
+function detectOpponentTilesFromEmbeddedPanelColumn(img: RgbaImage): TileBox[] {
+  const column = findEmbeddedPanelColumn(img);
+  return column ? boxesFromPanelColumn(img, column, isEmbeddedPanelRowPixel) : [];
 }
 
 export function detectOpponentTiles(img: RgbaImage, opts: RedOpts = RED): TileBox[] {
   const panelBoxes = detectOpponentTilesFromPanelColumn(img);
   if (panelBoxes.length >= 4) return panelBoxes;
+  const embeddedPanelBoxes = detectOpponentTilesFromEmbeddedPanelColumn(img);
+  if (embeddedPanelBoxes.length >= 6) return embeddedPanelBoxes;
 
   const minArea = Math.max(50, Math.floor(img.width * img.height * 0.0005));
   let boxes = connectedComponents(redMask(img, opts), img.width, img.height, minArea)
     .filter((b) => b.w > img.width * 0.08 && b.h > img.height * 0.03 && b.w / b.h > 1.1 && b.w / b.h < 8)
     .filter((b) => b.x + b.w / 2 > img.width * 0.5); // opponent column is on the right
   boxes.sort((a, b) => a.y - b.y);
+  if (boxes.length >= 4 && boxes[0].y > img.height * 0.35) return [];
   return boxes.slice(0, 6);
+}
+
+function isPlayerPanelColumnPixel(r: number, g: number, b: number): boolean {
+  // Player cards are BLUE/PURPLE-dominant — the mirror of the opponent's red.
+  return b > 110 && b > r + 30 && b > g + 50;
+}
+
+function isPlayerPanelRowPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  const purple = h >= 225 && h <= 290 && s >= 0.3 && v >= 0.2;
+  return purple || isPlayerPanelColumnPixel(r, g, b);
+}
+
+function purpleMask(img: RgbaImage): Uint8Array {
+  const mask = new Uint8Array(img.width * img.height);
+  for (let p = 0; p < mask.length; p++) {
+    const i = p * 4;
+    if (img.data[i + 3] > 0 && isPlayerPanelColumnPixel(img.data[i], img.data[i + 1], img.data[i + 2])) mask[p] = 1;
+  }
+  return mask;
+}
+
+// The player name banner is the same purple as the cards but noticeably
+// shorter — drop bands well under the median tile height.
+function dropShortTiles(boxes: TileBox[]): TileBox[] {
+  if (boxes.length < 2) return boxes;
+  const hs = boxes.map((b) => b.h).sort((a, b) => a - b);
+  const med = hs[Math.floor(hs.length / 2)];
+  return boxes.filter((b) => b.h >= med * 0.75);
+}
+
+export function detectPlayerTiles(img: RgbaImage): TileBox[] {
+  const column = findPanelColumn(img, 0.08, 0.1, 3, 'left', isPlayerPanelColumnPixel);
+  const panelBoxes = column ? dropShortTiles(boxesFromPanelColumn(img, column, isPlayerPanelRowPixel, 'left')) : [];
+  if (panelBoxes.length >= 4) return panelBoxes.slice(0, 6);
+
+  const minArea = Math.max(50, Math.floor(img.width * img.height * 0.0005));
+  const boxes = connectedComponents(purpleMask(img), img.width, img.height, minArea)
+    .filter((b) => b.w > img.width * 0.08 && b.h > img.height * 0.03 && b.w / b.h > 1.1 && b.w / b.h < 8)
+    .filter((b) => b.x + b.w / 2 < img.width * 0.5); // player column is on the left
+  boxes.sort((a, b) => a.y - b.y);
+  if (boxes.length >= 4 && boxes[0].y > img.height * 0.35) return [];
+  return dropShortTiles(boxes).slice(0, 6);
+}
+
+export function detectOpponentSpriteBoxes(img: RgbaImage): TileBox[] {
+  const bounds = { w: img.width, h: img.height };
+  return detectOpponentTiles(img).map((t) => spriteBoxFromTile(t, bounds, 'left'));
+}
+
+export function detectPlayerSpriteBoxes(img: RgbaImage): TileBox[] {
+  const bounds = { w: img.width, h: img.height };
+  return detectPlayerTiles(img).map((t) => spriteBoxFromTile(t, bounds, 'right'));
 }
 
 export function cropImage(img: RgbaImage, box: TileBox): RgbaImage {

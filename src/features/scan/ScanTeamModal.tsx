@@ -5,9 +5,11 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import type { Candidate } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
-import { useTeamScan } from './useTeamScan';
+import { useTeamScan, type ScanEngine } from './useTeamScan';
+import { loadClassifier } from './classifier';
 import { pickImage } from './capture';
 import { toParsedSets } from './toParsedSets';
+import CropStep from './CropStep';
 
 interface ScanTeamModalProps {
   isOpen: boolean;
@@ -32,10 +34,29 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
   // Editable roster, decoupled from the raw scan slots so the user can add/remove entries.
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [pickerOpenFor, setPickerOpenFor] = useState<number | null>(null);
+  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
+  const [cropping, setCropping] = useState(false);
+  const [engine, setEngine] = useState<ScanEngine>(
+    () => (localStorage.getItem('scan.engine') as ScanEngine | null) ?? 'auto',
+  );
+
+  // Warm up the classifier as soon as the modal opens so load success/failure logs
+  // land in the console before the first scan runs.
+  React.useEffect(() => {
+    if (isOpen) void loadClassifier();
+  }, [isOpen]);
+
+  const changeEngine = (value: ScanEngine) => {
+    setEngine(value);
+    localStorage.setItem('scan.engine', value);
+  };
 
   const startPick = async () => {
     const blob = await pickImage();
-    if (blob) await scan(blob);
+    if (blob) {
+      setPendingBlob(blob);
+      await scan(blob);
+    }
   };
 
   // Seed the editable roster from the scan results once a scan completes.
@@ -75,7 +96,14 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     onSaveTeam(toParsedSets(names));
   };
 
-  const handleClose = () => { reset(); setRoster([]); setPickerOpenFor(null); onClose(); };
+  const handleClose = () => {
+    reset();
+    setRoster([]);
+    setPickerOpenFor(null);
+    setPendingBlob(null);
+    setCropping(false);
+    onClose();
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Scan opponent team">
@@ -95,12 +123,33 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
 
         {status === 'error' && <p className="text-red-600">Scan failed: {error}</p>}
 
-        {status === 'done' && (
+        {status === 'done' && cropping && pendingBlob && (
+          <CropStep
+            blob={pendingBlob}
+            onCropped={(b) => { setCropping(false); setPendingBlob(b); scan(b); }}
+            onCancel={() => setCropping(false)}
+          />
+        )}
+
+        {status === 'done' && !cropping && (
           <>
             {slots.length === 0 && (
               <p className="text-amber-600 text-sm">
                 Couldn't auto-detect the opponent's tiles. Add the Pokémon manually below, or
                 <button className="ml-1 underline" onClick={startPick}>try another image</button>.
+                {pendingBlob && (
+                  <button className="ml-1 underline font-semibold" onClick={() => setCropping(true)}>
+                    Crop around the opponent's red column
+                  </button>
+                )}
+              </p>
+            )}
+            {slots.length > 0 && slots.length < 6 && pendingBlob && (
+              <p className="text-amber-600 text-sm">
+                Couldn't find all 6 —
+                <button className="ml-1 underline font-semibold" onClick={() => setCropping(true)}>
+                  crop around the opponent's red column
+                </button>.
               </p>
             )}
 
@@ -186,7 +235,24 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               + Add Pokémon
             </button>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex items-center justify-end gap-2">
+              <label className="mr-auto flex items-center gap-1 text-xs text-gray-500">
+                Engine
+                <select
+                  className="rounded border border-gray-200 bg-white px-1 py-0.5 text-xs text-gray-600"
+                  value={engine}
+                  onChange={(e) => changeEngine(e.target.value as ScanEngine)}
+                >
+                  <option value="auto">auto</option>
+                  <option value="classifier">classifier</option>
+                  <option value="descriptor">descriptor</option>
+                </select>
+              </label>
+              {pendingBlob && (
+                <button className="px-4 py-2 rounded border" onClick={() => setCropping(true)}>
+                  Crop image &amp; retry
+                </button>
+              )}
               <button className="px-4 py-2 rounded border" onClick={handleClose}>Cancel</button>
               {onSaveTeam && (
                 <button

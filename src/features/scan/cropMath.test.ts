@@ -32,20 +32,21 @@ describe('spriteBoxFromTile', () => {
   const bounds = { w: 1000, h: 800 };
   const tile = { x: 100, y: 200, w: 400, h: 80 };
 
-  it('returns a square ~1.1x tile height', () => {
+  it('returns a square ~1.6x tile height', () => {
     const b = spriteBoxFromTile(tile, bounds, 'left');
-    expect(b.w).toBe(88);
-    expect(b.h).toBe(88);
+    expect(b.w).toBe(128);
+    expect(b.h).toBe(128);
   });
 
-  it('anchors left with a small outward margin', () => {
+  it('anchors left at the tile left edge', () => {
     const b = spriteBoxFromTile(tile, bounds, 'left');
-    expect(b.x).toBe(96); // 100 - round(80*0.05)
+    expect(b.x).toBe(100);
   });
 
-  it('anchors right at the tile right edge', () => {
+  it('anchors right overshooting the tile right edge by a quarter side', () => {
     const b = spriteBoxFromTile(tile, bounds, 'right');
-    expect(b.x).toBe(100 + 400 - 88 + 4);
+    expect(b.x).toBe(100 + 400 - 128 + 32);
+    expect(b.x + b.w).toBeGreaterThan(500); // reaches past the tile edge
   });
 
   it('clamps to image bounds', () => {

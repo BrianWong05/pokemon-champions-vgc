@@ -5,14 +5,14 @@ export interface Size { w: number; h: number }
 export type SpriteAnchor = 'left' | 'right';
 
 /**
- * Square sprite region of a team-preview card. The mini-sprite sits at one end
- * of the card (opponent cards: left, player cards: right) and is roughly as
- * tall as the card; 1.1x side + small outward margin absorbs detection jitter.
+ * Square sprite region of a team-preview card. Measured from real screenshots:
+ * the mini-sprite can be ~1.25-1.6x wider than the card is tall, sits inset at
+ * the LEFT end of opponent cards, and hugs/overflows the RIGHT edge of player
+ * cards — so the right anchor overshoots the tile edge by a quarter side.
  */
 export function spriteBoxFromTile(tile: TileBox, bounds: Size, anchor: SpriteAnchor = 'left'): TileBox {
-  const side = Math.round(tile.h * 1.1);
-  const margin = Math.round(tile.h * 0.05);
-  let x = anchor === 'left' ? tile.x - margin : tile.x + tile.w - side + margin;
+  const side = Math.round(tile.h * 1.6);
+  let x = anchor === 'left' ? tile.x : tile.x + tile.w - side + Math.round(side * 0.25);
   let y = tile.y - Math.round((side - tile.h) / 2);
   x = Math.max(0, Math.min(x, bounds.w - 1));
   y = Math.max(0, Math.min(y, bounds.h - 1));
