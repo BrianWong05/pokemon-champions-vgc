@@ -619,12 +619,24 @@ export function hpTextRegion(panel: TileBox, img: { width: number; height: numbe
   };
 }
 
+// Adaptive threshold: glyphs are the brightest thing in the region, but phone
+// photos and video frames can be dim — threshold relative to the region's peak
+// brightness instead of a fixed cutoff (floor keeps noise out of black regions).
 export function whiteMask(img: RgbaImage, box: TileBox): BinMask {
   const bits = new Uint8Array(box.w * box.h);
+  let peak = 0;
   for (let y = 0; y < box.h; y++) {
     for (let x = 0; x < box.w; x++) {
       const i = ((box.y + y) * img.width + (box.x + x)) * 4;
-      if (img.data[i] > 190 && img.data[i + 1] > 190 && img.data[i + 2] > 190) bits[y * box.w + x] = 1;
+      const m = Math.min(img.data[i], img.data[i + 1], img.data[i + 2]);
+      if (m > peak) peak = m;
+    }
+  }
+  const thr = Math.max(120, Math.round(peak * 0.8));
+  for (let y = 0; y < box.h; y++) {
+    for (let x = 0; x < box.w; x++) {
+      const i = ((box.y + y) * img.width + (box.x + x)) * 4;
+      if (Math.min(img.data[i], img.data[i + 1], img.data[i + 2]) >= thr) bits[y * box.w + x] = 1;
     }
   }
   return { bits, w: box.w, h: box.h };
@@ -993,6 +1005,33 @@ export function scanTeamImage(img: RgbaImage, refs: ReferenceEntry[], topN = 3):
 
 ---
 
+### Task 6b: Game-rect inference fallback (margins, video frames, photos)
+
+**Files:**
+- Create: `src/features/scan/gameRect.ts`
+- Modify: `src/features/scan/scanTargets.ts`, `src/features/scan/battleDetection.ts` (export the plate pixel predicate)
+- Test: `src/features/scan/gameRect.test.ts`
+
+**Interfaces:**
+- Consumes: `connectedComponents` (segmentation), `isOpponentPlatePixel` (battleDetection, newly exported).
+- Produces:
+  - `export function inferGameRect(img: RgbaImage): TileBox | null` — locates the game frame inside a larger image by finding either the opponent card stack (≥4 aligned same-width magenta cards) or the battle plate pair (2 similar magenta plates side by side), then solving the 16:9 game rect from measured anchor fractions.
+  - `detectScanTargets(img, allowInfer = true)` — when the fast path finds nothing, retries once inside the inferred rect and offsets returned boxes back to source coordinates.
+
+- [ ] **Step 1: Measure anchor fractions from clean screenshots** — run `detectOpponentTiles` / `detectBattlePanels` on one clean team shot and one clean battle shot via a tsx one-liner; record the anchor bounding box as fractions of image width/height. Fills `OPP_COLUMN` / `PLATE_PAIR` constants.
+
+- [ ] **Step 2: Write the failing test** (`gameRect.test.ts`) — synthetic margins: paint a 1200×675 "game" at offset (200, 150) inside a 1600×1200 dark image, with 6 magenta cards laid out at the measured OPP_COLUMN fractions; assert `inferGameRect` recovers the game rect within 8% per edge, and `detectScanTargets` on the full image returns 6 opponent targets in source coordinates.
+
+- [ ] **Step 3: Implement `gameRect.ts`** — `magentaBlobs` (full-image mask with `isOpponentPlatePixel`, CC minArea 60), `findCardStack` (≥4 blobs, left-aligned within 20% of width, similar width ±25%, similar height 0.5–2×; largest group wins), `findPlatePair` (2 blobs, aspect 2–9, similar size, same row, gap < 3× width), `solveRect(anchor, frac, img)` (scale anchor box by measured fractions; reject unless 1.4 < w/h < 2.2 and rect > 20% of image). `inferGameRect` tries card stack first, then plate pair. Export `isOpponentPlatePixel` from `battleDetection.ts`. In `scanTargets.ts`: when fast path yields 0 targets and `allowInfer`, crop to `inferGameRect` and recurse once with `allowInfer = false`, offsetting returned boxes by the rect origin.
+
+- [ ] **Step 4: Run** `npx vitest run src/features/scan/gameRect.test.ts src/features/scan/scanTargets.test.ts` — expect PASS.
+
+- [ ] **Step 5: Real-image check** — run detection on a video-frame screenshot with browser chrome (the user's YouTube example) and confirm the card stack is found and targets land on the cards. Tune `findCardStack` tolerances if needed.
+
+- [ ] **Step 6: Commit** — `git commit -am "feat(scan): infer game rect for margins, video frames, photos"`
+
+---
+
 ### Task 7: `useTeamScan` routes through scan targets
 
 **Files:**
@@ -1228,7 +1267,7 @@ ls public/images/pokemon/menu-sprites | wc -l   # expect 213
 
 - [ ] **Step 3: Rebuild descriptors from clean sprites only** (so labeling suggestions work): `npx tsx scripts/generate-sprite-descriptors.ts`
 
-- [ ] **Step 4: Relabel (USER, interactive)** — `npx tsx scripts/label-sprites.ts` over all 76 screenshots. Both sides are cropped now, so expect roughly 6–12 crops per team screenshot and up to 4 per battle screenshot. Shiny variants: answer with `<id> shiny` as before.
+- [ ] **Step 4: Relabel (USER, interactive)** — `npx tsx scripts/label-sprites.ts` over all 76 screenshots. Both sides are cropped now, so expect roughly 6–12 crops per team screenshot and up to 4 per battle screenshot. Shiny variants: answer with `<id> shiny` as before. **Also add 2–3 phone photos of the screen and a couple of video-frame screenshots (YouTube etc.) to `training/screenshots/` first** — jpg/heic are accepted — so the training set covers those capture domains.
 
 - [ ] **Step 5: Rebuild descriptors with the new crops**: `npx tsx scripts/generate-sprite-descriptors.ts`
 
@@ -1247,6 +1286,7 @@ ls public/images/pokemon/menu-sprites | wc -l   # expect 213
 - Consumes: regenerated `menu-sprites/` (Task 10); existing `scripts/train_sprite_net.py` (unchanged).
 - Produces: the classifier the app loads via `loadClassifier()`.
 
+- [ ] **Step 0: Add perspective augmentation** — in `scripts/train_sprite_net.py`, insert `T.RandomPerspective(distortion_scale=0.15, p=0.3),` immediately after the `T.RandomAffine(...)` line (simulates phone-camera angle); commit.
 - [ ] **Step 1 (USER):** `cd public/images/pokemon && zip -r menu-sprites.zip menu-sprites` → upload+unzip in Colab with `scripts/train_sprite_net.py` → `pip install torch torchvision onnx` → `python train_sprite_net.py --data menu-sprites --epochs 40 --out out`.
 - [ ] **Step 2 (USER):** Evaluate with `scripts/test_sprite_net.py` per its header; expect held-out accuracy comparable or better than the previous run (record the number).
 - [ ] **Step 3 (USER):** Download `out/model.onnx` + `out/classes.json` into `public/models/pokemon-sprite-net/`.

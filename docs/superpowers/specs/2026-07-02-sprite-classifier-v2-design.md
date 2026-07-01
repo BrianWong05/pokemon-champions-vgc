@@ -31,6 +31,18 @@ nameplates, all on-device, to drive the Damage Calculator in real time.
   - Do NOT add official artwork / external thumbnails: different art domain,
     dilutes decision boundaries. The pokedex extracts are the in-domain
     clean art.
+- **Inputs are not always full-frame screenshots** (phone photos of the
+  screen, video frames with browser/YouTube chrome, letterboxed captures).
+  Handling is layered: (1) fast path assumes the game fills the frame;
+  (2) fallback infers the game rectangle from detected anchors — the
+  opponent card stack or the battle plate pair — using their internal
+  geometry (aligned, same-size, evenly spaced), then re-runs detection
+  inside the inferred rect (the game layout is fixed 16:9, so one anchor
+  pins the whole rect); (3) the existing manual CropStep remains the last
+  resort. Glyph thresholding is adaptive (relative to region peak
+  brightness) so dim photos/frames still read. A few real phone photos and
+  video-frame screenshots go into the training set, and training gains a
+  small RandomPerspective augmentation.
 - **Red vs blue card backgrounds are acceptable nuisance variation**:
   uncorrelated with species, covered by both-side crops plus the existing
   `hue=0.5` jitter in training. Optional future augmentation: composite
