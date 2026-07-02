@@ -33,3 +33,4 @@ dist-ssr
 official-artwork/*
 # scan crop debug output
 training/.crop-preview/
+training/sprite-net-checkpoint.pt
