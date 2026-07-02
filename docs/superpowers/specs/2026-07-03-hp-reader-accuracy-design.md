@@ -112,3 +112,28 @@ readings).
   missed).
 - Reading anything beyond HP text (timer, move PP).
 - The user's queued "minor crop fixes" (separate item).
+
+## Addendum (2026-07-03, approved): constrained phrase decoding
+
+Per-glyph accept/reject discards phrase-level evidence. Replace the read
+core with joint decoding:
+
+- Per glyph box, compute the DISTANCE PER CHARACTER (min over that char's
+  templates, hFrac-gated, char set restricted by the box's shape bands)
+  instead of a hard match.
+- Per candidate window, find the cheapest VALID phrase (language: `N%` with
+  1<=N<=100, or `A/B` with A<=B and B in a plausible HP range) via top-2
+  chars per position and a small product search.
+- Across ALL attempts (mask thresholds x pipeline configs x windows), keep
+  the best candidate per distinct VALUE. Accept iff the best value's cost is
+  under a ceiling AND it beats the best DIFFERENT value by a phrase margin;
+  when two values sit within the margin, the bar fill may arbitrate (pick
+  the one it corroborates within 12 points) — otherwise blank.
+- Existing guards retained: bar disagreement veto, truncation-shadow rule,
+  no-0% (baked into the language).
+- Segmentation fixes bundled: the speck filter must keep the SMALL `/max`
+  digits (two text sizes are legitimate), and boxes whose shape fits no
+  character make their window invalid rather than poisoning clusters.
+
+Explicitly rejected: surfacing bar-fill estimates in the UI (user decision)
+— the HP badge only ever shows glyph-exact reads.
