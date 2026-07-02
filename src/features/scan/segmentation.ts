@@ -132,19 +132,38 @@ function findEmbeddedPanelColumn(img: RgbaImage): TileBox | null {
   return findPanelColumn(img, 0.03, 0.055, Math.max(3, Math.round(img.width * 0.025)), 'right', isOpponentPanelColumnPixel);
 }
 
-function findPanelRowBands(img: RgbaImage, column: TileBox, isRowPixel = isOpponentPanelRowPixel): Band[] {
-  const minCount = column.w * 0.12;
-  const bands: Band[] = [];
-  let current: Band | null = null;
-
+function findPanelRowBands(
+  img: RgbaImage,
+  column: TileBox,
+  isRowPixel = isOpponentPanelRowPixel,
+  maxGap = 3,
+  adaptiveRows = false,
+): Band[] {
+  const counts = new Array<number>(img.height).fill(0);
   for (let y = 0; y < img.height; y++) {
     let count = 0;
     for (let x = column.x; x < column.x + column.w; x++) {
       const i = (y * img.width + x) * 4;
       if (isRowPixel(img.data[i], img.data[i + 1], img.data[i + 2])) count++;
     }
+    counts[y] = count;
+  }
+
+  let minCount = column.w * 0.12;
+  if (adaptiveRows) {
+    // Purple floor/reflections can keep gap rows above a fixed low threshold.
+    // Card rows cluster near the column's peak coverage, so half of the 90th
+    // percentile separates cards from background regardless of the frame.
+    const sorted = [...counts].sort((a, b) => a - b);
+    minCount = Math.max(minCount, sorted[Math.floor(sorted.length * 0.9)] * 0.5);
+  }
+
+  const bands: Band[] = [];
+  let current: Band | null = null;
+  for (let y = 0; y < img.height; y++) {
+    const count = counts[y];
     if (count <= minCount) continue;
-    if (!current || y > current.y2 + 3) {
+    if (!current || y > current.y2 + maxGap) {
       if (current) bands.push(current);
       current = { y1: y, y2: y, total: count, rows: 1 };
     } else {
@@ -168,8 +187,10 @@ function boxesFromPanelColumn(
   column: TileBox,
   isRowPixel = isOpponentPanelRowPixel,
   expandSide: 'left' | 'right' = 'right',
+  maxGap = 3,
+  adaptiveRows = false,
 ): TileBox[] {
-  const bands = findPanelRowBands(img, column, isRowPixel);
+  const bands = findPanelRowBands(img, column, isRowPixel, maxGap, adaptiveRows);
   const eligible = bands.filter((b) => {
     const center = (b.y1 + b.y2 + 1) / 2;
     const h = b.y2 - b.y1 + 1;
@@ -241,17 +262,31 @@ function isPlayerPanelColumnPixel(r: number, g: number, b: number): boolean {
   return b > 110 && b > r + 30 && b > g + 50;
 }
 
+// The card under the joycon/finger cursor turns bright lime, and once all 4
+// picks are locked in ("standing by") the chosen cards turn white with a wide
+// lime diagonal stripe. The lime is present in both states, so purple ∪ lime
+// covers every card state. (Plain white is NOT in the detection mask — the
+// arena background is full of bright pixels.)
+function isLimeHighlightPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  return h >= 60 && h <= 110 && s >= 0.35 && v >= 0.45;
+}
+
+function isPlayerCardStatePixel(r: number, g: number, b: number): boolean {
+  return isPlayerPanelColumnPixel(r, g, b) || isLimeHighlightPixel(r, g, b);
+}
+
 function isPlayerPanelRowPixel(r: number, g: number, b: number): boolean {
   const [h, s, v] = rgbToHsv(r, g, b);
   const purple = h >= 225 && h <= 290 && s >= 0.3 && v >= 0.2;
-  return purple || isPlayerPanelColumnPixel(r, g, b);
+  return purple || isPlayerCardStatePixel(r, g, b);
 }
 
-function purpleMask(img: RgbaImage): Uint8Array {
+function playerMask(img: RgbaImage): Uint8Array {
   const mask = new Uint8Array(img.width * img.height);
   for (let p = 0; p < mask.length; p++) {
     const i = p * 4;
-    if (img.data[i + 3] > 0 && isPlayerPanelColumnPixel(img.data[i], img.data[i + 1], img.data[i + 2])) mask[p] = 1;
+    if (img.data[i + 3] > 0 && isPlayerCardStatePixel(img.data[i], img.data[i + 1], img.data[i + 2])) mask[p] = 1;
   }
   return mask;
 }
@@ -266,12 +301,28 @@ function dropShortTiles(boxes: TileBox[]): TileBox[] {
 }
 
 export function detectPlayerTiles(img: RgbaImage): TileBox[] {
-  const column = findPanelColumn(img, 0.08, 0.1, 3, 'left', isPlayerPanelColumnPixel);
-  const panelBoxes = column ? dropShortTiles(boxesFromPanelColumn(img, column, isPlayerPanelRowPixel, 'left')) : [];
+  const column = findPanelColumn(img, 0.08, 0.1, 3, 'left', isPlayerCardStatePixel);
+  // Tight, resolution-scaled band gap: the hovered card's lime glow nearly
+  // bridges the banner->card gap (~2 rows at 720p), while in-card divider dips
+  // are 1 row — the default tolerance of 3 merges cards with the banner.
+  const bandGap = Math.max(1, Math.round(img.height * 0.0015));
+  // Higher row threshold than the opponent side: purple arena floor/reflections
+  // can keep gap rows above a low threshold and merge adjacent cards. Card rows
+  // fill nearly the whole column; floor-only rows do not.
+  // Some frames need the adaptive threshold (purple floor merges bottom cards),
+  // others the fixed one (low purple coverage inside cards). Run both and keep
+  // whichever yields a full 6-card column, else the richer result.
+  const variants = column
+    ? [true, false].map((adaptive) =>
+        dropShortTiles(boxesFromPanelColumn(img, column, isPlayerPanelRowPixel, 'left', bandGap, adaptive)))
+    : [[], []];
+  const panelBoxes =
+    variants.find((v) => v.length === 6) ??
+    (variants[0].length >= variants[1].length ? variants[0] : variants[1]);
   if (panelBoxes.length >= 4) return panelBoxes.slice(0, 6);
 
   const minArea = Math.max(50, Math.floor(img.width * img.height * 0.0005));
-  const boxes = connectedComponents(purpleMask(img), img.width, img.height, minArea)
+  const boxes = connectedComponents(playerMask(img), img.width, img.height, minArea)
     .filter((b) => b.w > img.width * 0.08 && b.h > img.height * 0.03 && b.w / b.h > 1.1 && b.w / b.h < 8)
     .filter((b) => b.x + b.w / 2 < img.width * 0.5); // player column is on the left
   boxes.sort((a, b) => a.y - b.y);
@@ -286,7 +337,10 @@ function isOpponentCardPixel(r: number, g: number, b: number): boolean {
 
 function isPlayerCardPixel(r: number, g: number, b: number): boolean {
   const [h, s, v] = rgbToHsv(r, g, b);
-  return (h >= 225 && h <= 300 && s >= 0.25 && v >= 0.15) || isPlayerPanelColumnPixel(r, g, b);
+  // For crop refinement (NOT detection) the white body of a locked-in card
+  // also counts as card background, so the sprite stays the dominant content.
+  const white = s <= 0.18 && v >= 0.7;
+  return white || (h >= 225 && h <= 300 && s >= 0.25 && v >= 0.15) || isPlayerCardStatePixel(r, g, b);
 }
 
 function largestRun(flags: boolean[], maxGap: number): { start: number; end: number } | null {

@@ -152,6 +152,31 @@ describe('detectPlayerTiles', () => {
     for (let k = 0; k < 6; k++) fillRect(img, 900, 60 + k * 95, 260, 72, 220, 30, 40);
     expect(detectPlayerTiles(img).length).toBe(0);
   });
+
+  it('detects the lime highlighted card among purple ones', () => {
+    const img = blank(1200, 700);
+    for (let k = 0; k < 6; k++) {
+      // card 3 is under the cursor (bright lime), others purple
+      if (k === 3) fillRect(img, 40, 60 + k * 95, 260, 72, 170, 220, 40);
+      else fillRect(img, 40, 60 + k * 95, 260, 72, 90, 60, 200);
+    }
+    expect(detectPlayerTiles(img).length).toBe(6);
+  });
+
+  it('detects locked-in white cards via their lime stripe (standing-by state)', () => {
+    const img = blank(1200, 700);
+    for (let k = 0; k < 6; k++) {
+      const y = 60 + k * 95;
+      if (k < 4) {
+        // selected: white card with a wide lime diagonal-ish band
+        fillRect(img, 40, y, 260, 72, 245, 245, 245);
+        fillRect(img, 120, y, 110, 72, 170, 220, 40);
+      } else {
+        fillRect(img, 40, y, 260, 72, 90, 60, 200);
+      }
+    }
+    expect(detectPlayerTiles(img).length).toBe(6);
+  });
 });
 
 describe('refineSpriteBox (via sprite box helpers)', () => {
