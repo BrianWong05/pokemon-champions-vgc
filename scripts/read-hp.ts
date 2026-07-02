@@ -14,6 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { detectBattlePanels } from '../src/features/scan/battleDetection';
 import { battleView } from './hp-accuracy-core';
+import { isSupportedScreenshotFile, resolveScreenshotInput } from './image-inputs';
 import { readHpFromPanel, measureHpBarFill } from '../src/features/scan/hpText';
 import type { RgbaImage } from '../src/features/scan/types';
 
@@ -25,7 +26,7 @@ function readPng(file: string): RgbaImage {
 }
 
 const args = process.argv.slice(2);
-const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter((f) => f.toLowerCase().endsWith('.png'));
+const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter(isSupportedScreenshotFile);
 
 for (const f of files) {
   // Accept a bare name (looked up in training/screenshots) or any path.
@@ -34,9 +35,11 @@ for (const f of files) {
     console.log(`${f}\n  (file not found)`);
     continue;
   }
+  // Non-PNG inputs (jpg/heic/...) are converted the same way the labeler does.
+  const input = resolveScreenshotInput(path.dirname(file), path.basename(file));
   // battleView applies the game-rect fallback for framed captures (browser
   // windows, video frames) before panel detection.
-  const img = battleView(readPng(file));
+  const img = battleView(readPng(input.pngPath));
   // Only actual battle screens (both opponent plates present) — team-select
   // screenshots produce stray single-panel detections that never carry HP.
   if (detectBattlePanels(img, 'opponent').length !== 2) {
