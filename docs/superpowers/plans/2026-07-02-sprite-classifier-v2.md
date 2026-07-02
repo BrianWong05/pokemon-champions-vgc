@@ -786,7 +786,7 @@ export function readHpFromPanel(
 - Consumes: `detectBattlePanels` (Task 3); `whiteMask`, `segmentGlyphs`, `clusterGlyphBoxes`, `normalizeGlyph`, `hpTextRegion` (Task 4).
 - Produces: populated `HP_GLYPH_TEMPLATES` in `src/features/scan/hpGlyphTemplates.ts`.
 
-- [ ] **Step 1: Write the script**
+- [x] **Step 1: Write the script**
 
 ```ts
 // scripts/build-hp-glyph-templates.ts
