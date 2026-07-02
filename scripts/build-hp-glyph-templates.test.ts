@@ -22,8 +22,10 @@ describe('build HP glyph templates', () => {
   it('extracts templates for the expected text from a panel region', () => {
     const img = blank(80, 40);
     const panel: TileBox = { x: 10, y: 5, w: 60, h: 10 };
-    fillRect(img, 12, 12, 4, 11, 255);
-    fillRect(img, 22, 12, 7, 11, 255);
+    // Narrow enough that the deskew shear (which widens upright synthetic
+    // rectangles by ~0.25*h) keeps each box inside its char's aspect band.
+    fillRect(img, 12, 12, 2, 11, 255);
+    fillRect(img, 22, 12, 6, 11, 255);
 
     const templates = glyphTemplatesFromPanel(img, panel, '12');
 
