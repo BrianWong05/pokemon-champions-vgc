@@ -343,32 +343,32 @@ function isPlayerCardPixel(r: number, g: number, b: number): boolean {
   return white || (h >= 225 && h <= 300 && s >= 0.25 && v >= 0.15) || isPlayerCardStatePixel(r, g, b);
 }
 
-function largestRun(flags: boolean[], maxGap: number): { start: number; end: number } | null {
-  let best: { start: number; end: number } | null = null;
+function runsOf(flags: boolean[], maxGap: number): Array<{ start: number; end: number }> {
+  const runs: Array<{ start: number; end: number }> = [];
   let cur: { start: number; end: number } | null = null;
   let gap = 0;
-  const better = (a: { start: number; end: number }) => !best || a.end - a.start > best.end - best.start;
   for (let i = 0; i < flags.length; i++) {
     if (flags[i]) {
       if (cur) cur.end = i; else cur = { start: i, end: i };
       gap = 0;
     } else if (cur && ++gap > maxGap) {
-      if (better(cur)) best = cur;
+      runs.push(cur);
       cur = null;
       gap = 0;
     }
   }
-  if (cur && better(cur)) best = cur;
-  return best;
+  if (cur) runs.push(cur);
+  return runs;
 }
 
 /**
- * Content-aware sprite crop: within the card's own rows, the sprite is the
- * widest run of columns that are NOT card-colored (name text/type icons are
- * separated from it by card-colored gaps). Centering on that run lets the
- * square be tighter (1.35x card height) than a blind anchor crop, so
- * neighboring cards' sprites stop bleeding into the top/bottom of the crop.
- * Falls back to the anchor-based box when no content is found.
+ * Content-aware sprite crop. Within the card's own rows, content = columns
+ * that are NOT card-colored. The sprite is a TALL content run (fills the card
+ * height); name/item text is thin and number badges narrow, so they filter
+ * out. The type-icon + gender cluster is also tall, but in every card layout
+ * it sits at the RIGHT END while the sprite varies — so with 2+ tall runs the
+ * rightmost is dropped. Falls back to the anchor-based box when nothing
+ * qualifies (e.g. sprite the same color family as the card).
  */
 export function refineSpriteBox(
   img: RgbaImage,
@@ -377,24 +377,138 @@ export function refineSpriteBox(
   isCardPixel: (r: number, g: number, b: number) => boolean,
 ): TileBox {
   const bounds = { w: img.width, h: img.height };
-  const stripW = Math.min(tile.w, Math.round(tile.h * 1.7));
-  const x0 = Math.max(0, anchor === 'left' ? tile.x : tile.x + tile.w - stripW);
   const y0 = Math.max(0, tile.y + 2);
   const y1 = Math.min(img.height, tile.y + tile.h - 2);
   if (y1 - y0 < 4) return spriteBoxFromTile(tile, bounds, anchor);
 
-  const colFlags: boolean[] = [];
-  for (let x = x0; x < Math.min(img.width, x0 + stripW); x++) {
+  const isContent = (x: number, y: number) => {
+    const i = (y * img.width + x) * 4;
+    return !isCardPixel(img.data[i], img.data[i + 1], img.data[i + 2]);
+  };
+
+  // Trim the tile to the card's true x-extent: detection pads the boxes with
+  // background columns that contain no card-colored pixels at all, and those
+  // would otherwise read as tall "content".
+  const cardCols = (x: number) => {
     let cnt = 0;
-    for (let y = y0; y < y1; y++) {
-      const i = (y * img.width + x) * 4;
-      if (!isCardPixel(img.data[i], img.data[i + 1], img.data[i + 2])) cnt++;
-    }
+    for (let y = y0; y < y1; y++) if (!isContent(x, y)) cnt++;
+    return cnt;
+  };
+  const minCard = Math.max(2, (y1 - y0) * 0.05);
+  let x0 = Math.max(0, tile.x);
+  let x1 = Math.min(img.width, tile.x + tile.w);
+  while (x0 < x1 && cardCols(x0) <= minCard) x0++;
+  while (x1 > x0 && cardCols(x1 - 1) <= minCard) x1--;
+  if (x1 - x0 < 4) return spriteBoxFromTile(tile, bounds, anchor);
+
+  const colFlags: boolean[] = [];
+  for (let x = x0; x < x1; x++) {
+    let cnt = 0;
+    for (let y = y0; y < y1; y++) if (isContent(x, y)) cnt++;
     colFlags.push(cnt > (y1 - y0) * 0.15);
   }
 
-  const run = largestRun(colFlags, Math.max(2, Math.round(tile.h * 0.1)));
-  if (!run || run.end - run.start < tile.h * 0.3) return spriteBoxFromTile(tile, bounds, anchor);
+  interface RunInfo { start: number; end: number; width: number; extent: number; whiteRatio: number; bright: number; center: number }
+  const annotate = (r: { start: number; end: number }): RunInfo => {
+    let first = -1;
+    let last = -1;
+    let pixels = 0;
+    let white = 0;
+    let bright = 0;
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0 + r.start; x <= x0 + r.end; x++) {
+        if (!isContent(x, y)) continue;
+        if (first < 0) first = y;
+        last = y;
+        pixels++;
+        const i = (y * img.width + x) * 4;
+        const lo = Math.min(img.data[i], img.data[i + 1], img.data[i + 2]);
+        const hi = Math.max(img.data[i], img.data[i + 1], img.data[i + 2]);
+        if (lo >= 160 && hi - lo <= 60) white++;
+        if (hi >= 90) bright++;
+      }
+    }
+    return {
+      ...r,
+      width: r.end - r.start + 1,
+      extent: first < 0 ? 0 : last - first + 1,
+      whiteRatio: pixels > 0 ? white / pixels : 0,
+      bright: pixels > 0 ? bright / pixels : 0,
+      center: x0 + (r.start + r.end) / 2,
+    };
+  };
+
+  const yspan = y1 - y0;
+  // Name/item text and number badges are near-white glyphs; sprites are not.
+  const candidates = runsOf(colFlags, Math.max(2, Math.round(tile.h * 0.1)))
+    .filter((r) => r.end - r.start >= tile.h * 0.3)
+    .map(annotate)
+    .filter((r) => r.whiteRatio < 0.65 && r.extent >= yspan * 0.35)
+    // Background sandwiched between the tile's left pad/glow and the card edge
+    // reads as a run touching the scan's left edge — but it is DARK, unlike
+    // any sprite/number content that can also touch the edge.
+    .filter((r) => !(r.start === 0 && r.bright < 0.2));
+  if (candidates.length === 0) return spriteBoxFromTile(tile, bounds, anchor);
+
+  // Does the run's TOP BAND break into >=2 solid sub-blocks with a clean gap
+  // (a type-icon pair)? Top band only: the gender badge sits BELOW the icons
+  // and would otherwise bridge the gap between them.
+  const splitsIntoBlocks = (r: RunInfo): boolean => {
+    const yTop = y0 + Math.ceil(yspan * 0.55);
+    const topFlags: boolean[] = [];
+    for (let x = x0 + r.start; x <= x0 + r.end; x++) {
+      let cnt = 0;
+      for (let y = y0; y < yTop; y++) if (isContent(x, y)) cnt++;
+      topFlags.push(cnt > (yTop - y0) * 0.15);
+    }
+    const sub = runsOf(topFlags, 1).filter((s) => s.end - s.start + 1 >= tile.h * 0.2);
+    return sub.length >= 2;
+  };
+
+  let run: RunInfo;
+  if (anchor === 'left') {
+    // Opponent cards NEVER put the sprite at the right end (that's the
+    // type-icon/gender zone in every opponent layout) — widest run outside it.
+    const rightZone = x0 + (x1 - x0) * 0.65;
+    const pool = candidates.filter((r) => r.center < rightZone);
+    if (pool.length === 0) return spriteBoxFromTile(tile, bounds, anchor);
+    run = pool.reduce((a, b) => (b.width > a.width ? b : a));
+  } else {
+    // Player cards put the sprite at the right end (select layouts), EXCEPT
+    // the icons layout — recognizable because the rightmost run is a narrow
+    // single icon or a split icon pair rather than one sprite-sized blob.
+    const rightZone = x0 + (x1 - x0) * 0.6;
+    const last = candidates[candidates.length - 1];
+    const iconsLike =
+      last.width < tile.h * 0.6 ||
+      (last.width <= tile.h && splitsIntoBlocks(last));
+    const rest = candidates.slice(0, -1);
+    // The icons branch must yield something sprite-sized — otherwise the
+    // "narrow icon" was actually a skinny sprite (no-icon layout) and the
+    // rest is item/text debris.
+    const restPick = rest.length > 0 ? rest.reduce((a, b) => (b.width > a.width ? b : a)) : null;
+    const spriteSized = restPick != null && restPick.width >= tile.h * 0.6 && restPick.extent >= yspan * 0.5;
+    if (iconsLike && spriteSized && restPick) {
+      run = restPick;
+    } else if (iconsLike && rest.length === 0) {
+      // Icons layout, but the sprite itself got filtered (white sprites hit
+      // the text filter, card-colored ones are invisible). In this layout the
+      // sprite sits left-of-center — synthesize the box there.
+      const side = Math.round(tile.h * 1.35);
+      const cx = Math.round(x0 + (x1 - x0) * 0.33);
+      const cy = tile.y + tile.h / 2 - Math.round(tile.h * 0.05);
+      const bx = Math.max(0, Math.min(cx - Math.round(side / 2), bounds.w - 1));
+      const by = Math.max(0, Math.min(Math.round(cy - side / 2), bounds.h - 1));
+      return { x: bx, y: by, w: Math.max(1, Math.min(side, bounds.w - bx)), h: Math.max(1, Math.min(side, bounds.h - by)) };
+    } else if (last.center >= rightZone) {
+      run = last;
+    } else {
+      // Nothing where the sprite should be — it blends into the card color
+      // (purple mon on purple card, white mon caught by the text filter).
+      // The remaining candidates are text; trust the anchor geometry instead.
+      return spriteBoxFromTile(tile, bounds, anchor);
+    }
+  }
 
   const side = Math.round(tile.h * 1.35);
   const cx = x0 + (run.start + run.end) / 2;

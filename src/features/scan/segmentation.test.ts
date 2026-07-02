@@ -197,6 +197,24 @@ describe('refineSpriteBox (via sprite box helpers)', () => {
     }
   });
 
+  it('picks the sprite, not the type-icon cluster at the right end', () => {
+    const img = blank(1200, 700);
+    for (let k = 0; k < 6; k++) {
+      const y = 60 + k * 95;
+      fillRect(img, 40, y, 300, 80, 90, 60, 200);        // player card
+      fillRect(img, 100, y + 8, 70, 64, 200, 150, 60);   // sprite (left-of-center)
+      fillRect(img, 270, y + 8, 28, 28, 230, 80, 60);    // type icon 1
+      fillRect(img, 304, y + 8, 28, 28, 240, 200, 60);   // type icon 2
+      fillRect(img, 285, y + 48, 24, 24, 220, 60, 90);   // gender badge below icons
+    }
+    const boxes = detectPlayerSpriteBoxes(img);
+    expect(boxes.length).toBe(6);
+    for (const b of boxes) {
+      // centered on the sprite (center x = 135), not the icons (~290)
+      expect(Math.abs(b.x + b.w / 2 - 135)).toBeLessThanOrEqual(6);
+    }
+  });
+
   it('falls back to the anchor box when the card has no distinct content', () => {
     const img = blank(1200, 700);
     for (let k = 0; k < 6; k++) fillRect(img, 900, 60 + k * 95, 260, 72, 220, 30, 40);
