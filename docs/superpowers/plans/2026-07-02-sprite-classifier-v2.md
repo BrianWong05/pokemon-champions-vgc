@@ -501,7 +501,7 @@ Expected: `opp: 2 player: 2`. Tune `SIDES.player` thresholds against sampled pla
   - `export function readHpFromPanel(img: RgbaImage, panel: TileBox, templates?: GlyphTemplate[]): HpReading | null`
 - `hpGlyphTemplates.ts` placeholder: `export const HP_GLYPH_TEMPLATES: Array<{ char: string; bits: string }> = [];` — with empty templates, `readHpFromPanel` returns `null` (HP reading silently off until Task 5).
 
-- [ ] **Step 1: Write the failing tests** (`src/features/scan/hpText.test.ts`)
+- [x] **Step 1: Write the failing tests** (`src/features/scan/hpText.test.ts`)
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -582,9 +582,9 @@ describe('readHpFromPanel', () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npx vitest run src/features/scan/hpText.test.ts` — expect FAIL.
+- [x] **Step 2: Run** `npx vitest run src/features/scan/hpText.test.ts` — expect FAIL.
 
-- [ ] **Step 3: Create `hpGlyphTemplates.ts` placeholder and implement `hpText.ts`:**
+- [x] **Step 3: Create `hpGlyphTemplates.ts` placeholder and implement `hpText.ts`:**
 
 ```ts
 // src/features/scan/hpGlyphTemplates.ts
@@ -763,9 +763,15 @@ export function readHpFromPanel(
 }
 ```
 
-- [ ] **Step 4: Run** `npx vitest run src/features/scan/hpText.test.ts` — expect PASS.
+- [x] **Step 4: Run** `npx vitest run src/features/scan/hpText.test.ts` — expect PASS.
 
-- [ ] **Step 5: Commit** — `git add src/features/scan/hpText.ts src/features/scan/hpGlyphTemplates.ts src/features/scan/hpText.test.ts && git commit -m "feat(scan): fixed-font HP text reader with bar-fill cross-check"`
+- [x] **Step 4b: Wire HP readings into battle scan targets** — added a red/green
+  test in `src/features/scan/scanTargetsHp.test.ts`; `detectScanTargets` now
+  attaches `readHpFromPanel(img, panel)?.percent ?? null` for each battle
+  target. With the placeholder template file this stays `null` until Task 5
+  generates templates.
+
+- [x] **Step 5: Commit** — `git add src/features/scan/hpText.ts src/features/scan/hpGlyphTemplates.ts src/features/scan/hpText.test.ts && git commit -m "feat(scan): fixed-font HP text reader with bar-fill cross-check"`
 
 ---
 

@@ -13,6 +13,7 @@ import {
 } from './segmentation';
 import { detectBattleIcons, detectBattlePanels } from './battleDetection';
 import { inferGameRect } from './gameRect';
+import { readHpFromPanel } from './hpText';
 import type { RgbaImage, ScanSide, TileBox } from './types';
 
 export type ScanMode = 'team' | 'battle';
@@ -32,7 +33,13 @@ export interface ScanDetection {
 }
 
 function battleTargets(img: RgbaImage, side: ScanSide): ScanTarget[] {
-  return detectBattleIcons(img, side).map((box) => ({ box, side, hpPercent: null }));
+  const panels = detectBattlePanels(img, side);
+  const icons = detectBattleIcons(img, side);
+  return panels.map((panel, i) => ({
+    box: icons[i],
+    side,
+    hpPercent: readHpFromPanel(img, panel)?.percent ?? null,
+  })).filter((target) => target.box != null);
 }
 
 function teamTargets(img: RgbaImage): ScanTarget[] {
