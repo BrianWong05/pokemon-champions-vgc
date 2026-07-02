@@ -28,6 +28,9 @@ const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter((f) => f.t
 
 for (const f of files) {
   const img = readPng(path.join(SHOTS, path.basename(f)));
+  // Only actual battle screens (both opponent plates present) — team-select
+  // screenshots produce stray single-panel detections that never carry HP.
+  if (detectBattlePanels(img, 'opponent').length !== 2) continue;
   const lines: string[] = [];
   for (const side of ['opponent', 'player'] as const) {
     detectBattlePanels(img, side).forEach((panel, i) => {
