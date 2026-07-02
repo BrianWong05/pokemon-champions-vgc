@@ -27,12 +27,17 @@ export interface BinMask {
 }
 
 export function hpTextRegion(panel: TileBox, img: { width: number; height: number }): TileBox {
-  const y = Math.min(img.height - 1, panel.y + panel.h);
+  // The HP text straddles the plate's bottom edge (the panel blob is the
+  // magenta/purple plate only) — start mid-plate so the glyphs are whole. The
+  // name text at the plate's top stays outside the region.
+  const y = Math.min(img.height - 1, panel.y + Math.round(panel.h * 0.45));
   return {
     x: panel.x,
     y,
     w: Math.max(0, Math.min(panel.w, img.width - panel.x)),
-    h: Math.max(0, Math.min(Math.round(panel.h * 1.8), img.height - y)),
+    // Tight height: the timer / "MOVE TIME" white text sits further below and
+    // must stay out of the region (a "20" cluster reads as a valid percent).
+    h: Math.max(0, Math.min(Math.round(panel.h * 1.3), img.height - y)),
   };
 }
 
@@ -57,7 +62,40 @@ export function whiteMask(img: RgbaImage, box: TileBox): BinMask {
   return { bits, w: box.w, h: box.h };
 }
 
-export function segmentGlyphs(mask: BinMask): TileBox[] {
+// The plate's slanted white border/outline crosses the region and would
+// bridge every glyph column into one run — remove connected components wider
+// than any glyph can be (pixel-accurate: bbox-zeroing would erase glyphs the
+// diagonal's bbox overlaps).
+function cleanMask(mask: BinMask): BinMask {
+  const limit = Math.max(4, Math.round(mask.h * 1.4));
+  const seen = new Uint8Array(mask.bits.length);
+  const bits = Uint8Array.from(mask.bits);
+  const stack: number[] = [];
+  for (let p = 0; p < bits.length; p++) {
+    if (!bits[p] || seen[p]) continue;
+    const pixels: number[] = [];
+    let minX = mask.w;
+    let maxX = 0;
+    stack.push(p);
+    seen[p] = 1;
+    while (stack.length) {
+      const q = stack.pop()!;
+      pixels.push(q);
+      const x = q % mask.w;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (x > 0 && bits[q - 1] && !seen[q - 1]) { seen[q - 1] = 1; stack.push(q - 1); }
+      if (x < mask.w - 1 && bits[q + 1] && !seen[q + 1]) { seen[q + 1] = 1; stack.push(q + 1); }
+      if (q - mask.w >= 0 && bits[q - mask.w] && !seen[q - mask.w]) { seen[q - mask.w] = 1; stack.push(q - mask.w); }
+      if (q + mask.w < bits.length && bits[q + mask.w] && !seen[q + mask.w]) { seen[q + mask.w] = 1; stack.push(q + mask.w); }
+    }
+    if (maxX - minX + 1 > limit) for (const q of pixels) bits[q] = 0;
+  }
+  return { bits, w: mask.w, h: mask.h };
+}
+
+export function segmentGlyphs(rawMask: BinMask): TileBox[] {
+  const mask = cleanMask(rawMask);
   const colHas = new Array<boolean>(mask.w).fill(false);
   for (let x = 0; x < mask.w; x++) {
     for (let y = 0; y < mask.h; y++) {
