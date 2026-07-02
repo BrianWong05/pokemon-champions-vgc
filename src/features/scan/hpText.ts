@@ -6,7 +6,10 @@ import type { RgbaImage, TileBox } from './types';
 
 export const GLYPH_SIZE = 16;
 
-const MAX_HAMMING = 64;
+const QUANT = 9;                 // coverage levels per cell: 0..9
+const MAX_DIST = 0.1;            // mean |level delta| / QUANT, 0..1 — tuned via scripts/hp-accuracy.ts
+const MIN_MARGIN = 0.02;         // best other-char distance must exceed the best by this
+export const MASK_THRESHOLDS = [0.8, 0.72, 0.88];
 // The bar-fill measure is crude (a full bar reads ~0.8) — the gate only
 // rejects catastrophic glyph misreads like "00%" against a mostly-full bar.
 const BAR_DISAGREE_PCT = 35;
@@ -46,7 +49,7 @@ export function hpTextRegion(panel: TileBox, img: { width: number; height: numbe
   };
 }
 
-export function whiteMask(img: RgbaImage, box: TileBox): BinMask {
+export function whiteMask(img: RgbaImage, box: TileBox, thresholdFactor = 0.8): BinMask {
   const bits = new Uint8Array(box.w * box.h);
   let peak = 0;
   for (let y = 0; y < box.h; y++) {
@@ -57,7 +60,7 @@ export function whiteMask(img: RgbaImage, box: TileBox): BinMask {
     }
   }
 
-  const threshold = Math.max(120, Math.round(peak * 0.8));
+  const threshold = Math.max(120, Math.round(peak * thresholdFactor));
   for (let y = 0; y < box.h; y++) {
     for (let x = 0; x < box.w; x++) {
       const i = ((box.y + y) * img.width + (box.x + x)) * 4;
@@ -288,7 +291,7 @@ export function normalizeGlyph(mask: BinMask, box: TileBox): Uint8Array {
           if (x >= 0 && y >= 0 && x < mask.w && y < mask.h && mask.bits[y * mask.w + x]) on++;
         }
       }
-      out[gy * GLYPH_SIZE + gx] = total > 0 && on / total >= 0.4 ? 1 : 0;
+      out[gy * GLYPH_SIZE + gx] = total > 0 ? Math.min(QUANT, Math.floor((on / total) * (QUANT + 1))) : 0;
     }
   }
   return out;
@@ -299,21 +302,30 @@ export function matchGlyph(
   hFrac: number,
   templates: GlyphTemplate[] = HP_GLYPH_TEMPLATES,
 ): string | null {
+  const norm = bits.length * QUANT;
   let bestChar: string | null = null;
   let bestDist = Infinity;
+  let bestOther = Infinity; // best distance among chars OTHER than bestChar
   for (const template of templates) {
     if (template.bits.length !== bits.length) continue;
     if (Math.abs(template.hFrac - hFrac) > 0.25) continue;
-    let dist = 0;
+    let sum = 0;
     for (let i = 0; i < bits.length; i++) {
-      if (bits[i] !== template.bits.charCodeAt(i) - 48) dist++;
+      sum += Math.abs(bits[i] - (template.bits.charCodeAt(i) - 48));
     }
+    const dist = sum / norm;
     if (dist < bestDist) {
-      bestDist = dist;
+      if (bestChar !== null && template.char !== bestChar) bestOther = bestDist;
       bestChar = template.char;
+      bestDist = dist;
+    } else if (template.char !== bestChar && dist < bestOther) {
+      bestOther = dist;
     }
   }
-  return bestDist <= MAX_HAMMING ? bestChar : null;
+  if (bestChar === null || bestDist > MAX_DIST) return null;
+  // Ambiguity margin (e.g. 1 vs 7 at small sizes): prefer blank over a guess.
+  if (bestOther - bestDist < MIN_MARGIN) return null;
+  return bestChar;
 }
 
 export function parseHpText(text: string): HpReading | null {
@@ -446,36 +458,38 @@ export function readHpFromPanel(
   const region = hpTextRegion(panel, img);
   if (region.h < 4 || region.w < 4) return null;
 
-  const raw = whiteMask(img, region);
-  for (const config of GLYPH_PIPELINE_CONFIGS) {
-    const { mask, boxes } = extractGlyphs(raw, config);
-    const clusters = clusterGlyphBoxes(filterSpecks(boxes));
-    // The phrase can straddle cluster boundaries ("1" | "00%"), so try every
-    // contiguous window of clusters, longest first — parse + bar validate.
-    const windows: TileBox[][] = [];
-    for (let i = 0; i < clusters.length; i++) {
-      for (let j = clusters.length; j > i; j--) windows.push(clusters.slice(i, j).flat());
-    }
-    windows.sort((a, b) => b.length - a.length);
-    for (const window of windows) {
-      const lineH = Math.max(...window.map((b) => b.h));
-      let items = window.map((box) => ({
-        box,
-        char: matchGlyph(normalizeGlyph(mask, box), box.h / lineH, templates),
-      }));
-      items = repairUnmatched(items, mask, lineH, templates);
-      if (items.some((item) => item.char === null)) continue;
-      const reading = parseHpText(items.map((item) => item.char).join(''));
-      if (!reading) continue;
-      // A live Pokemon is never at 0% — that's always a misread digit.
-      if (reading.percent === 0) continue;
+  for (const thresholdFactor of MASK_THRESHOLDS) {
+    const raw = whiteMask(img, region, thresholdFactor);
+    for (const config of GLYPH_PIPELINE_CONFIGS) {
+      const { mask, boxes } = extractGlyphs(raw, config);
+      const clusters = clusterGlyphBoxes(filterSpecks(boxes));
+      // The phrase can straddle cluster boundaries ("1" | "00%"), so try every
+      // contiguous window of clusters, longest first — parse + bar validate.
+      const windows: TileBox[][] = [];
+      for (let i = 0; i < clusters.length; i++) {
+        for (let j = clusters.length; j > i; j--) windows.push(clusters.slice(i, j).flat());
+      }
+      windows.sort((a, b) => b.length - a.length);
+      for (const window of windows) {
+        const lineH = Math.max(...window.map((b) => b.h));
+        let items = window.map((box) => ({
+          box,
+          char: matchGlyph(normalizeGlyph(mask, box), box.h / lineH, templates),
+        }));
+        items = repairUnmatched(items, mask, lineH, templates);
+        if (items.some((item) => item.char === null)) continue;
+        const reading = parseHpText(items.map((item) => item.char).join(''));
+        if (!reading) continue;
+        // A live Pokemon is never at 0% — that's always a misread digit.
+        if (reading.percent === 0) continue;
 
-      const bar = measureHpBarFill(img, panel);
-      if (bar != null && Math.abs(reading.percent - bar * 100) > BAR_DISAGREE_PCT) continue;
-      // Short reads ("7%") are easily a stray digit + speck: only trust them
-      // when the bar corroborates closely.
-      if (items.length <= 2 && (bar == null || Math.abs(reading.percent - bar * 100) > 12)) continue;
-      return reading;
+        const bar = measureHpBarFill(img, panel);
+        if (bar != null && Math.abs(reading.percent - bar * 100) > BAR_DISAGREE_PCT) continue;
+        // Short reads ("7%") are easily a stray digit + speck: only trust them
+        // when the bar corroborates closely.
+        if (items.length <= 2 && (bar == null || Math.abs(reading.percent - bar * 100) > 12)) continue;
+        return reading;
+      }
     }
   }
 
