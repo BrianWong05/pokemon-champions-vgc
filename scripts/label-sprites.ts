@@ -20,7 +20,7 @@
  *      Corrections (typed ids) are the highest-value training data — they're the
  *      cases the current recognizer got wrong.
  *
- * Output: public/images/pokemon/menu-sprites/<id>_<screenshot>_<n>.png — these
+ * Output: training/menu-sprites/<id>_<screenshot>_<n>.png — these
  * fold into that id's reference list (multi-image-per-id). After labeling, run
  *   npx tsx scripts/generate-sprite-descriptors.ts
  * to rebuild reference-descriptors.json so the scan uses the new references.
@@ -43,7 +43,7 @@ import type { LabelMode, RequestedMode } from './label-sprites-core';
 import type { Candidate, ReferenceEntry, RgbaImage } from '../src/features/scan/types';
 
 const SHOTS = path.resolve('training/screenshots');
-const OUT = path.resolve('public/images/pokemon/menu-sprites');
+const OUT = path.resolve('training/menu-sprites');
 
 interface RunOptions {
   requestedMode: RequestedMode;

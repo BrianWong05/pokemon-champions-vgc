@@ -4,7 +4,7 @@ Train a tiny IN-DOMAIN Pokemon menu-sprite classifier for the scan feature.
 RUN THIS ON A GPU (Google Colab, free) — NOT in this repo's environment.
 
 Colab quick start:
-  1. Zip `public/images/pokemon/menu-sprites/` and upload+unzip it in Colab so you
+  1. Zip `training/menu-sprites/` and upload+unzip it in Colab so you
      have a folder of `<id>[_tag]_<src>_<n>.png` files (e.g. `6_shiny_Xnip..._0.png`).
   2. !pip install torch torchvision onnx
   3. !python train_sprite_net.py --data menu-sprites --epochs 40 --out out

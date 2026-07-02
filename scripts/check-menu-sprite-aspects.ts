@@ -5,7 +5,7 @@ import { PNG } from 'pngjs';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const dir = path.resolve('public/images/pokemon/menu-sprites');
+const dir = path.resolve('training/menu-sprites');
 let bad = 0;
 let total = 0;
 for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.png'))) {

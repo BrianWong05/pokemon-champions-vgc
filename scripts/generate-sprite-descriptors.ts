@@ -31,7 +31,7 @@ export function generateDescriptors(srcDir: string): Record<string, Descriptor[]
 
 // CLI: npx tsx scripts/generate-sprite-descriptors.ts
 if (process.argv[1] && process.argv[1].endsWith('generate-sprite-descriptors.ts')) {
-  const src = path.resolve('public/images/pokemon/menu-sprites');
+  const src = path.resolve('training/menu-sprites');
   const outFile = path.resolve('public/images/pokemon/reference-descriptors.json');
   const out = generateDescriptors(src);
   fs.writeFileSync(outFile, JSON.stringify(out));
