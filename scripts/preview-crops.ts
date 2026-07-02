@@ -16,6 +16,7 @@ import * as path from 'path';
 import { cropImage } from '../src/features/scan/segmentation';
 import { detectScanTargets } from '../src/features/scan/scanTargets';
 import type { RgbaImage } from '../src/features/scan/types';
+import { isSupportedScreenshotFile, resolveScreenshotInput } from './image-inputs';
 
 const SHOTS = path.resolve('training/screenshots');
 const OUT = path.resolve('training/.crop-preview');
@@ -32,12 +33,20 @@ function writePng(img: RgbaImage, file: string): void {
 }
 
 const args = process.argv.slice(2);
-const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter((f) => f.toLowerCase().endsWith('.png'));
+const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter(isSupportedScreenshotFile);
 
 for (const f of files) {
-  const img = readPng(path.join(SHOTS, path.basename(f)));
+  // Accept a bare name (looked up in training/screenshots) or any path;
+  // non-PNG inputs (jpg/heic/...) convert through the labeler's sips path.
+  const file = fs.existsSync(f) ? f : path.join(SHOTS, path.basename(f));
+  if (!fs.existsSync(file)) {
+    console.log(`${f}  (file not found)`);
+    continue;
+  }
+  const input = resolveScreenshotInput(path.dirname(file), path.basename(file));
+  const img = readPng(input.pngPath);
   const { mode, targets, gameRect } = detectScanTargets(img);
-  const dir = path.join(OUT, path.basename(f, '.png'));
+  const dir = path.join(OUT, path.basename(f, path.extname(f)));
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
   const counters: Record<string, number> = {};
