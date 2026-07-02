@@ -90,14 +90,21 @@ describe('normalizeGlyph and matchGlyph', () => {
   it('recognizes a glyph against a template built from itself', () => {
     const mask = maskOf(['####', '#..#', '#..#', '####']);
     const bits = normalizeGlyph(mask, { x: 0, y: 0, w: 4, h: 4 });
-    const template = { char: '0', bits: Array.from(bits).join('') };
-    expect(matchGlyph(bits, [template])).toBe('0');
+    const template = { char: '0', bits: Array.from(bits).join(''), hFrac: 1 };
+    expect(matchGlyph(bits, 1, [template])).toBe('0');
   });
 
   it('returns null when nothing is close', () => {
     const empty = new Uint8Array(256);
-    const full = { char: '8', bits: '1'.repeat(256) };
-    expect(matchGlyph(empty, [full])).toBeNull();
+    const full = { char: '8', bits: '1'.repeat(256), hFrac: 1 };
+    expect(matchGlyph(empty, 1, [full])).toBeNull();
+  });
+
+  it('rejects templates from a different relative height (a % circle is not a 0)', () => {
+    const mask = maskOf(['####', '#..#', '#..#', '####']);
+    const bits = normalizeGlyph(mask, { x: 0, y: 0, w: 4, h: 4 });
+    const template = { char: '0', bits: Array.from(bits).join(''), hFrac: 1 };
+    expect(matchGlyph(bits, 0.35, [template])).toBeNull();
   });
 });
 
