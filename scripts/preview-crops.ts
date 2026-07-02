@@ -20,8 +20,8 @@ import {
   detectOpponentSpriteBoxes,
   detectPlayerSpriteBoxes,
 } from '../src/features/scan/segmentation';
-import { detectBattleIcons } from '../src/features/scan/battleDetection';
-import type { RgbaImage } from '../src/features/scan/types';
+import { detectBattleIcons, detectBattlePanels } from '../src/features/scan/battleDetection';
+import type { RgbaImage, TileBox } from '../src/features/scan/types';
 
 const SHOTS = path.resolve('training/screenshots');
 const OUT = path.resolve('training/.crop-preview');
@@ -42,12 +42,18 @@ const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter((f) => f.t
 
 for (const f of files) {
   const img = readPng(path.join(SHOTS, path.basename(f)));
-  const kinds: Array<[string, ReturnType<typeof detectOpponentSpriteBoxes>]> = [
-    ['team-opp', detectOpponentSpriteBoxes(img)],
-    ['team-player', detectPlayerSpriteBoxes(img)],
-    ['battle-opp', detectBattleIcons(img, 'opponent')],
-    ['battle-player', detectBattleIcons(img, 'player')],
-  ];
+  // A screenshot is EITHER in-battle OR team select, never both — route to one
+  // mode exactly like the scan pipeline does (battle iff both opponent plates).
+  const isBattle = detectBattlePanels(img, 'opponent').length === 2;
+  const kinds: Array<[string, TileBox[]]> = isBattle
+    ? [
+        ['battle-opp', detectBattleIcons(img, 'opponent')],
+        ['battle-player', detectBattleIcons(img, 'player')],
+      ]
+    : [
+        ['team-opp', detectOpponentSpriteBoxes(img)],
+        ['team-player', detectPlayerSpriteBoxes(img)],
+      ];
   const dir = path.join(OUT, path.basename(f, '.png'));
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
