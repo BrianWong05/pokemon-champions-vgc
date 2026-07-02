@@ -75,10 +75,18 @@ const DamageCalculatorPage: React.FC = () => {
 
   const { p1MaxHp, p2MaxHp, p1Results, p2Results } = useDamageCalc(state, pokemonList, efficacyMap);
 
-  const handleLoadDefender = (pokemonId: number) => {
+  const handleLoadDefender = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
     const p = pokemonList.find((p) => p.id === pokemonId);
     if (!p) return;
     actions.handleSelectPokemon('p2', p);
+    if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: opts.hpPercent } });
+  };
+
+  const handleLoadAttacker = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
+    const p = pokemonList.find((p) => p.id === pokemonId);
+    if (!p) return;
+    actions.handleSelectPokemon('p1', p);
+    if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val: opts.hpPercent } });
   };
 
   const handleSaveOppTeam = async (sets: ParsedShowdownSet[]) => {
@@ -219,6 +227,7 @@ const DamageCalculatorPage: React.FC = () => {
       onClose={() => setIsScanModalOpen(false)}
       pokemonList={pokemonList}
       onLoadPokemon={handleLoadDefender}
+      onLoadAttacker={handleLoadAttacker}
       onSaveTeam={handleSaveOppTeam}
     />
     </>

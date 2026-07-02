@@ -3,7 +3,7 @@ import Modal from '@/components/atoms/Modal';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
-import type { Candidate } from './types';
+import type { Candidate, ScanSide } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
 import { useTeamScan, type ScanEngine } from './useTeamScan';
 import { loadClassifier } from './classifier';
@@ -16,8 +16,10 @@ interface ScanTeamModalProps {
   onClose: () => void;
   onImport?: (sets: ParsedShowdownSet[]) => void;
   pokemonList: PokemonBaseStats[];
-  /** Calc mode: when provided, each roster entry shows a "Set as defender" action instead of/alongside import. */
-  onLoadPokemon?: (pokemonId: number) => void;
+  /** Calc mode: when provided, opponent entries show a "Set as defender" action. */
+  onLoadPokemon?: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
+  /** Calc mode: when provided, player-side entries (battle scans) show a "Set as attacker" action. */
+  onLoadAttacker?: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
   /** Calc mode: when provided, shows an optional button to save the scanned roster as a Team. */
   onSaveTeam?: (sets: ParsedShowdownSet[]) => void;
 }
@@ -25,9 +27,11 @@ interface ScanTeamModalProps {
 interface RosterEntry {
   id: number | null;
   candidates: Candidate[];
+  side?: ScanSide;
+  hpPercent?: number | null;
 }
 
-const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onSaveTeam }) => {
+const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam }) => {
   const legalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const { status, slots, error, scan, reset } = useTeamScan(legalIds);
@@ -62,7 +66,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
   // Seed the editable roster from the scan results once a scan completes.
   React.useEffect(() => {
     if (status === 'done') {
-      setRoster(slots.map((s) => ({ id: s.candidates[0]?.id ?? null, candidates: s.candidates })));
+      setRoster(slots.map((s) => ({ id: s.candidates[0]?.id ?? null, candidates: s.candidates, side: s.side, hpPercent: s.hpPercent })));
       setPickerOpenFor(null);
     }
   }, [status, slots]);
@@ -78,8 +82,11 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     setPickerOpenFor(roster.length); // open the image picker for the new row
   };
 
+  // Import/save build the OPPONENT's roster — player-side entries from battle
+  // scans must not leak into it (entries added by hand have no side).
   const rosterNames = () =>
     roster
+      .filter((e) => e.side !== 'player')
       .map((e) => (e.id != null ? byId.get(e.id)?.nameEn : undefined))
       .filter((n): n is string => !!n);
 
@@ -159,6 +166,22 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               return (
                 <div key={i} className="flex items-start gap-3 p-2 rounded border border-gray-100">
                   <span className="w-5 pt-2 text-sm text-gray-500">{i + 1}</span>
+                  {(entry.side || entry.hpPercent != null) && (
+                    <div className="flex flex-col items-center gap-0.5 pt-2">
+                      {entry.side && (
+                        <span
+                          className={`text-[10px] px-1 rounded font-semibold ${
+                            entry.side === 'player' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {entry.side === 'player' ? 'You' : 'Opp'}
+                        </span>
+                      )}
+                      {entry.hpPercent != null && (
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">{entry.hpPercent}% HP</span>
+                      )}
+                    </div>
+                  )}
                   {entry.id != null ? (
                     <PokemonImage id={entry.id} name={selectedName ?? 'pokemon'} className="w-12 h-12" />
                   ) : (
@@ -206,14 +229,24 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                       </div>
                     )}
                   </div>
-                  {onLoadPokemon && (
+                  {onLoadPokemon && entry.side !== 'player' && (
                     <button
                       type="button"
                       className="px-2 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                      onClick={() => entry.id != null && onLoadPokemon(entry.id)}
+                      onClick={() => entry.id != null && onLoadPokemon(entry.id, { hpPercent: entry.hpPercent })}
                       disabled={entry.id == null}
                     >
                       Set as defender
+                    </button>
+                  )}
+                  {onLoadAttacker && entry.side === 'player' && (
+                    <button
+                      type="button"
+                      className="px-2 py-1 text-xs font-semibold text-emerald-600 border border-emerald-200 rounded hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      onClick={() => entry.id != null && onLoadAttacker(entry.id, { hpPercent: entry.hpPercent })}
+                      disabled={entry.id == null}
+                    >
+                      Set as attacker
                     </button>
                   )}
                   <button
