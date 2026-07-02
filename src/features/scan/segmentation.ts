@@ -1,5 +1,5 @@
 // src/features/scan/segmentation.ts
-import { spriteBoxFromTile } from './cropMath';
+import { spriteBoxFromTile, type Size } from './cropMath';
 import type { RgbaImage, TileBox } from './types';
 
 export function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
@@ -362,24 +362,23 @@ function runsOf(flags: boolean[], maxGap: number): Array<{ start: number; end: n
 }
 
 /**
- * Content-aware sprite crop. Within the card's own rows, content = columns
- * that are NOT card-colored. The sprite is a TALL content run (fills the card
- * height); name/item text is thin and number badges narrow, so they filter
- * out. The type-icon + gender cluster is also tall, but in every card layout
- * it sits at the RIGHT END while the sprite varies — so with 2+ tall runs the
- * rightmost is dropped. Falls back to the anchor-based box when nothing
- * qualifies (e.g. sprite the same color family as the card).
+ * Content-aware card scan. Within the card's own rows, content = columns that
+ * are NOT card-colored. Runs are annotated so the pickers can tell sprites
+ * (tall-ish, colored) from name/item text (near-white), number badges
+ * (narrow), the type-icon cluster (right end), and pad/background junk (dark,
+ * touching the scan edge).
  */
-export function refineSpriteBox(
+interface RunInfo { start: number; end: number; width: number; extent: number; whiteRatio: number; bright: number; center: number }
+interface CardScan { x0: number; x1: number; yspan: number; candidates: RunInfo[]; lastIconsLike: boolean; lastSplitsPair: boolean }
+
+function scanCard(
   img: RgbaImage,
   tile: TileBox,
-  anchor: 'left' | 'right',
   isCardPixel: (r: number, g: number, b: number) => boolean,
-): TileBox {
-  const bounds = { w: img.width, h: img.height };
+): CardScan | null {
   const y0 = Math.max(0, tile.y + 2);
   const y1 = Math.min(img.height, tile.y + tile.h - 2);
-  if (y1 - y0 < 4) return spriteBoxFromTile(tile, bounds, anchor);
+  if (y1 - y0 < 4) return null;
 
   const isContent = (x: number, y: number) => {
     const i = (y * img.width + x) * 4;
@@ -399,7 +398,7 @@ export function refineSpriteBox(
   let x1 = Math.min(img.width, tile.x + tile.w);
   while (x0 < x1 && cardCols(x0) <= minCard) x0++;
   while (x1 > x0 && cardCols(x1 - 1) <= minCard) x1--;
-  if (x1 - x0 < 4) return spriteBoxFromTile(tile, bounds, anchor);
+  if (x1 - x0 < 4) return null;
 
   const colFlags: boolean[] = [];
   for (let x = x0; x < x1; x++) {
@@ -408,7 +407,6 @@ export function refineSpriteBox(
     colFlags.push(cnt > (y1 - y0) * 0.15);
   }
 
-  interface RunInfo { start: number; end: number; width: number; extent: number; whiteRatio: number; bright: number; center: number }
   const annotate = (r: { start: number; end: number }): RunInfo => {
     let first = -1;
     let last = -1;
@@ -448,11 +446,10 @@ export function refineSpriteBox(
     // reads as a run touching the scan's left edge — but it is DARK, unlike
     // any sprite/number content that can also touch the edge.
     .filter((r) => !(r.start === 0 && r.bright < 0.2));
-  if (candidates.length === 0) return spriteBoxFromTile(tile, bounds, anchor);
 
-  // Does the run's TOP BAND break into >=2 solid sub-blocks with a clean gap
-  // (a type-icon pair)? Top band only: the gender badge sits BELOW the icons
-  // and would otherwise bridge the gap between them.
+  // Does the rightmost run's TOP BAND break into >=2 solid sub-blocks with a
+  // clean gap (a type-icon pair)? Top band only: the gender badge sits BELOW
+  // the icons and would otherwise bridge the gap between them.
   const splitsIntoBlocks = (r: RunInfo): boolean => {
     const yTop = y0 + Math.ceil(yspan * 0.55);
     const topFlags: boolean[] = [];
@@ -465,53 +462,19 @@ export function refineSpriteBox(
     return sub.length >= 2;
   };
 
-  let run: RunInfo;
-  if (anchor === 'left') {
-    // Opponent cards NEVER put the sprite at the right end (that's the
-    // type-icon/gender zone in every opponent layout) — widest run outside it.
-    const rightZone = x0 + (x1 - x0) * 0.65;
-    const pool = candidates.filter((r) => r.center < rightZone);
-    if (pool.length === 0) return spriteBoxFromTile(tile, bounds, anchor);
-    run = pool.reduce((a, b) => (b.width > a.width ? b : a));
-  } else {
-    // Player cards put the sprite at the right end (select layouts), EXCEPT
-    // the icons layout — recognizable because the rightmost run is a narrow
-    // single icon or a split icon pair rather than one sprite-sized blob.
-    const rightZone = x0 + (x1 - x0) * 0.6;
-    const last = candidates[candidates.length - 1];
-    const iconsLike =
-      last.width < tile.h * 0.6 ||
-      (last.width <= tile.h && splitsIntoBlocks(last));
-    const rest = candidates.slice(0, -1);
-    // The icons branch must yield something sprite-sized — otherwise the
-    // "narrow icon" was actually a skinny sprite (no-icon layout) and the
-    // rest is item/text debris.
-    const restPick = rest.length > 0 ? rest.reduce((a, b) => (b.width > a.width ? b : a)) : null;
-    const spriteSized = restPick != null && restPick.width >= tile.h * 0.6 && restPick.extent >= yspan * 0.5;
-    if (iconsLike && spriteSized && restPick) {
-      run = restPick;
-    } else if (iconsLike && rest.length === 0) {
-      // Icons layout, but the sprite itself got filtered (white sprites hit
-      // the text filter, card-colored ones are invisible). In this layout the
-      // sprite sits left-of-center — synthesize the box there.
-      const side = Math.round(tile.h * 1.35);
-      const cx = Math.round(x0 + (x1 - x0) * 0.33);
-      const cy = tile.y + tile.h / 2 - Math.round(tile.h * 0.05);
-      const bx = Math.max(0, Math.min(cx - Math.round(side / 2), bounds.w - 1));
-      const by = Math.max(0, Math.min(Math.round(cy - side / 2), bounds.h - 1));
-      return { x: bx, y: by, w: Math.max(1, Math.min(side, bounds.w - bx)), h: Math.max(1, Math.min(side, bounds.h - by)) };
-    } else if (last.center >= rightZone) {
-      run = last;
-    } else {
-      // Nothing where the sprite should be — it blends into the card color
-      // (purple mon on purple card, white mon caught by the text filter).
-      // The remaining candidates are text; trust the anchor geometry instead.
-      return spriteBoxFromTile(tile, bounds, anchor);
-    }
-  }
+  const last = candidates[candidates.length - 1];
+  const lastSplitsPair = last != null && last.width <= tile.h && splitsIntoBlocks(last);
+  const lastIconsLike = last != null && (last.width < tile.h * 0.6 || lastSplitsPair);
 
+  return { x0, x1, yspan, candidates, lastIconsLike, lastSplitsPair };
+}
+
+function runBox(run: RunInfo, tile: TileBox, bounds: Size): TileBox {
+  return centeredBox(run.center, tile, bounds);
+}
+
+function centeredBox(cx: number, tile: TileBox, bounds: Size): TileBox {
   const side = Math.round(tile.h * 1.35);
-  const cx = x0 + (run.start + run.end) / 2;
   // Vertically the sprite fills the card and overflows slightly upward.
   const cy = tile.y + tile.h / 2 - Math.round(tile.h * 0.05);
   const x = Math.max(0, Math.min(Math.round(cx - side / 2), bounds.w - 1));
@@ -524,12 +487,75 @@ export function refineSpriteBox(
   };
 }
 
+const widest = (runs: RunInfo[]): RunInfo | null =>
+  runs.length > 0 ? runs.reduce((a, b) => (b.width > a.width ? b : a)) : null;
+
 export function detectOpponentSpriteBoxes(img: RgbaImage): TileBox[] {
-  return detectOpponentTiles(img).map((t) => refineSpriteBox(img, t, 'left', isOpponentCardPixel));
+  const bounds = { w: img.width, h: img.height };
+  return detectOpponentTiles(img).map((tile) => {
+    const scan = scanCard(img, tile, isOpponentCardPixel);
+    if (!scan || scan.candidates.length === 0) return spriteBoxFromTile(tile, bounds, 'left');
+    // Opponent cards NEVER put the sprite at the right end (that's the
+    // type-icon/gender zone in every opponent layout) — widest run outside it.
+    const rightZone = scan.x0 + (scan.x1 - scan.x0) * 0.65;
+    const pick = widest(scan.candidates.filter((r) => r.center < rightZone));
+    return pick ? runBox(pick, tile, bounds) : spriteBoxFromTile(tile, bounds, 'left');
+  });
 }
 
+/**
+ * Player cards have ONE layout per screen state, shared by the whole column:
+ * during selection the sprite sits at the card's RIGHT END; once the picks are
+ * confirmed ("preparing for battle") the cards flip to the opponent-style
+ * layout — sprite left-of-center, type icons at the right end. Decide the
+ * layout by majority vote of the unambiguous cards, then apply it to all —
+ * cards whose sprite is invisible (white sprites hit the text filter,
+ * card-colored ones blend in) inherit the column's sprite position.
+ */
 export function detectPlayerSpriteBoxes(img: RgbaImage): TileBox[] {
-  return detectPlayerTiles(img).map((t) => refineSpriteBox(img, t, 'right', isPlayerCardPixel));
+  const bounds = { w: img.width, h: img.height };
+  const tiles = detectPlayerTiles(img);
+  const scans = tiles.map((t) => scanCard(img, t, isPlayerCardPixel));
+
+  const spriteSized = (r: RunInfo | null, tile: TileBox, yspan: number): r is RunInfo =>
+    r != null && r.width >= tile.h * 0.6 && r.extent >= yspan * 0.5;
+
+  let iconVotes = 0;
+  let selectVotes = 0;
+  tiles.forEach((tile, i) => {
+    const s = scans[i];
+    if (!s || s.candidates.length === 0) return;
+    const last = s.candidates[s.candidates.length - 1];
+    const restPick = widest(s.candidates.slice(0, -1));
+    const rightZone = s.x0 + (s.x1 - s.x0) * 0.6;
+    // Only the STRONG icon signature votes — a narrow rightmost run can also
+    // be a skinny sprite at the right end of a select-layout card.
+    if (s.lastSplitsPair && spriteSized(restPick, tile, s.yspan)) iconVotes++;
+    else if (!s.lastIconsLike && last.center >= rightZone) selectVotes++;
+  });
+  const layout = iconVotes > selectVotes ? 'icons' : 'select';
+
+  return tiles.map((tile, i) => {
+    const s = scans[i];
+    if (layout === 'icons') {
+      const restPick = s ? widest(s.candidates.slice(0, -1)) : null;
+      if (s && spriteSized(restPick, tile, s.yspan)) return runBox(restPick, tile, bounds);
+      if (s && s.candidates.length === 1 && !s.lastIconsLike) {
+        const only = s.candidates[0];
+        if (spriteSized(only, tile, s.yspan)) return runBox(only, tile, bounds);
+      }
+      // Sprite invisible on this card — it sits left-of-center in this layout.
+      const cx = s ? s.x0 + (s.x1 - s.x0) * 0.33 : tile.x + tile.w * 0.33;
+      return centeredBox(Math.round(cx), tile, bounds);
+    }
+    if (s && s.candidates.length > 0) {
+      const last = s.candidates[s.candidates.length - 1];
+      const rightZone = s.x0 + (s.x1 - s.x0) * 0.6;
+      if (last.center >= rightZone) return runBox(last, tile, bounds);
+    }
+    // Sprite invisible — in the select layout it hugs the card's right end.
+    return spriteBoxFromTile(tile, bounds, 'right');
+  });
 }
 
 export function cropImage(img: RgbaImage, box: TileBox): RgbaImage {
