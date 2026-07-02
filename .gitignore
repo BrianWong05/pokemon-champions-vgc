@@ -34,3 +34,6 @@ official-artwork/*
 # scan crop debug output
 training/.crop-preview/
 training/sprite-net-checkpoint.pt
+
+# browser-decoded HP fixtures (regenerate: python3 scripts/capture-browser-fixtures.py)
+training/hp-fixtures/
