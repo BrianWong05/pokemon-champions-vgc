@@ -34,7 +34,7 @@ interface RosterEntry {
 const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam }) => {
   const legalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
-  const { status, slots, error, scan, reset } = useTeamScan(legalIds);
+  const { status, slots, mode, error, scan, reset } = useTeamScan(legalIds);
   // Editable roster, decoupled from the raw scan slots so the user can add/remove entries.
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [pickerOpenFor, setPickerOpenFor] = useState<number | null>(null);
@@ -113,7 +113,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Scan opponent team">
+    <Modal isOpen={isOpen} onClose={handleClose} title={mode === 'battle' ? 'Scan battle' : 'Scan opponent team'}>
       <div className="space-y-4">
         {status === 'idle' && (
           <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={startPick}>
@@ -142,16 +142,19 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
           <>
             {slots.length === 0 && (
               <p className="text-amber-600 text-sm">
-                Couldn't auto-detect the opponent's tiles. Add the Pokémon manually below, or
+                Couldn't auto-detect any Pokémon. Add them manually below, or
                 <button className="ml-1 underline" onClick={startPick}>try another image</button>.
                 {pendingBlob && (
                   <button className="ml-1 underline font-semibold" onClick={() => setCropping(true)}>
-                    Crop around the opponent's red column
+                    Crop around the game area
                   </button>
                 )}
               </p>
             )}
-            {slots.length > 0 && slots.length < 6 && pendingBlob && (
+            {/* A battle screen has at most 4 nameplates (and hidden player plates are
+                normal), so the too-few warning only applies to team scans — and it
+                counts the OPPONENT's entries, since player slots also fill the list. */}
+            {mode !== 'battle' && slots.length > 0 && slots.filter((s) => s.side !== 'player').length < 6 && pendingBlob && (
               <p className="text-amber-600 text-sm">
                 Couldn't find all 6 —
                 <button className="ml-1 underline font-semibold" onClick={() => setCropping(true)}>

@@ -3,7 +3,7 @@ import { scanTeamImage as realScan } from './scanImage';
 import { loadReferenceDescriptors, filterByFormatLegal } from './referenceData';
 import { blobToRgbaImage as realLoad } from './imageLoading';
 import { cropImage } from './segmentation';
-import { detectScanTargets, type ScanDetection } from './scanTargets';
+import { detectScanTargets, type ScanDetection, type ScanMode } from './scanTargets';
 import { computeDescriptor } from './fingerprint';
 import { matchTile } from './match';
 import { loadClassifier, type Classifier } from './classifier';
@@ -42,6 +42,7 @@ const DEFAULT_DEPS: Required<TeamScanDeps> = {
 export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_DEPS) {
   const [status, setStatus] = useState<ScanStatus>('idle');
   const [slots, setSlots] = useState<SlotResult[]>([]);
+  const [mode, setMode] = useState<ScanMode | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const scan = useCallback(async (blob: Blob) => {
@@ -62,6 +63,7 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
 
       if (engine === 'descriptor' || (engine !== 'classifier' && !hasTargetPipelineDeps)) {
         console.log('[scan] engine: descriptor');
+        setMode(null); // legacy path does not report the screen type
         setSlots(deps.scanTeamImage(image, refs, 3));
         setStatus('done');
         return;
@@ -74,6 +76,7 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
 
       const classifier = await loadClassifierFn();
       const { mode, targets } = detectTargets(image);
+      setMode(mode);
       const results: SlotResult[] = [];
       for (const { box, side, hpPercent } of targets) {
         const tile = crop(image, box);
@@ -94,7 +97,7 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
     }
   }, [legalIds, deps]);
 
-  const reset = useCallback(() => { setStatus('idle'); setSlots([]); setError(null); }, []);
+  const reset = useCallback(() => { setStatus('idle'); setSlots([]); setMode(null); setError(null); }, []);
 
-  return { status, slots, error, scan, reset };
+  return { status, slots, mode, error, scan, reset };
 }
