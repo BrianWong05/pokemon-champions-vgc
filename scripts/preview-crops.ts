@@ -1,27 +1,21 @@
 /**
- * Debug tool: dump every crop the scan detection would take from screenshots.
+ * Debug tool: dump every crop the scan pipeline would take from screenshots.
+ * Runs the REAL pipeline (detectScanTargets): mode routing (team vs battle),
+ * both sides, and game-rect inference for framed/video-frame images.
  *
  * Usage:
  *   npx tsx scripts/preview-crops.ts                     # all of training/screenshots
  *   npx tsx scripts/preview-crops.ts Xnip2026-07-01_19-38-20.png [more...]
  *
- * Output: training/.crop-preview/<screenshot>/<kind>-<n>.png
- *   team-opp-*    opponent team-card sprite crops
- *   team-player-* player team-card sprite crops
- *   battle-opp-*  opponent in-battle icon crops
- *   battle-player-* player in-battle icon crops
+ * Output: training/.crop-preview/<screenshot>/<mode>-<side>-<n>.png
  * Then: open training/.crop-preview
  */
 import { PNG } from 'pngjs';
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  cropImage,
-  detectOpponentSpriteBoxes,
-  detectPlayerSpriteBoxes,
-} from '../src/features/scan/segmentation';
-import { detectBattleIcons, detectBattlePanels } from '../src/features/scan/battleDetection';
-import type { RgbaImage, TileBox } from '../src/features/scan/types';
+import { cropImage } from '../src/features/scan/segmentation';
+import { detectScanTargets } from '../src/features/scan/scanTargets';
+import type { RgbaImage } from '../src/features/scan/types';
 
 const SHOTS = path.resolve('training/screenshots');
 const OUT = path.resolve('training/.crop-preview');
@@ -42,26 +36,18 @@ const files = (args.length > 0 ? args : fs.readdirSync(SHOTS)).filter((f) => f.t
 
 for (const f of files) {
   const img = readPng(path.join(SHOTS, path.basename(f)));
-  // A screenshot is EITHER in-battle OR team select, never both — route to one
-  // mode exactly like the scan pipeline does (battle iff both opponent plates).
-  const isBattle = detectBattlePanels(img, 'opponent').length === 2;
-  const kinds: Array<[string, TileBox[]]> = isBattle
-    ? [
-        ['battle-opp', detectBattleIcons(img, 'opponent')],
-        ['battle-player', detectBattleIcons(img, 'player')],
-      ]
-    : [
-        ['team-opp', detectOpponentSpriteBoxes(img)],
-        ['team-player', detectPlayerSpriteBoxes(img)],
-      ];
+  const { mode, targets, gameRect } = detectScanTargets(img);
   const dir = path.join(OUT, path.basename(f, '.png'));
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const counts: string[] = [];
-  for (const [kind, boxes] of kinds) {
-    boxes.forEach((box, i) => writePng(cropImage(img, box), path.join(dir, `${kind}-${i}.png`)));
-    if (boxes.length > 0) counts.push(`${kind}=${boxes.length}`);
+  const counters: Record<string, number> = {};
+  for (const t of targets) {
+    const kind = `${mode}-${t.side === 'player' ? 'player' : 'opp'}`;
+    const n = counters[kind] ?? 0;
+    counters[kind] = n + 1;
+    writePng(cropImage(img, t.box), path.join(dir, `${kind}-${n}.png`));
   }
-  console.log(`${f}  ${counts.join(' ') || '(nothing detected)'}`);
+  const summary = Object.entries(counters).map(([k, n]) => `${k}=${n}`).join(' ');
+  console.log(`${f}  ${summary || '(nothing detected)'}${gameRect ? '  [game rect inferred]' : ''}`);
 }
 console.log(`\nCrops written to ${OUT} — run: open "${OUT}"`);
