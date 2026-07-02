@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import { scanTeamImage as realScan } from './scanImage';
 import { loadReferenceDescriptors, filterByFormatLegal } from './referenceData';
 import { blobToRgbaImage as realLoad } from './imageLoading';
-import { detectOpponentTiles, cropImage } from './segmentation';
+import { cropImage } from './segmentation';
+import { detectScanTargets, type ScanDetection } from './scanTargets';
 import { computeDescriptor } from './fingerprint';
 import { matchTile } from './match';
 import { loadClassifier, type Classifier } from './classifier';
@@ -22,7 +23,7 @@ export interface TeamScanDeps {
   loadRefs: () => Promise<ReferenceEntry[]>;
   blobToRgbaImage: (blob: Blob) => Promise<RgbaImage>;
   scanTeamImage: (img: RgbaImage, refs: ReferenceEntry[], topN: number) => SlotResult[];
-  detectOpponentTiles?: (img: RgbaImage) => TileBox[];
+  detectScanTargets?: (img: RgbaImage) => ScanDetection;
   cropImage?: (img: RgbaImage, box: TileBox) => RgbaImage;
   matchTile?: (img: RgbaImage, refs: ReferenceEntry[], topN: number) => Candidate[];
   loadClassifier?: () => Promise<Classifier | null>;
@@ -32,7 +33,7 @@ const DEFAULT_DEPS: Required<TeamScanDeps> = {
   loadRefs: loadReferenceDescriptors,
   blobToRgbaImage: realLoad,
   scanTeamImage: realScan,
-  detectOpponentTiles,
+  detectScanTargets,
   cropImage,
   matchTile: (img, refs, topN) => matchTile(computeDescriptor(img), refs, topN),
   loadClassifier,
@@ -50,31 +51,31 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
       const refs = filterByFormatLegal(await deps.loadRefs(), legalIds);
       const image = await deps.blobToRgbaImage(blob);
 
-      // Callers that inject only the legacy 3-dep shape (no tile/classifier deps
+      // Callers that inject only the legacy 3-dep shape (no target/classifier deps
       // overridden) get the original scanTeamImage-only behavior, regardless of the
-      // engine setting — there's no classifier/tile pipeline to route through.
-      const hasTilePipelineDeps =
-        deps.detectOpponentTiles != null ||
+      // engine setting — there's no classifier/target pipeline to route through.
+      const hasTargetPipelineDeps =
+        deps.detectScanTargets != null ||
         deps.cropImage != null ||
         deps.matchTile != null ||
         deps.loadClassifier != null;
 
-      if (engine === 'descriptor' || (engine !== 'classifier' && !hasTilePipelineDeps)) {
+      if (engine === 'descriptor' || (engine !== 'classifier' && !hasTargetPipelineDeps)) {
         console.log('[scan] engine: descriptor');
         setSlots(deps.scanTeamImage(image, refs, 3));
         setStatus('done');
         return;
       }
 
-      const detectTiles = deps.detectOpponentTiles ?? DEFAULT_DEPS.detectOpponentTiles;
+      const detectTargets = deps.detectScanTargets ?? DEFAULT_DEPS.detectScanTargets;
       const crop = deps.cropImage ?? DEFAULT_DEPS.cropImage;
       const matchTileFn = deps.matchTile ?? DEFAULT_DEPS.matchTile;
       const loadClassifierFn = deps.loadClassifier ?? DEFAULT_DEPS.loadClassifier;
 
       const classifier = await loadClassifierFn();
-      const boxes = detectTiles(image);
+      const { mode, targets } = detectTargets(image);
       const results: SlotResult[] = [];
-      for (const box of boxes) {
+      for (const { box, side, hpPercent } of targets) {
         const tile = crop(image, box);
         const classifierCandidates = classifier ? await classifier.classify(tile, legalIds, 3) : [];
         const useDescriptorFallback =
@@ -82,9 +83,9 @@ export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_
         const candidates = useDescriptorFallback
           ? matchTileFn(tile, refs, 3)
           : classifierCandidates;
-        results.push({ box, candidates });
+        results.push({ box, side, hpPercent, candidates });
       }
-      console.log(`[scan] engine: ${classifier ? 'classifier' : 'descriptor'} (${engine})`);
+      console.log(`[scan] mode: ${mode}, engine: ${classifier ? 'classifier' : 'descriptor'} (${engine})`);
       setSlots(results);
       setStatus('done');
     } catch (e) {

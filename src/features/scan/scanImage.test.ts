@@ -1,6 +1,7 @@
 // src/features/scan/scanImage.test.ts
 import { describe, it, expect } from 'vitest';
 import { scanTeamImage } from './scanImage';
+import { detectScanTargets } from './scanTargets';
 import { computeDescriptor } from './fingerprint';
 import { cropImage } from './segmentation';
 import type { RgbaImage, ReferenceEntry } from './types';
@@ -16,23 +17,25 @@ function fillRect(img: RgbaImage, x0: number, y0: number, w: number, h: number, 
 }
 
 describe('scanTeamImage', () => {
-  it('returns one slot per detected tile with ranked candidates', () => {
+  it('returns one slot per detected target with ranked candidates and side', () => {
     const img = blank(400, 600);
-    // 6 red tiles, each with a distinct colored inner square (the "sprite")
-    const inner = [[0,0,255],[0,255,0],[255,255,0],[255,0,255],[0,255,255],[255,128,0]];
+    // 6 red opponent tiles, each with a distinct colored inner square (the "sprite")
+    const inner = [[0, 0, 255], [0, 255, 0], [255, 255, 0], [255, 0, 255], [0, 255, 255], [255, 128, 0]];
     for (let k = 0; k < 6; k++) {
       fillRect(img, 300, 20 + k * 95, 80, 70, 220, 30, 40);
       fillRect(img, 320, 30 + k * 95, 40, 40, inner[k][0], inner[k][1], inner[k][2]);
     }
-    // Build a reference set by fingerprinting each tile's own crop -> ids 101..106
-    const refs: ReferenceEntry[] = [];
-    for (let k = 0; k < 6; k++) {
-      const crop = cropImage(img, { x: 300, y: 20 + k * 95, w: 80, h: 70 });
-      refs.push({ id: 101 + k, desc: computeDescriptor(crop) });
-    }
+    // Reference set fingerprinted from the same crops the scan will take
+    const { targets } = detectScanTargets(img);
+    expect(targets.length).toBe(6);
+    const refs: ReferenceEntry[] = targets.map((t, k) => ({
+      id: 101 + k,
+      desc: computeDescriptor(cropImage(img, t.box)),
+    }));
+
     const slots = scanTeamImage(img, refs, 3);
     expect(slots.length).toBe(6);
-    // each slot's top candidate should be its own reference id
     slots.forEach((s, k) => expect(s.candidates[0].id).toBe(101 + k));
+    expect(slots.every((s) => s.side === 'opponent')).toBe(true);
   });
 });
