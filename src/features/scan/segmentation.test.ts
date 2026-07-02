@@ -154,6 +154,33 @@ describe('detectPlayerTiles', () => {
   });
 });
 
+describe('refineSpriteBox (via sprite box helpers)', () => {
+  it('centers the crop on the sprite content inside the card', () => {
+    const img = blank(1200, 700);
+    // 6 red cards; a blue "sprite" inset 40px from the left edge of each card
+    for (let k = 0; k < 6; k++) {
+      const y = 60 + k * 95;
+      fillRect(img, 900, y, 260, 72, 220, 30, 40);
+      fillRect(img, 940, y + 8, 80, 58, 60, 120, 220);
+    }
+    const boxes = detectOpponentSpriteBoxes(img);
+    expect(boxes.length).toBe(6);
+    for (const b of boxes) {
+      // square 1.35x tile height, centered on the sprite (center x = 980)
+      expect(b.w).toBe(97);
+      expect(Math.abs(b.x + b.w / 2 - 980)).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('falls back to the anchor box when the card has no distinct content', () => {
+    const img = blank(1200, 700);
+    for (let k = 0; k < 6; k++) fillRect(img, 900, 60 + k * 95, 260, 72, 220, 30, 40);
+    const boxes = detectOpponentSpriteBoxes(img);
+    expect(boxes.length).toBe(6);
+    for (const b of boxes) expect(b.w).toBe(Math.round(72 * 1.6)); // spriteBoxFromTile side
+  });
+});
+
 describe('sprite box helpers', () => {
   it('opponent sprite boxes are square and left-anchored on the tile', () => {
     const img = blank(1200, 700);

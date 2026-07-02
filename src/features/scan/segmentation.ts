@@ -279,14 +279,89 @@ export function detectPlayerTiles(img: RgbaImage): TileBox[] {
   return dropShortTiles(boxes).slice(0, 6);
 }
 
-export function detectOpponentSpriteBoxes(img: RgbaImage): TileBox[] {
+function isOpponentCardPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  return (h <= 30 || h >= 325) && s >= 0.25 && v >= 0.12;
+}
+
+function isPlayerCardPixel(r: number, g: number, b: number): boolean {
+  const [h, s, v] = rgbToHsv(r, g, b);
+  return (h >= 225 && h <= 300 && s >= 0.25 && v >= 0.15) || isPlayerPanelColumnPixel(r, g, b);
+}
+
+function largestRun(flags: boolean[], maxGap: number): { start: number; end: number } | null {
+  let best: { start: number; end: number } | null = null;
+  let cur: { start: number; end: number } | null = null;
+  let gap = 0;
+  const better = (a: { start: number; end: number }) => !best || a.end - a.start > best.end - best.start;
+  for (let i = 0; i < flags.length; i++) {
+    if (flags[i]) {
+      if (cur) cur.end = i; else cur = { start: i, end: i };
+      gap = 0;
+    } else if (cur && ++gap > maxGap) {
+      if (better(cur)) best = cur;
+      cur = null;
+      gap = 0;
+    }
+  }
+  if (cur && better(cur)) best = cur;
+  return best;
+}
+
+/**
+ * Content-aware sprite crop: within the card's own rows, the sprite is the
+ * widest run of columns that are NOT card-colored (name text/type icons are
+ * separated from it by card-colored gaps). Centering on that run lets the
+ * square be tighter (1.35x card height) than a blind anchor crop, so
+ * neighboring cards' sprites stop bleeding into the top/bottom of the crop.
+ * Falls back to the anchor-based box when no content is found.
+ */
+export function refineSpriteBox(
+  img: RgbaImage,
+  tile: TileBox,
+  anchor: 'left' | 'right',
+  isCardPixel: (r: number, g: number, b: number) => boolean,
+): TileBox {
   const bounds = { w: img.width, h: img.height };
-  return detectOpponentTiles(img).map((t) => spriteBoxFromTile(t, bounds, 'left'));
+  const stripW = Math.min(tile.w, Math.round(tile.h * 1.7));
+  const x0 = Math.max(0, anchor === 'left' ? tile.x : tile.x + tile.w - stripW);
+  const y0 = Math.max(0, tile.y + 2);
+  const y1 = Math.min(img.height, tile.y + tile.h - 2);
+  if (y1 - y0 < 4) return spriteBoxFromTile(tile, bounds, anchor);
+
+  const colFlags: boolean[] = [];
+  for (let x = x0; x < Math.min(img.width, x0 + stripW); x++) {
+    let cnt = 0;
+    for (let y = y0; y < y1; y++) {
+      const i = (y * img.width + x) * 4;
+      if (!isCardPixel(img.data[i], img.data[i + 1], img.data[i + 2])) cnt++;
+    }
+    colFlags.push(cnt > (y1 - y0) * 0.15);
+  }
+
+  const run = largestRun(colFlags, Math.max(2, Math.round(tile.h * 0.1)));
+  if (!run || run.end - run.start < tile.h * 0.3) return spriteBoxFromTile(tile, bounds, anchor);
+
+  const side = Math.round(tile.h * 1.35);
+  const cx = x0 + (run.start + run.end) / 2;
+  // Vertically the sprite fills the card and overflows slightly upward.
+  const cy = tile.y + tile.h / 2 - Math.round(tile.h * 0.05);
+  const x = Math.max(0, Math.min(Math.round(cx - side / 2), bounds.w - 1));
+  const y = Math.max(0, Math.min(Math.round(cy - side / 2), bounds.h - 1));
+  return {
+    x,
+    y,
+    w: Math.max(1, Math.min(side, bounds.w - x)),
+    h: Math.max(1, Math.min(side, bounds.h - y)),
+  };
+}
+
+export function detectOpponentSpriteBoxes(img: RgbaImage): TileBox[] {
+  return detectOpponentTiles(img).map((t) => refineSpriteBox(img, t, 'left', isOpponentCardPixel));
 }
 
 export function detectPlayerSpriteBoxes(img: RgbaImage): TileBox[] {
-  const bounds = { w: img.width, h: img.height };
-  return detectPlayerTiles(img).map((t) => spriteBoxFromTile(t, bounds, 'right'));
+  return detectPlayerTiles(img).map((t) => refineSpriteBox(img, t, 'right', isPlayerCardPixel));
 }
 
 export function cropImage(img: RgbaImage, box: TileBox): RgbaImage {
