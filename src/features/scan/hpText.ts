@@ -10,6 +10,22 @@ const QUANT = 9;                 // coverage levels per cell: 0..9
 const MAX_DIST = 0.1;            // mean |level delta| / QUANT, 0..1 — tuned via scripts/hp-accuracy.ts
 const MIN_MARGIN = 0.02;         // best other-char distance must exceed the best by this
 export const MASK_THRESHOLDS = [0.8, 0.72, 0.88];
+
+// Fixed-font glyph shape bands (width/height, post-shear). Used by the
+// template builder to refuse mis-split boxes and at read time to refuse
+// readings whose glyph shapes are impossible (a fused '00' matching '0').
+export const CHAR_ASPECT: Record<string, [number, number]> = {
+  '1': [0.08, 0.5],
+  '/': [0.08, 0.55],
+  '%': [0.5, 2.0], // small captures merge the two circles + slash into one wide half-height box
+};
+export const DIGIT_ASPECT: [number, number] = [0.28, 0.95];
+
+export function plausibleGlyphShape(char: string, box: TileBox): boolean {
+  const [lo, hi] = CHAR_ASPECT[char] ?? DIGIT_ASPECT;
+  const aspect = box.w / box.h;
+  return aspect >= lo && aspect <= hi;
+}
 // The bar-fill measure is crude (a full bar reads ~0.8) — the gate only
 // rejects catastrophic glyph misreads like "00%" against a mostly-full bar.
 const BAR_DISAGREE_PCT = 35;
@@ -347,39 +363,68 @@ export function parseHpText(text: string): HpReading | null {
 }
 
 export function measureHpBarFill(img: RgbaImage, panel: TileBox): number | null {
-  const region = hpTextRegion(panel, img);
-  // Find the bar row: the row with the longest saturated-fill run.
-  let barY = -1;
-  let bestRun = 0;
+  // The bar's own search window: taller than the text region (the bar can sit
+  // right at the plate's bottom edge, above where the HP text starts).
+  const y0 = Math.min(img.height - 1, panel.y + Math.round(panel.h * 0.2));
+  const region = {
+    x: panel.x,
+    y: y0,
+    w: Math.max(0, Math.min(panel.w, img.width - panel.x)),
+    h: Math.max(0, Math.min(Math.round(panel.h * 1.6), img.height - y0)),
+  };
+  // Fill colors: green/yellow/orange (h<140) or TRUE red (h>=350) — the gate
+  // must exclude the magenta plate (h~325-345), which otherwise wins rows.
+  const fillAt = (x: number, y: number) => {
+    const i = (y * img.width + x) * 4;
+    const [h, s, v] = rgbToHsv(img.data[i], img.data[i + 1], img.data[i + 2]);
+    return s > 0.45 && v > 0.35 && (h < 140 || h >= 350);
+  };
+
+  // Per-row longest fill run + where it starts.
+  const rows: Array<{ y: number; run: number; start: number }> = [];
   for (let y = region.y; y < region.y + region.h; y++) {
     let run = 0;
     let maxRun = 0;
+    let start = -1;
+    let curStart = -1;
     for (let x = region.x; x < region.x + region.w; x++) {
-      const i = (y * img.width + x) * 4;
-      const [h, s, v] = rgbToHsv(img.data[i], img.data[i + 1], img.data[i + 2]);
-      const filled = s > 0.45 && v > 0.35 && (h < 140 || h > 330);
-      if (filled) {
+      if (fillAt(x, y)) {
+        if (run === 0) curStart = x;
         run++;
-        if (run > maxRun) maxRun = run;
+        if (run > maxRun) {
+          maxRun = run;
+          start = curStart;
+        }
       } else {
         run = 0;
       }
     }
-    if (maxRun > bestRun) {
-      bestRun = maxRun;
-      barY = y;
+    rows.push({ y, run: maxRun, start });
+  }
+
+  // The bar is a BAND: several adjacent rows with similar, aligned runs. Fire
+  // and crowd effects have long runs too, but blobby — lengths and starts jump
+  // row to row. Pick the longest-run row that has band support.
+  const aligned = (a: { run: number; start: number }, b: { run: number; start: number }) =>
+    b.run >= a.run * 0.7 && Math.abs(b.start - a.start) < Math.max(6, panel.w * 0.06);
+  let barY = -1;
+  let bestRun = 0;
+  for (let k = 1; k < rows.length - 1; k++) {
+    const r = rows[k];
+    if (r.run < panel.w * 0.08 || r.start < 0) continue;
+    const support = [rows[k - 1], rows[k + 1]].filter((n) => n.start >= 0 && aligned(r, n)).length;
+    if (support < 2) continue;
+    if (r.run > bestRun) {
+      bestRun = r.run;
+      barY = r.y;
     }
   }
-  if (barY < 0 || bestRun < panel.w * 0.08) return null;
+  if (barY < 0) return null;
 
   // Walk the track at that row: from the first filled pixel, the track
   // continues while pixels are filled or dark (the empty remainder); it ends
   // at the first sustained bright/colored non-fill (text, plate edge).
-  const isFilled = (x: number) => {
-    const i = (barY * img.width + x) * 4;
-    const [h, s, v] = rgbToHsv(img.data[i], img.data[i + 1], img.data[i + 2]);
-    return s > 0.45 && v > 0.35 && (h < 140 || h > 330);
-  };
+  const isFilled = (x: number) => fillAt(x, barY);
   const isTrack = (x: number) => {
     const i = (barY * img.width + x) * 4;
     const [, s, v] = rgbToHsv(img.data[i], img.data[i + 1], img.data[i + 2]);
@@ -478,6 +523,9 @@ export function readHpFromPanel(
         }));
         items = repairUnmatched(items, mask, lineH, templates);
         if (items.some((item) => item.char === null)) continue;
+        // Shape sanity: a fused '00' box can MATCH '0' and turn 100% into a
+        // clean-parsing 10% — but its box is far too wide for a single digit.
+        if (!items.every((item) => plausibleGlyphShape(item.char!, item.box))) continue;
         const reading = parseHpText(items.map((item) => item.char).join(''));
         if (!reading) continue;
         // A live Pokemon is never at 0% — that's always a misread digit.
@@ -485,6 +533,12 @@ export function readHpFromPanel(
 
         const bar = measureHpBarFill(img, panel);
         if (bar != null && Math.abs(reading.percent - bar * 100) > BAR_DISAGREE_PCT) continue;
+        // '10%' and '1%' are the truncation shadows of '100%' (a fused or
+        // dropped '0' parses cleanly) — those exact values need the bar to
+        // agree closely before we trust them.
+        if (reading.current == null && (reading.percent === 10 || reading.percent === 1)) {
+          if (bar == null || Math.abs(reading.percent - bar * 100) > 12) continue;
+        }
         // Short reads ("7%") are easily a stray digit + speck: only trust them
         // when the bar corroborates closely.
         if (items.length <= 2 && (bar == null || Math.abs(reading.percent - bar * 100) > 12)) continue;

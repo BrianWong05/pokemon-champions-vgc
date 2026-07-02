@@ -19,8 +19,11 @@ import {
   normalizeGlyph,
   whiteMask,
   type GlyphTemplate,
+  plausibleGlyphShape,
+  MASK_THRESHOLDS,
 } from '../src/features/scan/hpText';
 import type { RgbaImage, TileBox } from '../src/features/scan/types';
+import { battleView, type GoldenFile } from './hp-accuracy-core';
 
 const JSON_PATH = path.resolve('training/hp-glyph-templates.json');
 const TS_PATH = path.resolve('src/features/scan/hpGlyphTemplates.ts');
@@ -89,8 +92,13 @@ function selectCluster(mask: BinMask, clusters: TileBox[][], expectedText: strin
   return null;
 }
 
-export function glyphTemplatesFromPanel(img: RgbaImage, panel: TileBox, expectedText: string): GlyphTemplate[] {
-  const raw = whiteMask(img, hpTextRegion(panel, img));
+export function glyphTemplatesFromPanel(
+  img: RgbaImage,
+  panel: TileBox,
+  expectedText: string,
+  thresholdFactor = 0.8,
+): GlyphTemplate[] {
+  const raw = whiteMask(img, hpTextRegion(panel, img), thresholdFactor);
   const chars = [...expectedText];
   const shapes: string[] = [];
 
@@ -102,9 +110,16 @@ export function glyphTemplatesFromPanel(img: RgbaImage, panel: TileBox, expected
     const cluster = selectCluster(mask, clusters, expectedText);
     if (!cluster) continue;
 
+    // Keep only glyphs whose box shape is plausible for their assigned char —
+    // mis-split slivers must never become templates. If most of the plate is
+    // implausible the assignment itself is suspect: try the next config.
     const lineH = Math.max(...cluster.map((b) => b.h));
-    return cluster.map((box, i) => ({
-      char: chars[i],
+    const kept = cluster
+      .map((box, i) => ({ box, char: chars[i] }))
+      .filter(({ box, char }) => plausibleGlyphShape(char, box));
+    if (kept.length < chars.length * 0.7) continue;
+    return kept.map(({ box, char }) => ({
+      char,
       bits: Array.from(normalizeGlyph(mask, box)).join(''),
       hFrac: Number((box.h / lineH).toFixed(2)),
     }));
@@ -152,10 +167,86 @@ function readExistingTemplates(jsonPath = JSON_PATH): GlyphTemplate[] {
   return fs.existsSync(jsonPath) ? JSON.parse(fs.readFileSync(jsonPath, 'utf8')) : [];
 }
 
+// Rebuild the ENTIRE template set from every readable golden plate, in every
+// available pixel source (pngjs screenshots + browser-decoded fixtures) — the
+// two decoders differ on ~40% of bytes, and templates built from one
+// systematically mismatch glyphs masked from the other.
+export function buildFromGolden(): void {
+  const golden: GoldenFile = JSON.parse(fs.readFileSync(path.resolve('training/hp-golden.json'), 'utf8'));
+  const sources = [path.resolve('training/screenshots'), path.resolve('training/hp-fixtures')]
+    .filter((d) => fs.existsSync(d));
+  let templates: GlyphTemplate[] = [];
+  let built = 0;
+  let skipped = 0;
+  for (const dir of sources) {
+    for (const [name, entry] of Object.entries(golden)) {
+      const file = path.join(dir, name);
+      if (!fs.existsSync(file)) continue;
+      const img = battleView(readPng(file));
+      for (const side of ['opponent', 'player'] as const) {
+        const panels = detectBattlePanels(img, side);
+        entry[side].forEach((expected, i) => {
+          if (expected == null || !panels[i]) return;
+          // Build at every mask threshold the reader will try: glyph stroke
+          // weight changes with the threshold, and templates from one weight
+          // do not match masks produced at another.
+          let ok = false;
+          for (const thresholdFactor of MASK_THRESHOLDS) {
+            try {
+              templates = mergeTemplates(templates, glyphTemplatesFromPanel(img, panels[i], expected, thresholdFactor));
+              ok = true;
+            } catch {
+              // a threshold variant failing is fine as long as one succeeds
+            }
+          }
+          if (ok) built++;
+          else {
+            skipped++;
+            console.log(`  skip ${path.basename(dir)}/${name} ${side}[${i}] "${expected}": no threshold variant segmented`);
+          }
+        });
+      }
+    }
+  }
+  const pruned = pruneConflicts(templates);
+  writeTemplateFiles(pruned);
+  const chars = [...new Set(pruned.map((t) => t.char))].sort().join('');
+  console.log(`Built from ${built} plate(s) across ${sources.length} source(s), skipped ${skipped}.`);
+  console.log(`${pruned.length} templates (${templates.length - pruned.length} conflicted pruned) covering: ${chars}`);
+}
+
+// Two templates of DIFFERENT chars at near-zero distance cannot both be
+// right — one is a mis-assigned build sliver (force-split plates assign chars
+// positionally). Keeping either would poison the read-time margin rule, so
+// drop both: policy A prefers a blank over a guess.
+export function pruneConflicts(templates: GlyphTemplate[], eps = 0.04): GlyphTemplate[] {
+  const bad = new Set<number>();
+  for (let i = 0; i < templates.length; i++) {
+    for (let j = i + 1; j < templates.length; j++) {
+      if (templates[i].char === templates[j].char) continue;
+      if (templates[i].bits.length !== templates[j].bits.length) continue;
+      if (Math.abs(templates[i].hFrac - templates[j].hFrac) > 0.25) continue; // never co-candidates
+      let sum = 0;
+      for (let k = 0; k < templates[i].bits.length; k++) {
+        sum += Math.abs(templates[i].bits.charCodeAt(k) - templates[j].bits.charCodeAt(k));
+      }
+      if (sum / (templates[i].bits.length * 9) < eps) {
+        bad.add(i);
+        bad.add(j);
+      }
+    }
+  }
+  return templates.filter((_, i) => !bad.has(i));
+}
+
 function main(argv: string[]): void {
+  if (argv[0] === '--from-golden') {
+    buildFromGolden();
+    return;
+  }
   const [file, side, ...expected] = argv;
   if (!file || (side !== 'opponent' && side !== 'player') || expected.length === 0) {
-    throw new Error('Usage: build-hp-glyph-templates.ts <screenshot.png> <opponent|player> <text-per-panel...>');
+    throw new Error('Usage: build-hp-glyph-templates.ts [--from-golden] | <screenshot.png> <opponent|player> <text-per-panel...>');
   }
 
   const existing = readExistingTemplates();
