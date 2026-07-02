@@ -50,6 +50,7 @@ class SpriteDataset(Dataset):
                 T.Resize((IMG, IMG)),
                 T.RandomApply([CaptureDownscale()], p=0.8),                  # capture blur
                 T.RandomAffine(degrees=8, translate=(0.06, 0.06), scale=(0.85, 1.15)),
+                T.RandomPerspective(distortion_scale=0.15, p=0.3),   # phone-camera angle
                 T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.4, hue=0.5),  # hue=0.5 => shiny-invariant
                 T.RandomApply([T.GaussianBlur(3)], p=0.2),
                 T.ToTensor(),
