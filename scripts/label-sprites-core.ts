@@ -1,27 +1,26 @@
-import { detectOpponentTiles } from '../src/features/scan/segmentation';
+import { detectOpponentSpriteBoxes, detectPlayerSpriteBoxes } from '../src/features/scan/segmentation';
 import { detectBattleIcons as detectSideBattleIcons } from '../src/features/scan/battleDetection';
+import { detectScanTargets } from '../src/features/scan/scanTargets';
 import type { RgbaImage, TileBox } from '../src/features/scan/types';
 
 export type LabelMode = 'team' | 'battle';
 export type RequestedMode = 'auto' | LabelMode;
 
 export function detectTiles(img: RgbaImage): TileBox[] {
-  return detectOpponentTiles(img);
+  return [...detectOpponentSpriteBoxes(img), ...detectPlayerSpriteBoxes(img)];
 }
 
 export function detectBattleIcons(img: RgbaImage): TileBox[] {
-  return detectSideBattleIcons(img, 'opponent');
+  return [...detectSideBattleIcons(img, 'opponent'), ...detectSideBattleIcons(img, 'player')];
 }
 
 export function detectLabelCrops(img: RgbaImage, requestedMode: RequestedMode = 'auto'): { mode: LabelMode; boxes: TileBox[] } {
   if (requestedMode === 'team') return { mode: 'team', boxes: detectTiles(img) };
   if (requestedMode === 'battle') return { mode: 'battle', boxes: detectBattleIcons(img) };
 
-  const battleBoxes = detectBattleIcons(img);
-  if (battleBoxes.length === 2) return { mode: 'battle', boxes: battleBoxes };
-
-  const teamBoxes = detectTiles(img);
-  if (teamBoxes.length > 0) return { mode: 'team', boxes: teamBoxes };
-
-  return { mode: 'battle', boxes: battleBoxes };
+  // Auto mirrors the app pipeline exactly (mode routing, both sides, and
+  // game-rect inference for framed/video images), so labeled training crops
+  // match what inference will see.
+  const { mode, targets } = detectScanTargets(img);
+  return { mode, boxes: targets.map((t) => t.box) };
 }
