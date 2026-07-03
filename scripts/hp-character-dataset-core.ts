@@ -78,6 +78,24 @@ function totalWidth(boxes: TileBox[]): number {
   return boxes.reduce((sum, box) => sum + box.w, 0);
 }
 
+function isLikelySplitPercent(boxes: TileBox[]): boolean {
+  if (boxes.length !== 2) return false;
+  const [left, right] = [...boxes].sort((a, b) => a.x - b.x || a.y - b.y);
+  const lineHeight = Math.max(left.h, right.h);
+  const merged = unionBoxes([left, right]);
+  const gap = Math.max(0, right.x - (left.x + left.w));
+  const smallPiece =
+    left.w <= lineHeight * 0.45 &&
+    left.h <= lineHeight * 0.45 &&
+    left.x <= merged.x + lineHeight * 0.35;
+  const tallPiece =
+    right.w <= lineHeight * 0.8 &&
+    right.h >= lineHeight * 0.7 &&
+    right.x + right.w >= merged.x + merged.w - Math.max(1, Math.round(lineHeight * 0.15));
+
+  return plausibleGlyphShape('%', merged) && smallPiece && tallPiece && gap <= Math.max(1, Math.round(lineHeight * 0.2));
+}
+
 function forceSplitToCount(mask: BinMask, boxes: TileBox[], count: number): TileBox[] | null {
   const out = [...boxes];
   while (out.length < count) {
@@ -125,8 +143,9 @@ export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedT
   if (expectedText.endsWith('%')) {
     for (const candidate of candidates) {
       if (candidate.length !== chars.length + 1) continue;
-      const percentStart = chars.length - 1;
-      return [...candidate.slice(0, percentStart), unionBoxes(candidate.slice(percentStart))];
+      const percentTail = candidate.slice(chars.length - 1);
+      if (!isLikelySplitPercent(percentTail)) continue;
+      return [...candidate.slice(0, chars.length - 1), unionBoxes(percentTail)];
     }
   }
 

@@ -59,13 +59,12 @@ describe('selectGlyphBoxes', () => {
     expect(selected?.[2]).toEqual({ x: 18, y: 0, w: 6, h: 12 });
   });
 
-  it('rejects a percent candidate when prefix glyphs are over-segmented', () => {
+  it('rejects a percent candidate when the extra split is on a preceding digit', () => {
     const boxes: TileBox[] = [
-      { x: 0, y: 0, w: 5, h: 12 },
-      { x: 8, y: 0, w: 3, h: 12 },
-      { x: 11, y: 0, w: 2, h: 12 },
-      { x: 18, y: 1, w: 3, h: 3 },
-      { x: 20, y: 0, w: 4, h: 12 },
+      { x: 0, y: 0, w: 2, h: 12 },
+      { x: 2, y: 0, w: 3, h: 12 },
+      { x: 10, y: 0, w: 5, h: 12 },
+      { x: 18, y: 1, w: 5, h: 6 },
     ];
     const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
     expect(selected).toBeNull();
