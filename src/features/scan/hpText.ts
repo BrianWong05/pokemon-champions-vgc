@@ -28,9 +28,10 @@ export function plausibleGlyphShape(char: string, box: TileBox): boolean {
   const aspect = box.w / box.h;
   return aspect >= lo && aspect <= hi;
 }
-// The bar-fill measure is crude (a full bar reads ~0.8) — the gate only
-// rejects catastrophic glyph misreads like "00%" against a mostly-full bar.
-const BAR_DISAGREE_PCT = 35;
+// Band-coherent bar detection reads within ~6 points when present (worst
+// legitimate observed gap: 19) — 25 rejects wrong values like 60% against a
+// full bar while clearing honest reads.
+const BAR_DISAGREE_PCT = 25;
 
 export interface GlyphTemplate {
   char: string;
@@ -379,6 +380,17 @@ export function parseHpText(text: string): HpReading | null {
 }
 
 export function measureHpBarFill(img: RgbaImage, panel: TileBox): number | null {
+  // Same short-blob problem as the text region: when the detected panel is
+  // only the plate's top band, the bar sits deeper than a fixed window. Try
+  // tight first, then tall.
+  for (const heightFactor of [1.6, 3.2]) {
+    const fill = measureHpBarFillIn(img, panel, heightFactor);
+    if (fill != null) return fill;
+  }
+  return null;
+}
+
+function measureHpBarFillIn(img: RgbaImage, panel: TileBox, heightFactor: number): number | null {
   // The bar's own search window: taller than the text region (the bar can sit
   // right at the plate's bottom edge, above where the HP text starts).
   const y0 = Math.min(img.height - 1, panel.y + Math.round(panel.h * 0.2));
@@ -386,7 +398,7 @@ export function measureHpBarFill(img: RgbaImage, panel: TileBox): number | null 
     x: panel.x,
     y: y0,
     w: Math.max(0, Math.min(panel.w, img.width - panel.x)),
-    h: Math.max(0, Math.min(Math.round(panel.h * 1.6), img.height - y0)),
+    h: Math.max(0, Math.min(Math.round(panel.h * heightFactor), img.height - y0)),
   };
   // Fill colors: green/yellow/orange (h<140) or TRUE red (h>=350) — the gate
   // must exclude the magenta plate (h~325-345), which otherwise wins rows.
@@ -549,7 +561,9 @@ export function decodeWindow(glyphs: GlyphCosts[]): PhraseCandidate[] {
     if (!ok) continue;
     const reading = parseHpText(text);
     if (!reading || reading.percent === 0) continue;
-    if (reading.max != null && (reading.max < 60 || reading.max > 500)) continue;
+    // Level-50 VGC max HP is never below ~110 (frailest legal mons ~130);
+    // a low max is a fraction that LOST a digit ('30/170' -> '30/70').
+    if (reading.max != null && (reading.max < 100 || reading.max > 500)) continue;
     out.push({
       text,
       value: reading.current != null ? `${reading.current}/${reading.max}` : `${reading.percent}%`,
@@ -663,12 +677,20 @@ export function readHpFromPanel(
     chosen = corroborated[0];
   }
 
-  // Retained guards: bar veto, truncation shadows, short percent reads.
-  if (bar != null && Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT) return null;
-  if (chosen.current == null && (chosen.percent === 10 || chosen.percent === 1)) {
-    if (bar == null || Math.abs(chosen.percent - bar * 100) > 12) return null;
+  // Every wrong read this system has produced was a PERCENT-ONLY value with
+  // no measurable bar (junk decoding to a cheap valid phrase). Percent reads
+  // therefore REQUIRE a corroborating bar; fractions carry internal
+  // redundancy (two consistent numbers, max >= 100) and only get a loose
+  // sanity gate — the bar itself mis-measures on subtitled plates.
+  if (chosen.current == null) {
+    if (bar == null || Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT) return null;
+    // Truncation shadows of 100% and bare short reads need the bar CLOSE.
+    if (chosen.percent === 10 || chosen.percent === 1 || chosen.text.length <= 2) {
+      if (Math.abs(chosen.percent - bar * 100) > 12) return null;
+    }
+  } else if (bar != null && Math.abs(chosen.percent - bar * 100) > 35) {
+    return null;
   }
-  if (chosen.text.length <= 2 && (bar == null || Math.abs(chosen.percent - bar * 100) > 12)) return null;
 
   return chosen.current != null && chosen.max != null
     ? { percent: chosen.percent, current: chosen.current, max: chosen.max }
