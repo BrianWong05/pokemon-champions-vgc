@@ -176,6 +176,20 @@ export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedT
   const exact = candidates.find((candidate) => candidate.length === chars.length && hasEnoughGlyphInk(mask, candidate));
   if (exact) return exact;
 
+  // HP text is right-aligned in the plate — extra boxes are the Pokemon icon /
+  // plate-edge blob on the LEFT. When a run over-segments, shed the leftmost
+  // extras and take the rightmost N, but ONLY when that dropped group sits
+  // further from the digits than any gap between the kept ones (so we peel off
+  // an isolated blob, never split a real digit run).
+  const ordered = clusters.flat().sort((a, b) => a.x - b.x);
+  if (ordered.length > chars.length) {
+    const kept = ordered.slice(ordered.length - chars.length);
+    const lastDropped = ordered[ordered.length - chars.length - 1];
+    const dropGap = kept[0].x - (lastDropped.x + lastDropped.w);
+    const internalGap = Math.max(0, ...kept.slice(1).map((b, i) => b.x - (kept[i].x + kept[i].w)));
+    if (dropGap > internalGap && hasEnoughGlyphInk(mask, kept)) return kept;
+  }
+
   if (expectedText.endsWith('%')) return null;
 
   for (const candidate of clusters) {

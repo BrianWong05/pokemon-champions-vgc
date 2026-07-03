@@ -131,6 +131,28 @@ describe('selectGlyphBoxes', () => {
       { x: 189, y: 32, w: 13, h: 11 },
     ]);
   });
+
+  it('sheds an isolated left blob and keeps the rightmost N (right-aligned text)', () => {
+    // 3 boxes for a 2-char label: the box at x=0 sits far from the digits, so
+    // drop it (the icon/plate-edge blob) and keep the rightmost two.
+    const boxes: TileBox[] = [
+      { x: 0, y: 0, w: 10, h: 20 },
+      { x: 60, y: 0, w: 12, h: 20 },
+      { x: 74, y: 0, w: 12, h: 20 },
+    ];
+    expect(selectGlyphBoxes(maskWithBoxes(100, 24, boxes), [boxes], '43')?.map((b) => b.x)).toEqual([60, 74]);
+  });
+
+  it('does not shed when no box is clearly the isolated left blob', () => {
+    // evenly-spaced boxes: the drop gap is not larger than the internal gap, so
+    // we must not guess which to drop.
+    const boxes: TileBox[] = [
+      { x: 0, y: 0, w: 12, h: 20 },
+      { x: 20, y: 0, w: 12, h: 20 },
+      { x: 40, y: 0, w: 12, h: 20 },
+    ];
+    expect(selectGlyphBoxes(maskWithBoxes(100, 24, boxes), [boxes], '43')).toBeNull();
+  });
 });
 
 describe('glyph ink density', () => {
