@@ -156,6 +156,38 @@ function forceSplitToCount(mask: BinMask, boxes: TileBox[], count: number): Tile
   return out;
 }
 
+// Column projection sets a box's height to the y-extent of ANY pixel in its
+// columns, so one noise pixel (timer, subtitle, plate glow) bleeding into a
+// digit's columns inflates the box far beyond the glyph — wrecking the crop and
+// tanking ink density. Trim each box to the contiguous vertical band around its
+// densest row; a clean box (no stray rows) is returned unchanged.
+export function trimBoxVertically(mask: BinMask, box: TileBox): TileBox {
+  const rowInk: number[] = [];
+  let peak = 0;
+  let peakRow = 0;
+  for (let y = box.y; y < box.y + box.h; y++) {
+    let c = 0;
+    for (let x = box.x; x < box.x + box.w; x++) {
+      if (x >= 0 && y >= 0 && x < mask.w && y < mask.h && mask.bits[y * mask.w + x]) c++;
+    }
+    if (c > peak) {
+      peak = c;
+      peakRow = rowInk.length;
+    }
+    rowInk.push(c);
+  }
+  if (peak === 0) return box;
+  // Keep every non-empty row contiguous with the densest row (the whole glyph
+  // body, thin extremities included) and shed only rows DISCONNECTED from it by
+  // an empty gap — the stray noise pixels that inflated the box. A higher
+  // threshold clips thin digit rows and skips otherwise-clean plates.
+  let first = peakRow;
+  let last = peakRow;
+  while (first > 0 && rowInk[first - 1] >= 1) first--;
+  while (last < rowInk.length - 1 && rowInk[last + 1] >= 1) last++;
+  return { x: box.x, y: box.y + first, w: box.w, h: last - first + 1 };
+}
+
 export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedText: string): TileBox[] | null {
   const chars = charsForExpectedText(expectedText);
   const candidates = clusters.filter((cluster) => cluster.length >= 2).map((candidate) =>
@@ -261,7 +293,8 @@ export function samplesFromPanel(
     const raw = whiteMask(img, hpTextRegion(panel, img), thresholdFactor);
     for (let configIndex = 0; configIndex < configs.length; configIndex++) {
       const { mask, boxes } = extractGlyphs(raw, configs[configIndex]);
-      const clusters = clusterGlyphBoxes(filterSpecks(boxes, mask.h)).sort(
+      const trimmed = boxes.map((box) => trimBoxVertically(mask, box));
+      const clusters = clusterGlyphBoxes(filterSpecks(trimmed, mask.h)).sort(
         (a, b) => b.length - a.length || totalWidth(b) - totalWidth(a),
       );
       const selected = selectGlyphBoxes(mask, clusters, expectedText);

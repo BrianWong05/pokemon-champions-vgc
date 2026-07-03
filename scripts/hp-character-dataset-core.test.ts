@@ -7,6 +7,7 @@ import {
   normalizeBoxToImage,
   samplesFromPanel,
   selectGlyphBoxes,
+  trimBoxVertically,
 } from './hp-character-dataset-core';
 import type { BinMask } from '../src/features/scan/hpText';
 import type { RgbaImage, TileBox } from '../src/features/scan/types';
@@ -152,6 +153,26 @@ describe('selectGlyphBoxes', () => {
       { x: 40, y: 0, w: 12, h: 20 },
     ];
     expect(selectGlyphBoxes(maskWithBoxes(100, 24, boxes), [boxes], '43')).toBeNull();
+  });
+});
+
+describe('trimBoxVertically', () => {
+  it('trims to the dense ink band, dropping a stray noise row above the glyph', () => {
+    const w = 8;
+    const h = 32;
+    const bits = new Uint8Array(w * h);
+    bits[2 * w + 3] = 1; // one noise pixel high in a column (inflates the box to y=2)
+    for (let y = 10; y <= 25; y++) for (let x = 1; x < 7; x++) bits[y * w + x] = 1; // the glyph body
+    const trimmed = trimBoxVertically({ bits, w, h }, { x: 0, y: 2, w, h: 29 });
+    expect(trimmed).toEqual({ x: 0, y: 10, w, h: 16 });
+  });
+
+  it('leaves an already-tight box unchanged', () => {
+    const w = 8;
+    const h = 20;
+    const bits = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 1; x < 7; x++) bits[y * w + x] = 1;
+    expect(trimBoxVertically({ bits, w, h }, { x: 0, y: 0, w, h })).toEqual({ x: 0, y: 0, w, h });
   });
 });
 
