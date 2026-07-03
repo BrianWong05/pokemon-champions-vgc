@@ -4,6 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "vendor:ort": "node scripts/vendor-ort.mjs",
+    "predev": "node scripts/vendor-ort.mjs",
+    "prebuild": "node scripts/vendor-ort.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
     "build:mobile": "tsc && vite build --mode capacitor",
@@ -13,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:hp-dataset": "tsx scripts/extract-hp-character-dataset.ts --clean",
-    "review:hp-dataset": "tsx scripts/review-hp-character-dataset.ts"
+    "review:hp-dataset": "tsx scripts/review-hp-character-dataset.ts",
+    "add:hp-golden": "tsx scripts/add-hp-golden.ts"
   },
   "repository": {
     "type": "git",
@@ -49,6 +53,7 @@
     "pngjs": "^7.0.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
+    "tesseract.js": "^7.0.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.8",
     "vitest": "^4.1.9"

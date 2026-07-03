@@ -40,3 +40,13 @@ training/hp-fixtures/
 training/.hp-debug/
 training/.hp-character-preview.png
 hp-reader/dataset-candidates/
+
+# Vendored ONNX Runtime WASM (reproducible: npm run vendor:ort)
+public/ort/
+# Derived sips PNG conversions of jpg/heic screenshots (regenerated on demand)
+training/.converted-screenshots/
+# Tesseract data — OCR was evaluated and rejected (see scripts/ocr-spike.ts)
+eng.traineddata
+# HP screenshot staging inboxes for the add/review labeling flow
+hp-reader/new-screenshot/
+hp-reader/new-candidate/

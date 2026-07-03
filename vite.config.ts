@@ -12,6 +12,12 @@ export default defineConfig(({ mode }) => ({
     react(),
     tailwindcss(),
   ],
+  // onnxruntime-web loads its WASM runtime via a runtime dynamic import; Vite's
+  // dep pre-bundler rewrites that import (adds ?import) and breaks it. Exclude it
+  // so ORT is served as native ESM and fetches /ort/* assets directly.
+  optimizeDeps: {
+    exclude: ['onnxruntime-web'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
