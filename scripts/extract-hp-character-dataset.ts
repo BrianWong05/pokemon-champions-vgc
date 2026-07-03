@@ -31,7 +31,7 @@ export interface ExtractDatasetSummary {
 
 const DEFAULT_OPTIONS: ExtractDatasetOptions = {
   goldenPath: 'training/hp-golden.json',
-  sourceDirs: ['training/screenshots', 'training/hp-fixtures'],
+  sourceDirs: ['training/screenshots', 'training/.converted-screenshots', 'training/hp-fixtures'],
   outDir: 'hp-reader/dataset-candidates',
   classesPath: 'hp-reader/models/classes.json',
   clean: false,

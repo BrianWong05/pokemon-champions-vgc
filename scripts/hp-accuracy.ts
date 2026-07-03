@@ -11,7 +11,14 @@ if (browser && !fs.existsSync(dir)) {
   process.exit(2);
 }
 const golden: GoldenFile = JSON.parse(fs.readFileSync('training/hp-golden.json', 'utf8'));
-const summary = sweep(golden, (n) => loadPng(path.join(dir, n)));
+const convertedDir = path.resolve('training/.converted-screenshots');
+const summary = sweep(golden, (n) => {
+  const primary = path.join(dir, n);
+  if (fs.existsSync(primary)) return loadPng(primary);
+  // jpg/heic sources convert into .converted-screenshots, not screenshots/.
+  if (!browser) return loadPng(path.join(convertedDir, n));
+  throw new Error(`No browser fixture for ${n} — run: python3 scripts/capture-browser-fixtures.py`);
+});
 
 for (const r of summary.results) {
   const mark = r.expected == null ? '·' : r.got === r.expected ? '✓' : r.got == null ? '✗ miss' : '!! WRONG';
