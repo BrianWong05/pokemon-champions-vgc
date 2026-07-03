@@ -16,6 +16,8 @@ export interface ReviewOptions {
   previewFile: string;
   clean: boolean;
   noOpen: boolean;
+  /** Order the queue by scripts/triage_glyph_candidates.py output (disagreements first). */
+  triage: boolean;
 }
 
 const DEFAULT_OPTIONS: ReviewOptions = {
@@ -25,7 +27,34 @@ const DEFAULT_OPTIONS: ReviewOptions = {
   previewFile: 'training/.hp-character-preview.png',
   clean: false,
   noOpen: process.env.HP_REVIEW_NO_OPEN === '1',
+  triage: false,
 };
+
+// A row of the model-scored review order written by triage_glyph_candidates.py.
+export interface TriageRow {
+  path: string;
+  label: string;
+  pred: string;
+  conf: number;
+  disagree: boolean;
+}
+
+const TRIAGE_FILE = '.triage.json';
+
+export function loadTriage(candidatesDir: string): TriageRow[] | null {
+  const file = path.join(candidatesDir, TRIAGE_FILE);
+  return fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, 'utf8')) as TriageRow[]) : null;
+}
+
+// Reorder candidates to match the triage manifest (most-informative first), keyed
+// by basename; candidates absent from the manifest keep their order at the end.
+export function orderByTriage(candidates: CandidateFile[], manifest: TriageRow[]): CandidateFile[] {
+  const rank = new Map<string, number>();
+  manifest.forEach((row, i) => rank.set(path.basename(row.path), i));
+  return [...candidates].sort(
+    (a, b) => (rank.get(path.basename(a.path)) ?? Infinity) - (rank.get(path.basename(b.path)) ?? Infinity),
+  );
+}
 
 const CLASS_BY_ANSWER = new Map<string, string>(
   HP_DATASET_CLASSES.flatMap((entry) => [
@@ -46,6 +75,8 @@ export function parseReviewArgs(argv: string[]): ReviewOptions {
       parsed.clean = true;
     } else if (arg === '--no-open') {
       parsed.noOpen = true;
+    } else if (arg === '--triage') {
+      parsed.triage = true;
     } else if (arg === '--candidates') {
       const value = argv[++i];
       if (!value) throw new Error('--candidates requires a directory');
@@ -112,6 +143,7 @@ export function clearReviewedCandidates(candidatesDir: string, classes: string[]
   for (const className of classes) {
     fs.rmSync(path.join(candidatesDir, className), { recursive: true, force: true });
   }
+  fs.rmSync(path.join(candidatesDir, TRIAGE_FILE), { force: true }); // stale once its crops are gone
   if (fs.existsSync(candidatesDir) && fs.readdirSync(candidatesDir).length === 0) {
     fs.rmSync(candidatesDir, { recursive: true, force: true });
   }
@@ -138,14 +170,31 @@ async function reviewCandidates(options: ReviewOptions): Promise<void> {
     return;
   }
 
+  // Active-learning order: with --triage, review the model's confident
+  // disagreements (likely mis-crops) first, then the hardest agreements.
+  let ordered = candidates;
+  let triageByName: Map<string, TriageRow> | null = null;
+  if (options.triage) {
+    const manifest = loadTriage(options.candidatesDir);
+    if (!manifest) {
+      console.log('No .triage.json — run: .venv/bin/python scripts/triage_glyph_candidates.py');
+    } else {
+      ordered = orderByTriage(candidates, manifest);
+      triageByName = new Map(manifest.map((row) => [path.basename(row.path), row]));
+      console.log(`triage: ${manifest.filter((r) => r.disagree).length} disagreement(s) first, then hardest.`);
+    }
+  }
+
   let accepted = 0;
   let corrected = 0;
   let skipped = 0;
-  for (let i = 0; i < candidates.length; i++) {
-    const candidate = candidates[i];
+  for (let i = 0; i < ordered.length; i++) {
+    const candidate = ordered[i];
+    const t = triageByName?.get(path.basename(candidate.path));
+    const note = t ? `  [model ${t.pred} @ ${t.conf.toFixed(2)}${t.disagree ? ` ⚠ aligned ${t.label}` : ''}]` : '';
     fs.copyFileSync(candidate.path, options.previewFile);
     if (options.noOpen) {
-      console.log(`\n${i + 1}/${candidates.length} ${candidate.className}: ${candidate.path}`);
+      console.log(`\n${i + 1}/${ordered.length} ${candidate.className}: ${candidate.path}${note}`);
       console.log(`  preview: ${options.previewFile}`);
     } else {
       try {
@@ -153,7 +202,7 @@ async function reviewCandidates(options: ReviewOptions): Promise<void> {
       } catch {
         console.log(`  open ${options.previewFile} to view the crop`);
       }
-      console.log(`\n${i + 1}/${candidates.length} ${candidate.className}: ${candidate.path}`);
+      console.log(`\n${i + 1}/${ordered.length} ${candidate.className}: ${candidate.path}${note}`);
     }
 
     while (true) {

@@ -8,7 +8,10 @@ import {
   copyAcceptedCandidate,
   listCandidateFiles,
   normalizeReviewLabel,
+  orderByTriage,
   parseReviewArgs,
+  type CandidateFile,
+  type TriageRow,
 } from './review-hp-character-dataset';
 
 function tmpDir(): string {
@@ -62,11 +65,13 @@ describe('HP character dataset review helpers', () => {
     fs.writeFileSync(path.join(root, 'slash', 'a.png'), '');
     fs.writeFileSync(path.join(root, 'percent', 'c.png'), '');
     fs.writeFileSync(path.join(root, '1', 'd.png'), '');
+    fs.writeFileSync(path.join(root, '.triage.json'), '[]');
 
     clearReviewedCandidates(root, ['slash', 'percent']);
     expect(fs.existsSync(path.join(root, 'slash'))).toBe(false);
     expect(fs.existsSync(path.join(root, 'percent'))).toBe(false);
     expect(fs.existsSync(path.join(root, '1'))).toBe(true); // out-of-scope class kept
+    expect(fs.existsSync(path.join(root, '.triage.json'))).toBe(false); // stale manifest cleared
     expect(fs.existsSync(root)).toBe(true);
 
     clearReviewedCandidates(root, ['1']);
@@ -80,5 +85,20 @@ describe('HP character dataset review helpers', () => {
       outDir: 'tmp/accepted',
       classes: ['slash', 'percent'],
     });
+  });
+
+  it('parses the --triage flag (off by default)', () => {
+    expect(parseReviewArgs([]).triage).toBe(false);
+    expect(parseReviewArgs(['--triage']).triage).toBe(true);
+  });
+
+  it('orders candidates by the triage manifest, unlisted last', () => {
+    const cand = (name: string): CandidateFile => ({ className: '1', path: `/pool/1/${name}` });
+    const candidates = [cand('a.png'), cand('b.png'), cand('c.png')];
+    const manifest: TriageRow[] = [
+      { path: 'hp-reader/dataset-candidates/1/c.png', label: '1', pred: '7', conf: 0.9, disagree: true },
+      { path: 'anywhere/a.png', label: '1', pred: '1', conf: 0.4, disagree: false },
+    ];
+    expect(orderByTriage(candidates, manifest).map((c) => path.basename(c.path))).toEqual(['c.png', 'a.png', 'b.png']);
   });
 });
