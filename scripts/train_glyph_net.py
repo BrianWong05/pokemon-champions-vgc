@@ -1,24 +1,33 @@
 """
 Train the tiny HP glyph classifier (0-9, '/', '%') for the on-device HP reader.
 
-Local run (Apple Silicon / CPU is plenty for this tiny net):
-  1. python3 -m venv .venv && source .venv/bin/activate   # if not already
-  2. pip install torch numpy pillow onnx                   # onnx enables the export
-  3. python scripts/train_glyph_net.py
+This ~19K-param net trains in SECONDS on CPU, so GPU/Colab is optional — but the
+workflow matches train_sprite_net.py if you prefer Colab:
 
-Reads reviewed crops from hp-reader/dataset/<class>/*.png (24x32 white-on-black),
-does a stratified train/val split, trains with light augmentation, and reports
-OVERALL + PER-CLASS validation accuracy plus the top confusions. The per-class
-number is the point: the never-wrong (policy A) bar is >99.5% char accuracy, and
-the rare classes (3/4/8, ~12 samples each) are where that will or won't hold.
+Colab quick start (same muscle memory as the sprite net):
+  1. Zip `hp-reader/dataset/` locally and upload+unzip in Colab so you have a
+     `dataset/` folder with per-class subfolders: 0/ 1/ ... 9/ slash/ percent/.
+  2. !pip install torch numpy pillow onnx
+  3. !python train_glyph_net.py --data dataset --out out
+  4. Download out/hp_classifier.onnx + out/classes.json.
+     (INT8 quantize + the ORT-web wrapper happen back in the repo.)
 
-Best-effort ONNX export to hp-reader/models/hp_classifier.onnx (skipped with a
-clear message if the `onnx` package is absent — the accuracy report is the goal).
+Local (reads the repo dataset, writes hp-reader/models/):
+  .venv/bin/python scripts/train_glyph_net.py
 
-Architecture (spec docs/superpowers/specs/2026-07-03-hp-reader-design.md):
-  input 1x32x24 -> conv3x3(16) -> ReLU -> maxpool -> conv3x3(32) -> ReLU
-  -> global avg pool -> dense(12) -> softmax
+Reads reviewed crops from <data>/<class>/*.png (24x32 white-on-black), does a
+stratified train/val split, trains with light label-preserving augmentation, and
+reports OVERALL + PER-CLASS validation accuracy plus the top confusions. The
+per-class number is the point: the never-wrong (policy A) bar is >99.5% char
+accuracy, and the rare classes (3/4/8) are where that will or won't hold.
+
+Architecture (spec docs/superpowers/specs/2026-07-03-hp-reader-design.md, with one
+evidence-driven fix): input 1x32x24 -> conv3x3(16) -> ReLU -> maxpool ->
+conv3x3(32) -> ReLU -> maxpool -> flatten -> dense(12). The spec sketched a
+global-average-pool head; it collapsed to the majority class (GAP averages away
+WHERE strokes sit), so this uses a spatial flatten head instead.
 """
+import argparse
 import glob
 import json
 import os
@@ -30,9 +39,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATASET_DIR = os.path.join(ROOT, "hp-reader", "dataset")
-MODELS_DIR = os.path.join(ROOT, "hp-reader", "models")
 W, H = 24, 32
 SEED = 0
 
@@ -42,32 +48,22 @@ CLASSES = [str(d) for d in range(10)] + ["/", "%"]
 CHAR_TO_IDX = {c: i for i, c in enumerate(CLASSES)}
 
 
-def load_samples():
-    """Return [(path, class_idx)] for every reviewed crop."""
+def load_samples(data_dir):
+    """Return [(path, class_idx)] for every crop under data_dir/<class>/."""
     samples = []
     for dirname, char in DIR_TO_CHAR.items():
-        for path in glob.glob(os.path.join(DATASET_DIR, dirname, "*.png")):
+        for path in glob.glob(os.path.join(data_dir, dirname, "*.png")):
             samples.append((path, CHAR_TO_IDX[char]))
     return samples
 
 
-def to_gray_array(img):
-    """PIL RGBA/L crop -> (H, W) float32 in [0,1], white glyph on black."""
-    arr = np.asarray(img.convert("L").resize((W, H)), dtype=np.float32) / 255.0
-    return arr
-
-
 def augment(img):
     """Label-preserving aug per the spec: no flip/mirror/perspective."""
-    # rotation up to 3 deg
     img = img.rotate(random.uniform(-3, 3), resample=Image.BILINEAR, fillcolor=0)
-    # translation up to 2 px
     dx, dy = random.randint(-2, 2), random.randint(-2, 2)
     img = img.transform(img.size, Image.AFFINE, (1, 0, dx, 0, 1, dy), fillcolor=0)
-    # brightness / contrast
     img = ImageEnhance.Brightness(img).enhance(random.uniform(0.75, 1.25))
     img = ImageEnhance.Contrast(img).enhance(random.uniform(0.75, 1.25))
-    # occasional blur
     if random.random() < 0.3:
         img = img.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.3, 0.9)))
     return img
@@ -118,7 +114,7 @@ def stratified_split(samples, val_frac=0.2):
     for s in samples:
         by_class.setdefault(s[1], []).append(s)
     train, val = [], []
-    for label, items in by_class.items():
+    for _, items in by_class.items():
         items = items[:]
         rng.shuffle(items)
         n_val = max(1, round(len(items) * val_frac))
@@ -129,42 +125,52 @@ def stratified_split(samples, val_frac=0.2):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default="hp-reader/dataset", help="folder of <class>/ subdirs of 24x32 crops")
+    ap.add_argument("--out", default="hp-reader/models", help="where to write checkpoint + onnx + classes.json")
+    ap.add_argument("--epochs", type=int, default=60)
+    ap.add_argument("--batch", type=int, default=64)
+    a = ap.parse_args()
+
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
 
-    samples = load_samples()
+    samples = load_samples(a.data)
     if not samples:
-        raise SystemExit(f"No samples under {DATASET_DIR}")
+        raise SystemExit(f"No samples under {a.data} (expected {a.data}/<class>/*.png)")
     train_s, val_s = stratified_split(samples)
     counts = {c: 0 for c in CLASSES}
     for _, lab in samples:
         counts[CLASSES[lab]] += 1
-    print(f"{len(samples)} samples | train {len(train_s)} / val {len(val_s)}")
+    print(f"device {dev} | {len(samples)} samples | train {len(train_s)} / val {len(val_s)}")
     print("per-class total:", " ".join(f"{c}:{counts[c]}" for c in CLASSES))
 
-    train_dl = DataLoader(GlyphDataset(train_s, train=True), batch_size=64, shuffle=True)
+    train_dl = DataLoader(GlyphDataset(train_s, train=True), batch_size=a.batch, shuffle=True)
     val_dl = DataLoader(GlyphDataset(val_s, train=False), batch_size=128)
 
-    model = GlyphNet()
+    model = GlyphNet().to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=1e-3)
     loss_fn = nn.CrossEntropyLoss()
 
     best_acc, best_state, patience, since_best = 0.0, None, 15, 0
-    for epoch in range(60):
+    best_per_class, best_confusion = {}, {}
+    for epoch in range(a.epochs):
         model.train()
         for xb, yb in train_dl:
+            xb, yb = xb.to(dev), yb.to(dev)
             opt.zero_grad()
             loss_fn(model(xb), yb).backward()
             opt.step()
 
         model.eval()
         correct = total = 0
-        per_class = {c: [0, 0] for c in CLASSES}  # [correct, total]
+        per_class = {c: [0, 0] for c in CLASSES}
         confusion = {}
         with torch.no_grad():
             for xb, yb in val_dl:
-                pred = model(xb).argmax(1)
+                pred = model(xb.to(dev)).argmax(1).cpu()
                 for p, y in zip(pred.tolist(), yb.tolist()):
                     total += 1
                     per_class[CLASSES[y]][1] += 1
@@ -175,7 +181,8 @@ def main():
                         confusion[(CLASSES[y], CLASSES[p])] = confusion.get((CLASSES[y], CLASSES[p]), 0) + 1
         acc = correct / total
         if acc > best_acc:
-            best_acc, best_state, since_best = acc, {k: v.clone() for k, v in model.state_dict().items()}, 0
+            best_acc, since_best = acc, 0
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
             best_per_class, best_confusion = per_class, confusion
         else:
             since_best += 1
@@ -194,26 +201,29 @@ def main():
         for (t, p), n in sorted(best_confusion.items(), key=lambda kv: -kv[1])[:8]:
             print(f"  {t} -> {p}: {n}")
 
-    os.makedirs(MODELS_DIR, exist_ok=True)
-    ckpt = os.path.join(MODELS_DIR, "glyph-net-checkpoint.pt")
+    os.makedirs(a.out, exist_ok=True)
+    ckpt = os.path.join(a.out, "glyph-net-checkpoint.pt")
     torch.save(best_state, ckpt)
-    with open(os.path.join(MODELS_DIR, "classes.json"), "w") as f:
+    with open(os.path.join(a.out, "classes.json"), "w") as f:
         json.dump(CLASSES, f, indent=2)
         f.write("\n")
-    print(f"saved checkpoint {os.path.relpath(ckpt, ROOT)}")
 
     model.load_state_dict(best_state)
-    model.eval()
-    onnx_path = os.path.join(MODELS_DIR, "hp_classifier.onnx")
-    try:
-        torch.onnx.export(
-            model, torch.randn(1, 1, H, W), onnx_path, opset_version=18,
-            input_names=["input"], output_names=["logits"], dynamo=False,
-        )
-        print(f"exported {os.path.relpath(onnx_path, ROOT)} "
-              f"({os.path.getsize(onnx_path) / 1024:.1f} KB, FP32 — INT8 quantize is a later step)")
-    except Exception as e:  # noqa: BLE001 — export is best-effort; accuracy report is the goal
-        print(f"ONNX export skipped ({type(e).__name__}: {e}); `pip install onnx` to enable it")
+    model.eval().cpu()
+    onnx_path = os.path.join(a.out, "hp_classifier.onnx")
+    torch.onnx.export(
+        model, torch.randn(1, 1, H, W), onnx_path, opset_version=18,
+        input_names=["input"], output_names=["logits"],
+        dynamic_axes={"input": {0: "batch"}, "logits": {0: "batch"}}, dynamo=False,
+    )
+    # Repack into ONE self-contained .onnx (drop any weights sidecar) so the web
+    # runtime fetches a single file — mirrors train_sprite_net.py.
+    import onnx
+    onnx.save_model(onnx.load(onnx_path), onnx_path)
+    for leftover in glob.glob(onnx_path + ".data"):
+        os.remove(leftover)
+    print(f"saved {onnx_path} ({os.path.getsize(onnx_path) / 1024:.1f} KB, FP32) + "
+          f"classes.json + {os.path.basename(ckpt)}")
 
 
 if __name__ == "__main__":
