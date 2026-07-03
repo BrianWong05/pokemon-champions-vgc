@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {
   acceptedPathForCandidate,
+  clearReviewedCandidates,
   copyAcceptedCandidate,
   listCandidateFiles,
   normalizeReviewLabel,
@@ -53,6 +54,23 @@ describe('HP character dataset review helpers', () => {
 
     expect(fs.readFileSync(expected, 'utf8')).toBe('png');
     expect(expected).toBe(path.join(out, 'percent', 'sample.png'));
+  });
+
+  it('clears only reviewed classes and drops the dir once empty', () => {
+    const root = tmpDir();
+    for (const c of ['slash', 'percent', '1']) fs.mkdirSync(path.join(root, c), { recursive: true });
+    fs.writeFileSync(path.join(root, 'slash', 'a.png'), '');
+    fs.writeFileSync(path.join(root, 'percent', 'c.png'), '');
+    fs.writeFileSync(path.join(root, '1', 'd.png'), '');
+
+    clearReviewedCandidates(root, ['slash', 'percent']);
+    expect(fs.existsSync(path.join(root, 'slash'))).toBe(false);
+    expect(fs.existsSync(path.join(root, 'percent'))).toBe(false);
+    expect(fs.existsSync(path.join(root, '1'))).toBe(true); // out-of-scope class kept
+    expect(fs.existsSync(root)).toBe(true);
+
+    clearReviewedCandidates(root, ['1']);
+    expect(fs.existsSync(root)).toBe(false); // parent removed once nothing is left
   });
 
   it('parses review options with candidate defaults', () => {

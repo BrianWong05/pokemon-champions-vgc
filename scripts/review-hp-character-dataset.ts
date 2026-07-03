@@ -105,6 +105,18 @@ export function copyAcceptedCandidate(
   fs.copyFileSync(candidate.path, outFile);
 }
 
+// Drop the reviewed candidates once a full pass is done. Only the classes that
+// were actually reviewed are cleared (so `--class 4` never wipes other classes'
+// candidates); the parent dir goes too once nothing is left to review.
+export function clearReviewedCandidates(candidatesDir: string, classes: string[]): void {
+  for (const className of classes) {
+    fs.rmSync(path.join(candidatesDir, className), { recursive: true, force: true });
+  }
+  if (fs.existsSync(candidatesDir) && fs.readdirSync(candidatesDir).length === 0) {
+    fs.rmSync(candidatesDir, { recursive: true, force: true });
+  }
+}
+
 function ensureClassDirs(outDir: string): void {
   for (const entry of HP_DATASET_CLASSES) {
     fs.mkdirSync(path.join(outDir, entry.className), { recursive: true });
@@ -175,6 +187,8 @@ async function reviewCandidates(options: ReviewOptions): Promise<void> {
   rl.close();
   console.log(`Done. Accepted ${accepted}, corrected ${corrected}, skipped ${skipped}.`);
   console.log(`Reviewed dataset written to ${options.outDir}.`);
+  clearReviewedCandidates(options.candidatesDir, options.classes);
+  console.log(`Cleared reviewed candidates from ${options.candidatesDir}.`);
 }
 
 if (require.main === module) {
