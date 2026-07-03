@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  decodeWindow,
   clusterGlyphBoxes,
   matchGlyph,
   normalizeGlyph,
@@ -158,5 +159,41 @@ describe('readHpFromPanel', () => {
   it('returns null with empty templates', () => {
     const img: RgbaImage = { data: new Uint8ClampedArray(100 * 100 * 4), width: 100, height: 100 };
     expect(readHpFromPanel(img, { x: 10, y: 10, w: 60, h: 12 }, [])).toBeNull();
+  });
+});
+
+describe('decodeWindow', () => {
+  const glyph = (chars: Array<[string, number]>): import('./hpText').GlyphCosts => ({
+    box: { x: 0, y: 0, w: 8, h: 16 },
+    dists: new Map(chars),
+  });
+
+  it('resolves an ambiguous glyph by phrase validity', () => {
+    // First glyph: '7' is marginally cheaper than '1', but "700%" is not a
+    // valid HP phrase — the decode must settle on "100%".
+    const window = [
+      glyph([['7', 0.02], ['1', 0.025]]),
+      glyph([['0', 0.01]]),
+      glyph([['0', 0.01]]),
+      glyph([['%', 0.01]]),
+    ];
+    const cands = decodeWindow(window);
+    expect(cands.map((c) => c.value)).toContain('100%');
+    expect(cands.map((c) => c.value)).not.toContain('700%');
+  });
+
+  it('returns nothing when a position has no plausible characters', () => {
+    const window = [glyph([['1', 0.01]]), glyph([]), glyph([['%', 0.01]])];
+    expect(decodeWindow(window)).toEqual([]);
+  });
+
+  it('rejects fraction phrases with implausible max HP', () => {
+    const window = [
+      glyph([['9', 0.01]]),
+      glyph([['/', 0.01]]),
+      glyph([['9', 0.01]]),
+    ];
+    // 9/9 parses, but max 9 is not a plausible Pokemon HP.
+    expect(decodeWindow(window).map((c) => c.value)).not.toContain('9/9');
   });
 });

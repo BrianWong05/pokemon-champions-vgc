@@ -7,8 +7,10 @@ import type { RgbaImage, TileBox } from './types';
 export const GLYPH_SIZE = 16;
 
 const QUANT = 9;                 // coverage levels per cell: 0..9
-const MAX_DIST = 0.1;            // mean |level delta| / QUANT, 0..1 — tuned via scripts/hp-accuracy.ts
-const MIN_MARGIN = 0.02;         // best other-char distance must exceed the best by this
+const MAX_DIST = 0.1;            // per-glyph ceiling (matchGlyph; also caps decode candidates)
+const MIN_MARGIN = 0.02;         // matchGlyph: best other-char distance must exceed the best by this
+const MAX_PHRASE_DIST = 0.10;    // mean per-glyph cost ceiling for a decoded phrase
+const PHRASE_MARGIN = 0.02;     // best value must beat the best DIFFERENT value by this
 export const MASK_THRESHOLDS = [0.8, 0.72, 0.88];
 
 // Fixed-font glyph shape bands (width/height, post-shear). Used by the
@@ -271,7 +273,9 @@ function projectColumns(mask: BinMask): TileBox[] {
 export function filterSpecks(boxes: TileBox[]): TileBox[] {
   if (boxes.length === 0) return boxes;
   const maxH = Math.max(...boxes.map((b) => b.h));
-  return boxes.filter((b) => b.h >= maxH * 0.4 && b.w * b.h >= 4);
+  // Two legitimate text sizes share a line: current-HP digits (~1.0 lineH)
+  // and the small /max digits (~0.45) — the cutoff must sit below the small size.
+  return boxes.filter((b) => b.h >= maxH * 0.3 && b.w * b.h >= 4);
 }
 
 export function clusterGlyphBoxes(boxes: TileBox[]): TileBox[][] {
@@ -468,30 +472,96 @@ function mergeBoxes(a: TileBox, b: TileBox): TileBox {
   };
 }
 
-// Multi-component glyphs ('%' = two circles + slash) can segment into several
-// boxes none of which match alone — merge adjacent unmatched runs and rematch.
-function repairUnmatched(
-  items: Array<{ box: TileBox; char: string | null }>,
-  mask: BinMask,
-  lineH: number,
-  templates: GlyphTemplate[],
-): Array<{ box: TileBox; char: string | null }> {
-  const out: Array<{ box: TileBox; char: string | null }> = [];
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].char !== null) {
-      out.push(items[i]);
-      continue;
+
+export interface GlyphCosts {
+  box: TileBox;
+  /** Best distance per character, shape- and hFrac-gated. */
+  dists: Map<string, number>;
+}
+
+export function charDistances(
+  bits: Uint8Array,
+  hFrac: number,
+  box: TileBox,
+  templates: GlyphTemplate[] = HP_GLYPH_TEMPLATES,
+): Map<string, number> {
+  const dists = new Map<string, number>();
+  const norm = bits.length * QUANT;
+  for (const template of templates) {
+    if (template.bits.length !== bits.length) continue;
+    if (Math.abs(template.hFrac - hFrac) > 0.25) continue;
+    if (!plausibleGlyphShape(template.char, box)) continue;
+    let sum = 0;
+    for (let i = 0; i < bits.length; i++) {
+      sum += Math.abs(bits[i] - (template.bits.charCodeAt(i) - 48));
     }
-    let box = items[i].box;
-    let j = i;
-    while (j + 1 < items.length && items[j + 1].char === null) {
-      box = mergeBoxes(box, items[j + 1].box);
-      j++;
+    const dist = sum / norm;
+    if (dist < (dists.get(template.char) ?? Infinity)) dists.set(template.char, dist);
+  }
+  return dists;
+}
+
+export interface PhraseCandidate {
+  text: string;
+  /** Canonical value key: "40%" or "81/202". */
+  value: string;
+  percent: number;
+  current?: number;
+  max?: number;
+  /** Mean per-glyph distance. */
+  cost: number;
+}
+
+// Joint decoding: instead of accepting each glyph independently, search the
+// small product space of the top-2 characters per position for the cheapest
+// text that is a VALID HP phrase. Phrase context settles ambiguous glyphs
+// ("700%" is not a value, so a 7-vs-1 toss-up resolves to '1') and junk lines
+// like the timer can never win (no valid phrase exists for them).
+export function decodeWindow(glyphs: GlyphCosts[]): PhraseCandidate[] {
+  const n = glyphs.length;
+  if (n < 2 || n > 9) return [];
+  const tops = glyphs.map((g) => [...g.dists.entries()].sort((a, b) => a[1] - b[1]).slice(0, 2));
+  if (tops.some((t) => t.length === 0)) return [];
+
+  const out: PhraseCandidate[] = [];
+  for (let m = 0; m < (1 << n); m++) {
+    let cost = 0;
+    let text = '';
+    let ok = true;
+    for (let i = 0; i < n; i++) {
+      const pick = tops[i][(m >> i) & 1];
+      if (!pick || pick[1] > MAX_DIST) { ok = false; break; }
+      text += pick[0];
+      cost += pick[1];
     }
-    out.push({ box, char: matchGlyph(normalizeGlyph(mask, box), box.h / lineH, templates) });
-    i = j;
+    if (!ok) continue;
+    const reading = parseHpText(text);
+    if (!reading || reading.percent === 0) continue;
+    if (reading.max != null && (reading.max < 60 || reading.max > 500)) continue;
+    out.push({
+      text,
+      value: reading.current != null ? `${reading.current}/${reading.max}` : `${reading.percent}%`,
+      percent: reading.percent,
+      current: reading.current,
+      max: reading.max,
+      cost: cost / n,
+    });
   }
   return out;
+}
+
+// A '%' that split into pieces used to be repaired by re-merging unmatched
+// boxes; under joint decoding the equivalent is offering window variants with
+// the trailing boxes merged (percent phrases end in '%').
+function tailMergeVariants(window: TileBox[]): TileBox[][] {
+  const variants: TileBox[][] = [window];
+  for (const take of [2, 3]) {
+    if (window.length > take) {
+      const merged = window.slice(-take).reduce(mergeBoxes);
+      variants.push([...window.slice(0, -take), merged]);
+    }
+  }
+  return variants;
 }
 
 export function readHpFromPanel(
@@ -502,50 +572,91 @@ export function readHpFromPanel(
   if (templates.length === 0) return null;
   const region = hpTextRegion(panel, img);
   if (region.h < 4 || region.w < 4) return null;
+  const bar = measureHpBarFill(img, panel);
 
+  // Collect the cheapest candidate per distinct VALUE across every attempt
+  // (mask threshold x pipeline config x cluster window x tail-merge variant).
+  const best = new Map<string, PhraseCandidate>();
   for (const thresholdFactor of MASK_THRESHOLDS) {
     const raw = whiteMask(img, region, thresholdFactor);
     for (const config of GLYPH_PIPELINE_CONFIGS) {
       const { mask, boxes } = extractGlyphs(raw, config);
       const clusters = clusterGlyphBoxes(filterSpecks(boxes));
       // The phrase can straddle cluster boundaries ("1" | "00%"), so try every
-      // contiguous window of clusters, longest first — parse + bar validate.
+      // contiguous window of clusters.
       const windows: TileBox[][] = [];
       for (let i = 0; i < clusters.length; i++) {
         for (let j = clusters.length; j > i; j--) windows.push(clusters.slice(i, j).flat());
       }
-      windows.sort((a, b) => b.length - a.length);
+      // Costs depend on the box AND the window's line height (hFrac gate).
+      const costCache = new Map<string, GlyphCosts>();
       for (const window of windows) {
-        const lineH = Math.max(...window.map((b) => b.h));
-        let items = window.map((box) => ({
-          box,
-          char: matchGlyph(normalizeGlyph(mask, box), box.h / lineH, templates),
-        }));
-        items = repairUnmatched(items, mask, lineH, templates);
-        if (items.some((item) => item.char === null)) continue;
-        // Shape sanity: a fused '00' box can MATCH '0' and turn 100% into a
-        // clean-parsing 10% — but its box is far too wide for a single digit.
-        if (!items.every((item) => plausibleGlyphShape(item.char!, item.box))) continue;
-        const reading = parseHpText(items.map((item) => item.char).join(''));
-        if (!reading) continue;
-        // A live Pokemon is never at 0% — that's always a misread digit.
-        if (reading.percent === 0) continue;
-
-        const bar = measureHpBarFill(img, panel);
-        if (bar != null && Math.abs(reading.percent - bar * 100) > BAR_DISAGREE_PCT) continue;
-        // '10%' and '1%' are the truncation shadows of '100%' (a fused or
-        // dropped '0' parses cleanly) — those exact values need the bar to
-        // agree closely before we trust them.
-        if (reading.current == null && (reading.percent === 10 || reading.percent === 1)) {
-          if (bar == null || Math.abs(reading.percent - bar * 100) > 12) continue;
+        for (const variant of tailMergeVariants(window)) {
+          const lineH = Math.max(...variant.map((b) => b.h));
+          const glyphs = variant.map((box) => {
+            const key = `${box.x},${box.y},${box.w},${box.h}:${lineH}`;
+            const cached = costCache.get(key);
+            if (cached) return cached;
+            const costs: GlyphCosts = { box, dists: charDistances(normalizeGlyph(mask, box), box.h / lineH, box, templates) };
+            costCache.set(key, costs);
+            return costs;
+          });
+          let cands = decodeWindow(glyphs);
+          // A box whose shape fits no character invalidates the window (by
+          // design) — but it is often a SPLIT piece of its neighbor. Offer
+          // repaired variants with that box merged left/right (the decode-era
+          // equivalent of the old repairUnmatched).
+          if (cands.length === 0 && variant.length > 2) {
+            const bad = glyphs.findIndex((g) => g.dists.size === 0);
+            if (bad >= 0) {
+              for (const j of [bad - 1, bad + 1]) {
+                if (j < 0 || j >= variant.length) continue;
+                const lo = Math.min(bad, j);
+                const repaired = [...variant];
+                repaired.splice(lo, 2, mergeBoxes(variant[lo], variant[lo + 1]));
+                const lineH2 = Math.max(...repaired.map((b) => b.h));
+                const glyphs2 = repaired.map((box) => ({
+                  box,
+                  dists: charDistances(normalizeGlyph(mask, box), box.h / lineH2, box, templates),
+                }));
+                cands = cands.concat(decodeWindow(glyphs2));
+              }
+            }
+          }
+          for (const cand of cands) {
+            const prev = best.get(cand.value);
+            if (!prev || cand.cost < prev.cost) best.set(cand.value, cand);
+          }
         }
-        // Short reads ("7%") are easily a stray digit + speck: only trust them
-        // when the bar corroborates closely.
-        if (items.length <= 2 && (bar == null || Math.abs(reading.percent - bar * 100) > 12)) continue;
-        return reading;
       }
     }
   }
 
-  return null;
+  const ranked = [...best.values()].sort((a, b) => a.cost - b.cost);
+  if (ranked.length === 0 || ranked[0].cost > MAX_PHRASE_DIST) return null;
+
+  let chosen = ranked[0];
+  // A contender must be close in ABSOLUTE terms and not dominated in RELATIVE
+  // terms — an exact (near-zero-cost) match is not "ambiguous" merely because
+  // some phrase costs 0.008.
+  const contenders = ranked.filter(
+    (c) => c.cost - ranked[0].cost < PHRASE_MARGIN && c.cost < ranked[0].cost * 3 + 0.005,
+  );
+  if (contenders.length > 1) {
+    // Two different values are nearly as cheap — only the bar may arbitrate.
+    const corroborated = contenders.filter((c) => bar != null && Math.abs(c.percent - bar * 100) <= 12);
+    if (corroborated.length !== 1) return null;
+    chosen = corroborated[0];
+  }
+
+  // Retained guards: bar veto, truncation shadows, short percent reads.
+  if (bar != null && Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT) return null;
+  if (chosen.current == null && (chosen.percent === 10 || chosen.percent === 1)) {
+    if (bar == null || Math.abs(chosen.percent - bar * 100) > 12) return null;
+  }
+  if (chosen.text.length <= 2 && (bar == null || Math.abs(chosen.percent - bar * 100) > 12)) return null;
+
+  return chosen.current != null && chosen.max != null
+    ? { percent: chosen.percent, current: chosen.current, max: chosen.max }
+    : { percent: chosen.percent };
 }
