@@ -69,6 +69,27 @@ describe('selectGlyphBoxes', () => {
     const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
     expect(selected).toBeNull();
   });
+
+  it('does not force-split percentage reads when the percent glyph is absent', () => {
+    const boxes: TileBox[] = [
+      { x: 0, y: 0, w: 14, h: 18 },
+      { x: 18, y: 0, w: 13, h: 18 },
+    ];
+    const selected = selectGlyphBoxes(mask(36, 24), [boxes], '87%');
+    expect(selected).toBeNull();
+  });
+
+  it('does not concatenate separated clusters to satisfy a percentage label', () => {
+    const clusters: TileBox[][] = [
+      [{ x: 0, y: 0, w: 8, h: 16 }],
+      [
+        { x: 120, y: 0, w: 14, h: 18 },
+        { x: 138, y: 0, w: 13, h: 18 },
+      ],
+    ];
+    const selected = selectGlyphBoxes(mask(160, 24), clusters, '87%');
+    expect(selected).toBeNull();
+  });
 });
 
 describe('normalizeBoxToImage', () => {

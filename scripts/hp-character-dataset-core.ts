@@ -132,8 +132,7 @@ function forceSplitToCount(mask: BinMask, boxes: TileBox[], count: number): Tile
 
 export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedText: string): TileBox[] | null {
   const chars = charsForExpectedText(expectedText);
-  const all = clusters.flat().sort((a, b) => a.x - b.x);
-  const candidates = [...clusters.filter((cluster) => cluster.length >= 2), all].map((candidate) =>
+  const candidates = clusters.filter((cluster) => cluster.length >= 2).map((candidate) =>
     [...candidate].sort((a, b) => a.x - b.x),
   );
 
@@ -147,9 +146,10 @@ export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedT
       if (!isLikelySplitPercent(percentTail)) continue;
       return [...candidate.slice(0, chars.length - 1), unionBoxes(percentTail)];
     }
+    return null;
   }
 
-  for (const candidate of [...clusters, all]) {
+  for (const candidate of clusters) {
     if (candidate.length >= chars.length) continue;
     const split = forceSplitToCount(mask, candidate, chars.length);
     if (split) return split;

@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:hp-dataset": "tsx scripts/extract-hp-character-dataset.ts --clean"
   },
   "repository": {
     "type": "git",
