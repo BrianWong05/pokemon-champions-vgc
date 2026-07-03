@@ -78,6 +78,22 @@ function totalWidth(boxes: TileBox[]): number {
   return boxes.reduce((sum, box) => sum + box.w, 0);
 }
 
+export function glyphInkDensity(mask: BinMask, box: TileBox): number {
+  let filled = 0;
+  let total = 0;
+  for (let y = box.y; y < box.y + box.h; y++) {
+    for (let x = box.x; x < box.x + box.w; x++) {
+      total++;
+      if (x >= 0 && y >= 0 && x < mask.w && y < mask.h && mask.bits[y * mask.w + x]) filled++;
+    }
+  }
+  return total > 0 ? filled / total : 0;
+}
+
+export function hasEnoughGlyphInk(mask: BinMask, boxes: TileBox[], minDensity = 0.12): boolean {
+  return boxes.every((box) => glyphInkDensity(mask, box) >= minDensity);
+}
+
 function isLikelySplitPercent(boxes: TileBox[]): boolean {
   if (boxes.length !== 2) return false;
   const [left, right] = [...boxes].sort((a, b) => a.x - b.x || a.y - b.y);
@@ -92,8 +108,18 @@ function isLikelySplitPercent(boxes: TileBox[]): boolean {
     right.w <= lineHeight * 0.8 &&
     right.h >= lineHeight * 0.7 &&
     right.x + right.w >= merged.x + merged.w - Math.max(1, Math.round(lineHeight * 0.15));
+  const compactPair =
+    left.w <= lineHeight * 0.9 &&
+    right.w <= lineHeight * 0.9 &&
+    left.h >= lineHeight * 0.6 &&
+    right.h >= lineHeight * 0.6 &&
+    Math.abs(left.y + left.h / 2 - (right.y + right.h / 2)) <= lineHeight * 0.3;
 
-  return plausibleGlyphShape('%', merged) && smallPiece && tallPiece && gap <= Math.max(1, Math.round(lineHeight * 0.2));
+  return (
+    plausibleGlyphShape('%', merged) &&
+    gap <= Math.max(1, Math.round(lineHeight * 0.2)) &&
+    ((smallPiece && tallPiece) || compactPair)
+  );
 }
 
 function forceSplitToCount(mask: BinMask, boxes: TileBox[], count: number): TileBox[] | null {
@@ -136,22 +162,26 @@ export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedT
     [...candidate].sort((a, b) => a.x - b.x),
   );
 
-  const exact = candidates.find((candidate) => candidate.length === chars.length);
-  if (exact) return exact;
-
   if (expectedText.endsWith('%')) {
     for (const candidate of candidates) {
       if (candidate.length !== chars.length + 1) continue;
       const percentTail = candidate.slice(chars.length - 1);
       if (!isLikelySplitPercent(percentTail)) continue;
-      return [...candidate.slice(0, chars.length - 1), unionBoxes(percentTail)];
+      const selected = [...candidate.slice(0, chars.length - 1), unionBoxes(percentTail)];
+      if (!hasEnoughGlyphInk(mask, selected)) continue;
+      return selected;
     }
-    return null;
   }
+
+  const exact = candidates.find((candidate) => candidate.length === chars.length && hasEnoughGlyphInk(mask, candidate));
+  if (exact) return exact;
+
+  if (expectedText.endsWith('%')) return null;
 
   for (const candidate of clusters) {
     if (candidate.length >= chars.length) continue;
     const split = forceSplitToCount(mask, candidate, chars.length);
+    if (split && !hasEnoughGlyphInk(mask, split)) continue;
     if (split) return split;
   }
 

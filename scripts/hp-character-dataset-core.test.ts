@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   classNameForChar,
   charsForExpectedText,
+  glyphInkDensity,
+  hasEnoughGlyphInk,
   normalizeBoxToImage,
   samplesFromPanel,
   selectGlyphBoxes,
@@ -29,6 +31,20 @@ function mask(w: number, h: number): BinMask {
   return { bits: new Uint8Array(w * h), w, h };
 }
 
+function fillMaskBox(m: BinMask, box: TileBox): void {
+  for (let y = box.y; y < box.y + box.h; y++) {
+    for (let x = box.x; x < box.x + box.w; x++) {
+      if (x >= 0 && x < m.w && y >= 0 && y < m.h) m.bits[y * m.w + x] = 1;
+    }
+  }
+}
+
+function maskWithBoxes(w: number, h: number, boxes: TileBox[]): BinMask {
+  const m = mask(w, h);
+  boxes.forEach((box) => fillMaskBox(m, box));
+  return m;
+}
+
 describe('HP character dataset labels', () => {
   it('maps classifier characters to stable dataset directories', () => {
     expect(classNameForChar('0')).toBe('0');
@@ -53,7 +69,7 @@ describe('selectGlyphBoxes', () => {
       { x: 18, y: 1, w: 3, h: 3 },
       { x: 20, y: 0, w: 4, h: 12 },
     ];
-    const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
+    const selected = selectGlyphBoxes(maskWithBoxes(32, 16, boxes), [boxes], '43%');
     expect(selected).not.toBeNull();
     expect(selected?.length).toBe(3);
     expect(selected?.[2]).toEqual({ x: 18, y: 0, w: 6, h: 12 });
@@ -66,7 +82,7 @@ describe('selectGlyphBoxes', () => {
       { x: 10, y: 0, w: 5, h: 12 },
       { x: 18, y: 1, w: 5, h: 6 },
     ];
-    const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
+    const selected = selectGlyphBoxes(maskWithBoxes(32, 16, boxes), [boxes], '43%');
     expect(selected).toBeNull();
   });
 
@@ -75,7 +91,7 @@ describe('selectGlyphBoxes', () => {
       { x: 0, y: 0, w: 14, h: 18 },
       { x: 18, y: 0, w: 13, h: 18 },
     ];
-    const selected = selectGlyphBoxes(mask(36, 24), [boxes], '87%');
+    const selected = selectGlyphBoxes(maskWithBoxes(36, 24, boxes), [boxes], '87%');
     expect(selected).toBeNull();
   });
 
@@ -87,8 +103,48 @@ describe('selectGlyphBoxes', () => {
         { x: 138, y: 0, w: 13, h: 18 },
       ],
     ];
-    const selected = selectGlyphBoxes(mask(160, 24), clusters, '87%');
+    const selected = selectGlyphBoxes(maskWithBoxes(160, 24, clusters.flat()), clusters, '87%');
     expect(selected).toBeNull();
+  });
+
+  it('prefers a split percent cluster over an oversized exact-count noise cluster', () => {
+    const noisyExact: TileBox[] = [
+      { x: 44, y: 7, w: 28, h: 60 },
+      { x: 72, y: 7, w: 39, h: 60 },
+      { x: 111, y: 7, w: 55, h: 60 },
+      { x: 166, y: 7, w: 36, h: 60 },
+    ];
+    const validSplitPercent: TileBox[] = [
+      { x: 136, y: 24, w: 10, h: 19 },
+      { x: 151, y: 24, w: 15, h: 19 },
+      { x: 168, y: 24, w: 15, h: 19 },
+      { x: 189, y: 32, w: 6, h: 11 },
+      { x: 195, y: 32, w: 7, h: 11 },
+    ];
+
+    const selected = selectGlyphBoxes(maskWithBoxes(220, 87, validSplitPercent), [noisyExact, validSplitPercent], '100%');
+
+    expect(selected).toEqual([
+      { x: 136, y: 24, w: 10, h: 19 },
+      { x: 151, y: 24, w: 15, h: 19 },
+      { x: 168, y: 24, w: 15, h: 19 },
+      { x: 189, y: 32, w: 13, h: 11 },
+    ]);
+  });
+});
+
+describe('glyph ink density', () => {
+  it('rejects sparse frame-like boxes before they become training samples', () => {
+    const m = mask(20, 20);
+    const sparse = { x: 2, y: 2, w: 10, h: 10 };
+    m.bits[2 * m.w + 2] = 1;
+    m.bits[11 * m.w + 11] = 1;
+
+    expect(glyphInkDensity(m, sparse)).toBeCloseTo(0.02);
+    expect(hasEnoughGlyphInk(m, [sparse])).toBe(false);
+
+    fillMaskBox(m, { x: 4, y: 4, w: 4, h: 8 });
+    expect(hasEnoughGlyphInk(m, [{ x: 4, y: 4, w: 4, h: 8 }])).toBe(true);
   });
 });
 
