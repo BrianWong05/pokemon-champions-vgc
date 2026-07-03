@@ -52,7 +52,11 @@ export interface BinMask {
   h: number;
 }
 
-export function hpTextRegion(panel: TileBox, img: { width: number; height: number }): TileBox {
+export function hpTextRegion(
+  panel: TileBox,
+  img: { width: number; height: number },
+  heightFactor = 1.3,
+): TileBox {
   // The HP text straddles the plate's bottom edge (the panel blob is the
   // magenta/purple plate only) — start mid-plate so the glyphs are whole. The
   // name text at the plate's top stays outside the region.
@@ -61,11 +65,18 @@ export function hpTextRegion(panel: TileBox, img: { width: number; height: numbe
     x: panel.x,
     y,
     w: Math.max(0, Math.min(panel.w, img.width - panel.x)),
-    // Tight height: the timer / "MOVE TIME" white text sits further below and
-    // must stay out of the region (a "20" cluster reads as a valid percent).
-    h: Math.max(0, Math.min(Math.round(panel.h * 1.3), img.height - y)),
+    // Tight default height: the timer / "MOVE TIME" white text sits further
+    // below and should stay out. When the panel blob is only the plate's top
+    // band (compressed captures), callers retry with a taller factor.
+    h: Math.max(0, Math.min(Math.round(panel.h * heightFactor), img.height - y)),
   };
 }
+
+// First the tight region; then a tall variant for captures where the color
+// blob is only the plate's top band and the HP text sits deeper. The tall
+// pass sees more junk (timer, subtitles) — the decode's validity, margin and
+// bar guards carry the never-wrong burden there.
+export const REGION_HEIGHT_FACTORS = [1.3, 2.6];
 
 export function whiteMask(img: RgbaImage, box: TileBox, thresholdFactor = 0.8): BinMask {
   const bits = new Uint8Array(box.w * box.h);
@@ -270,8 +281,9 @@ function projectColumns(mask: BinMask): TileBox[] {
 
 // Drop noise blobs (orb reflections, plate-edge fragments) that are far
 // shorter than the text line.
-export function filterSpecks(boxes: TileBox[]): TileBox[] {
+export function filterSpecks(boxes: TileBox[], maskH?: number): TileBox[] {
   if (boxes.length === 0) return boxes;
+  void maskH; // reserved: giant-blob filtering regressed low-res plates (their digits span most of the region)
   const maxH = Math.max(...boxes.map((b) => b.h));
   // Two legitimate text sizes share a line: current-HP digits (~1.0 lineH)
   // and the small /max digits (~0.45) — the cutoff must sit below the small size.
@@ -570,18 +582,19 @@ export function readHpFromPanel(
   templates: GlyphTemplate[] = HP_GLYPH_TEMPLATES,
 ): HpReading | null {
   if (templates.length === 0) return null;
-  const region = hpTextRegion(panel, img);
-  if (region.h < 4 || region.w < 4) return null;
   const bar = measureHpBarFill(img, panel);
 
   // Collect the cheapest candidate per distinct VALUE across every attempt
-  // (mask threshold x pipeline config x cluster window x tail-merge variant).
+  // (region height x mask threshold x pipeline config x window x variant).
   const best = new Map<string, PhraseCandidate>();
+  for (const heightFactor of REGION_HEIGHT_FACTORS) {
+  const region = hpTextRegion(panel, img, heightFactor);
+  if (region.h < 4 || region.w < 4) continue;
   for (const thresholdFactor of MASK_THRESHOLDS) {
     const raw = whiteMask(img, region, thresholdFactor);
     for (const config of GLYPH_PIPELINE_CONFIGS) {
       const { mask, boxes } = extractGlyphs(raw, config);
-      const clusters = clusterGlyphBoxes(filterSpecks(boxes));
+      const clusters = clusterGlyphBoxes(filterSpecks(boxes, mask.h));
       // The phrase can straddle cluster boundaries ("1" | "00%"), so try every
       // contiguous window of clusters.
       const windows: TileBox[][] = [];
@@ -632,6 +645,7 @@ export function readHpFromPanel(
     }
   }
 
+  }
   const ranked = [...best.values()].sort((a, b) => a.cost - b.cost);
   if (ranked.length === 0 || ranked[0].cost > MAX_PHRASE_DIST) return null;
 

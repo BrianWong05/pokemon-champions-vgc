@@ -104,7 +104,7 @@ export function glyphTemplatesFromPanel(
 
   for (const config of GLYPH_PIPELINE_CONFIGS) {
     const { mask, boxes } = extractGlyphs(raw, config);
-    const clusters = clusterGlyphBoxes(filterSpecks(boxes))
+    const clusters = clusterGlyphBoxes(filterSpecks(boxes, mask.h))
       .sort((a, b) => b.length - a.length || totalWidth(b) - totalWidth(a));
     shapes.push(`[${clusters.map((c) => c.length).join(',')}]`);
     const cluster = selectCluster(mask, clusters, expectedText);

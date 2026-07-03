@@ -104,7 +104,7 @@ for (const f of files) {
         drawBox(overlay, text, 255, 60, 60);   // red: HP text region
         const mask = whiteMask(img, text, 0.8);
         const { mask: processed, boxes } = extractGlyphs(mask, GLYPH_PIPELINE_CONFIGS[0]);
-        const glyphs = clusterGlyphBoxes(filterSpecks(boxes)).flat();
+        const glyphs = clusterGlyphBoxes(filterSpecks(boxes, mask.h)).flat();
         const m: RgbaImage = { data: new Uint8ClampedArray(processed.w * processed.h * 4), width: processed.w, height: processed.h };
         for (let p = 0; p < processed.bits.length; p++) {
           const v = processed.bits[p] ? 255 : 0;
