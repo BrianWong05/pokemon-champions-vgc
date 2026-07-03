@@ -66,4 +66,8 @@ describe('extract HP character dataset CLI helpers', () => {
       sourceDirs: ['training/screenshots'],
     });
   });
+
+  it('defaults to writing unreviewed samples into candidate storage', () => {
+    expect(parseArgs([]).outDir).toBe('hp-reader/dataset-candidates');
+  });
 });

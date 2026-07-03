@@ -12,7 +12,8 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:hp-dataset": "tsx scripts/extract-hp-character-dataset.ts --clean"
+    "build:hp-dataset": "tsx scripts/extract-hp-character-dataset.ts --clean",
+    "review:hp-dataset": "tsx scripts/review-hp-character-dataset.ts"
   },
   "repository": {
     "type": "git",

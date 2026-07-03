@@ -28,7 +28,7 @@ export interface ExtractDatasetSummary {
 const DEFAULT_OPTIONS: ExtractDatasetOptions = {
   goldenPath: 'training/hp-golden.json',
   sourceDirs: ['training/screenshots', 'training/hp-fixtures'],
-  outDir: 'hp-reader/dataset',
+  outDir: 'hp-reader/dataset-candidates',
   classesPath: 'hp-reader/models/classes.json',
   clean: false,
 };
@@ -146,7 +146,7 @@ export function parseArgs(argv: string[]): ExtractDatasetOptions {
 if (require.main === module) {
   const summary = extractDataset(parseArgs(process.argv.slice(2)));
   console.log(
-    `HP character dataset: ${summary.written} sample(s) from ${summary.readablePlates} readable plate(s); skipped ${summary.skipped}.`,
+    `HP character candidate dataset: ${summary.written} sample(s) from ${summary.readablePlates} readable plate(s); skipped ${summary.skipped}.`,
   );
   for (const reason of summary.skipReasons.slice(0, 30)) console.log(`  skip ${reason}`);
   if (summary.skipReasons.length > 30) console.log(`  ... ${summary.skipReasons.length - 30} more skip(s)`);
