@@ -52,12 +52,23 @@ describe('selectGlyphBoxes', () => {
       { x: 8, y: 0, w: 5, h: 12 },
       { x: 18, y: 1, w: 3, h: 3 },
       { x: 20, y: 0, w: 4, h: 12 },
-      { x: 24, y: 9, w: 3, h: 3 },
     ];
     const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
     expect(selected).not.toBeNull();
     expect(selected?.length).toBe(3);
-    expect(selected?.[2]).toEqual({ x: 18, y: 0, w: 9, h: 12 });
+    expect(selected?.[2]).toEqual({ x: 18, y: 0, w: 6, h: 12 });
+  });
+
+  it('rejects a percent candidate when prefix glyphs are over-segmented', () => {
+    const boxes: TileBox[] = [
+      { x: 0, y: 0, w: 5, h: 12 },
+      { x: 8, y: 0, w: 3, h: 12 },
+      { x: 11, y: 0, w: 2, h: 12 },
+      { x: 18, y: 1, w: 3, h: 3 },
+      { x: 20, y: 0, w: 4, h: 12 },
+    ];
+    const selected = selectGlyphBoxes(mask(32, 16), [boxes], '43%');
+    expect(selected).toBeNull();
   });
 });
 
@@ -72,7 +83,8 @@ describe('normalizeBoxToImage', () => {
     expect(img.width).toBe(24);
     expect(img.height).toBe(32);
     expect(img.data.length).toBe(24 * 32 * 4);
-    expect(Array.from(img.data).some((v) => v === 255)).toBe(true);
+    const pixels = Array.from({ length: img.data.length / 4 }, (_, index) => img.data.slice(index * 4, index * 4 + 4));
+    expect(pixels.some(([r, g, b, a]) => a === 255 && r === 255 && g === 255 && b === 255)).toBe(true);
   });
 });
 

@@ -124,7 +124,7 @@ export function selectGlyphBoxes(mask: BinMask, clusters: TileBox[][], expectedT
 
   if (expectedText.endsWith('%')) {
     for (const candidate of candidates) {
-      if (candidate.length <= chars.length || candidate.length > chars.length + 2) continue;
+      if (candidate.length !== chars.length + 1) continue;
       const percentStart = chars.length - 1;
       return [...candidate.slice(0, percentStart), unionBoxes(candidate.slice(percentStart))];
     }
