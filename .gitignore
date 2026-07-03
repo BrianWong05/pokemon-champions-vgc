@@ -50,3 +50,7 @@ eng.traineddata
 # HP screenshot staging inboxes for the add/review labeling flow
 hp-reader/new-screenshot/
 hp-reader/new-candidate/
+
+# Experimental HP glyph-net artifacts (reproducible via scripts/train_glyph_net.py)
+hp-reader/models/glyph-net-checkpoint.pt
+hp-reader/models/hp_classifier.onnx
