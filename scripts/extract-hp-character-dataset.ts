@@ -16,6 +16,8 @@ export interface ExtractDatasetOptions {
   outDir: string;
   classesPath: string;
   clean: boolean;
+  /** Only extract screenshots not already present in the candidate/reviewed dataset. */
+  onlyNew: boolean;
 }
 
 export interface ExtractDatasetSummary {
@@ -23,6 +25,8 @@ export interface ExtractDatasetSummary {
   written: number;
   skipped: number;
   skipReasons: string[];
+  /** Screenshots skipped by --new because they were already extracted. */
+  skippedExisting: number;
 }
 
 const DEFAULT_OPTIONS: ExtractDatasetOptions = {
@@ -31,10 +35,37 @@ const DEFAULT_OPTIONS: ExtractDatasetOptions = {
   outDir: 'hp-reader/dataset-candidates',
   classesPath: 'hp-reader/models/classes.json',
   clean: false,
+  onlyNew: false,
 };
 
 function safeStem(name: string): string {
   return path.basename(name, path.extname(name)).replace(/[^a-zA-Z0-9_-]+/g, '_');
+}
+
+// Sample filenames are `<screenshotStem>__<source>__<side>N__<idx>__<class>.png`.
+// The screenshot stem is everything before the first `__` delimiter; returns
+// null when the name has no delimiter (not one of our samples).
+export function screenshotStemOfSample(fileName: string): string | null {
+  const at = fileName.indexOf('__');
+  return at > 0 ? fileName.slice(0, at) : null;
+}
+
+// The set of screenshot stems that already have samples anywhere in the given
+// dirs (candidate + reviewed). Used by --new to skip already-extracted shots.
+function existingScreenshotStems(dirs: string[]): Set<string> {
+  const stems = new Set<string>();
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of HP_DATASET_CLASSES) {
+      const classDir = path.join(dir, entry.className);
+      if (!fs.existsSync(classDir)) continue;
+      for (const file of fs.readdirSync(classDir)) {
+        const stem = screenshotStemOfSample(file);
+        if (stem) stems.add(stem);
+      }
+    }
+  }
+  return stems;
 }
 
 export function sampleFilename(
@@ -70,15 +101,28 @@ export function extractDataset(options: Partial<ExtractDatasetOptions> = {}): Ex
   const resolved: ExtractDatasetOptions = { ...DEFAULT_OPTIONS, ...options };
   const golden: GoldenFile = JSON.parse(fs.readFileSync(resolved.goldenPath, 'utf8'));
   const sourceDirs = resolved.sourceDirs.filter((dir) => fs.existsSync(dir));
-  const summary: ExtractDatasetSummary = { readablePlates: 0, written: 0, skipped: 0, skipReasons: [] };
+  const summary: ExtractDatasetSummary = { readablePlates: 0, written: 0, skipped: 0, skipReasons: [], skippedExisting: 0 };
 
   if (resolved.clean) fs.rmSync(resolved.outDir, { recursive: true, force: true });
   ensureClassDirs(resolved.outDir);
   writeClassesJson(resolved.classesPath);
 
+  // --new: skip screenshots that already have samples in the candidate dir or
+  // the reviewed dataset beside it (a wiped candidate dir shouldn't force
+  // re-cropping already-reviewed shots). Ignored under --clean (nothing exists).
+  const alreadyExtracted =
+    resolved.onlyNew && !resolved.clean
+      ? existingScreenshotStems([resolved.outDir, path.join(path.dirname(resolved.outDir), 'dataset')])
+      : new Set<string>();
+  const skippedNew = new Set<string>();
+
   for (const sourceDir of sourceDirs) {
     const sourceName = path.basename(sourceDir);
     for (const [screenshot, entry] of Object.entries(golden)) {
+      if (resolved.onlyNew && alreadyExtracted.has(safeStem(screenshot))) {
+        skippedNew.add(screenshot);
+        continue;
+      }
       const file = path.join(sourceDir, screenshot);
       if (!fs.existsSync(file)) continue;
       const img = battleView(loadPng(file));
@@ -114,6 +158,7 @@ export function extractDataset(options: Partial<ExtractDatasetOptions> = {}): Ex
     }
   }
 
+  summary.skippedExisting = skippedNew.size;
   return summary;
 }
 
@@ -123,6 +168,8 @@ export function parseArgs(argv: string[]): ExtractDatasetOptions {
     const arg = argv[i];
     if (arg === '--clean') {
       parsed.clean = true;
+    } else if (arg === '--new') {
+      parsed.onlyNew = true;
     } else if (arg === '--out') {
       const value = argv[++i];
       if (!value) throw new Error('--out requires a directory');
@@ -146,7 +193,10 @@ export function parseArgs(argv: string[]): ExtractDatasetOptions {
 if (require.main === module) {
   const summary = extractDataset(parseArgs(process.argv.slice(2)));
   console.log(
-    `HP character candidate dataset: ${summary.written} sample(s) from ${summary.readablePlates} readable plate(s); skipped ${summary.skipped}.`,
+    `HP character candidate dataset: ${summary.written} sample(s) from ${summary.readablePlates} readable plate(s); ` +
+      `skipped ${summary.skipped} plate(s)` +
+      (summary.skippedExisting > 0 ? `, ${summary.skippedExisting} already-extracted screenshot(s)` : '') +
+      '.',
   );
   for (const reason of summary.skipReasons.slice(0, 30)) console.log(`  skip ${reason}`);
   if (summary.skipReasons.length > 30) console.log(`  ... ${summary.skipReasons.length - 30} more skip(s)`);

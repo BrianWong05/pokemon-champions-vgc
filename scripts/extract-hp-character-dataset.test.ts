@@ -7,6 +7,7 @@ import { HP_DATASET_CLASSES, type ExtractedHpCharacterSample } from './hp-charac
 import {
   parseArgs,
   sampleFilename,
+  screenshotStemOfSample,
   writeClassesJson,
   writeRgbaPng,
 } from './extract-hp-character-dataset';
@@ -60,6 +61,7 @@ describe('extract HP character dataset CLI helpers', () => {
   it('parses output, clean flag, and positional source dirs', () => {
     expect(parseArgs(['--clean', '--out', 'tmp/hp', 'training/screenshots'])).toEqual({
       clean: true,
+      onlyNew: false,
       outDir: 'tmp/hp',
       classesPath: 'hp-reader/models/classes.json',
       goldenPath: 'training/hp-golden.json',
@@ -67,7 +69,19 @@ describe('extract HP character dataset CLI helpers', () => {
     });
   });
 
+  it('parses the --new incremental flag', () => {
+    expect(parseArgs(['--new']).onlyNew).toBe(true);
+    expect(parseArgs([]).onlyNew).toBe(false);
+  });
+
   it('defaults to writing unreviewed samples into candidate storage', () => {
     expect(parseArgs([]).outDir).toBe('hp-reader/dataset-candidates');
+  });
+
+  it('recovers the screenshot stem from a sample filename (the --new skip key)', () => {
+    expect(screenshotStemOfSample('Xnip2026-07-03_02-11-37__screenshots__player1__02__slash.png'))
+      .toBe('Xnip2026-07-03_02-11-37');
+    // A screenshot that never produced samples has no filename, so nothing to recover.
+    expect(screenshotStemOfSample('no-delimiter.png')).toBeNull();
   });
 });
