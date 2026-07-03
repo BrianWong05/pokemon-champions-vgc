@@ -23,7 +23,7 @@ import {
   MASK_THRESHOLDS,
 } from '../src/features/scan/hpText';
 import type { RgbaImage, TileBox } from '../src/features/scan/types';
-import { battleView, type GoldenFile } from './hp-accuracy-core';
+import { battleView, resolveGoldenPng, type GoldenFile } from './hp-accuracy-core';
 
 const JSON_PATH = path.resolve('training/hp-glyph-templates.json');
 const TS_PATH = path.resolve('src/features/scan/hpGlyphTemplates.ts');
@@ -173,14 +173,16 @@ function readExistingTemplates(jsonPath = JSON_PATH): GlyphTemplate[] {
 // systematically mismatch glyphs masked from the other.
 export function buildFromGolden(): void {
   const golden: GoldenFile = JSON.parse(fs.readFileSync(path.resolve('training/hp-golden.json'), 'utf8'));
-  const sources = [path.resolve('training/screenshots'), path.resolve('training/hp-fixtures')]
-    .filter((d) => fs.existsSync(d));
+  const shotsDir = path.resolve('training/screenshots');
+  const sources = [shotsDir, path.resolve('training/hp-fixtures')].filter((d) => fs.existsSync(d));
   let templates: GlyphTemplate[] = [];
   let built = 0;
   let skipped = 0;
   for (const dir of sources) {
     for (const [name, entry] of Object.entries(golden)) {
-      const file = path.join(dir, name);
+      // Screenshots: jpg/heic keys reconvert from their tracked raw source on
+      // demand; fixtures are used as-is (browser pixels have no raw fallback).
+      const file = dir === shotsDir ? resolveGoldenPng(name, dir) : path.join(dir, name);
       if (!fs.existsSync(file)) continue;
       const img = battleView(readPng(file));
       for (const side of ['opponent', 'player'] as const) {

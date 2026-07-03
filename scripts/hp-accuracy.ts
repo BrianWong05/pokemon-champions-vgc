@@ -2,7 +2,7 @@
 //        npx tsx scripts/hp-accuracy.ts --browser  (canvas-decoded fixtures)
 import * as fs from 'fs';
 import * as path from 'path';
-import { sweep, loadPng, type GoldenFile } from './hp-accuracy-core';
+import { sweep, loadPng, resolveGoldenPng, type GoldenFile } from './hp-accuracy-core';
 
 const browser = process.argv.includes('--browser');
 const dir = path.resolve(browser ? 'training/hp-fixtures' : 'training/screenshots');
@@ -11,13 +11,16 @@ if (browser && !fs.existsSync(dir)) {
   process.exit(2);
 }
 const golden: GoldenFile = JSON.parse(fs.readFileSync('training/hp-golden.json', 'utf8'));
-const convertedDir = path.resolve('training/.converted-screenshots');
 const summary = sweep(golden, (n) => {
-  const primary = path.join(dir, n);
-  if (fs.existsSync(primary)) return loadPng(primary);
-  // jpg/heic sources convert into .converted-screenshots, not screenshots/.
-  if (!browser) return loadPng(path.join(convertedDir, n));
-  throw new Error(`No browser fixture for ${n} — run: python3 scripts/capture-browser-fixtures.py`);
+  if (browser) {
+    const fixture = path.join(dir, n);
+    if (!fs.existsSync(fixture)) {
+      throw new Error(`No browser fixture for ${n} — run: python3 scripts/capture-browser-fixtures.py`);
+    }
+    return loadPng(fixture);
+  }
+  // node: native PNGs load directly; jpg/heic keys reconvert from the tracked raw source.
+  return loadPng(resolveGoldenPng(n, dir));
 });
 
 for (const r of summary.results) {

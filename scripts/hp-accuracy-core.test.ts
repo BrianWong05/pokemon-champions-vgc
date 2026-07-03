@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import * as path from 'path';
-import { sweep, loadPng, readingToString, type GoldenFile } from './hp-accuracy-core';
+import { rawSourceName, sweep, loadPng, readingToString, type GoldenFile } from './hp-accuracy-core';
+
+describe('rawSourceName', () => {
+  it('recovers the raw jpg/heic source from a converted-png golden key', () => {
+    expect(rawSourceName('shot_jpg.png')).toBe('shot.jpg');
+    expect(rawSourceName('Xnip2026-07-04_00-03-44_jpg.png')).toBe('Xnip2026-07-04_00-03-44.jpg');
+    expect(rawSourceName('cap_heic.png')).toBe('cap.heic');
+  });
+
+  it('returns null for native-PNG keys (no separate source, e.g. hyphens in stem)', () => {
+    expect(rawSourceName('Xnip2026-07-01_03-26-01.png')).toBeNull();
+    expect(rawSourceName('plain.png')).toBeNull();
+    expect(rawSourceName('shot_png.png')).toBeNull(); // "_png" is not a foreign source
+  });
+});
 
 describe('readingToString', () => {
   it('formats percent and fraction readings', () => {
