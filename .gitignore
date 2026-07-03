@@ -54,3 +54,9 @@ hp-reader/new-candidate/
 # Experimental HP glyph-net artifacts (reproducible via scripts/train_glyph_net.py)
 hp-reader/models/glyph-net-checkpoint.pt
 hp-reader/models/hp_classifier.onnx
+
+# Python bytecode
+__pycache__/
+*.pyc
+# Colab dataset bundle (regenerate: zip -r glyph-dataset.zip hp-reader/dataset scripts/train_glyph_net.py)
+glyph-dataset.zip
