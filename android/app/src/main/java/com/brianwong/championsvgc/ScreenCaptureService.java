@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.DisplayMetrics;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -43,6 +44,8 @@ public class ScreenCaptureService extends Service {
     int width, height, densityDpi;
     private WindowManager windowManager;
     private Button floatingButton;
+    private DisplayManager displayManager;
+    private DisplayManager.DisplayListener displayListener;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -59,20 +62,48 @@ public class ScreenCaptureService extends Service {
             @Override public void onStop() { teardown(); }
         }, new Handler(Looper.getMainLooper()));
 
-        DisplayMetrics m = getResources().getDisplayMetrics();
-        width = m.widthPixels;
-        height = m.heightPixels;
-        densityDpi = m.densityDpi;
+        displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+        readDisplaySize();
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
         virtualDisplay = projection.createVirtualDisplay(
                 "champvgc-capture", width, height, densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 imageReader.getSurface(), null, null);
+        registerDisplayListener();
 
         addFloatingButton();
         instance = this;
         return START_NOT_STICKY;
+    }
+
+    /** Reads the current physical display size (accounts for rotation). */
+    private void readDisplaySize() {
+        Display d = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        DisplayMetrics m = new DisplayMetrics();
+        d.getRealMetrics(m);
+        width = m.widthPixels;
+        height = m.heightPixels;
+        densityDpi = m.densityDpi;
+    }
+
+    /** Resize the capture surface when the display rotates so captures match the live screen. */
+    private void registerDisplayListener() {
+        displayListener = new DisplayManager.DisplayListener() {
+            @Override public void onDisplayAdded(int displayId) {}
+            @Override public void onDisplayRemoved(int displayId) {}
+            @Override public void onDisplayChanged(int displayId) {
+                if (displayId != Display.DEFAULT_DISPLAY || virtualDisplay == null) return;
+                int oldW = width, oldH = height;
+                readDisplaySize();
+                if (width == oldW && height == oldH) return;
+                if (imageReader != null) imageReader.close();
+                imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+                virtualDisplay.resize(width, height, densityDpi);
+                virtualDisplay.setSurface(imageReader.getSurface());
+            }
+        };
+        displayManager.registerDisplayListener(displayListener, new Handler(Looper.getMainLooper()));
     }
 
     private void startAsForeground() {
@@ -142,6 +173,10 @@ public class ScreenCaptureService extends Service {
     }
 
     private void teardown() {
+        if (displayManager != null && displayListener != null) {
+            displayManager.unregisterDisplayListener(displayListener);
+            displayListener = null;
+        }
         if (floatingButton != null && windowManager != null) {
             try { windowManager.removeView(floatingButton); } catch (Exception ignored) {}
             floatingButton = null;
