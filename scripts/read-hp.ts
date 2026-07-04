@@ -77,7 +77,7 @@ for (const f of files) {
   const lines: string[] = [];
   for (const side of ['opponent', 'player'] as const) {
     detectBattlePanels(img, side).forEach((panel, i) => {
-      const reading = readHpFromPanel(img, panel);
+      const reading = readHpFromPanel(img, panel, undefined, side === 'opponent' ? 'percent' : 'fraction');
       const text = reading == null
         ? '-'
         : reading.current != null

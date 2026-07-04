@@ -17,7 +17,7 @@ export const MASK_THRESHOLDS = [0.8, 0.72, 0.88];
 // template builder to refuse mis-split boxes and at read time to refuse
 // readings whose glyph shapes are impossible (a fused '00' matching '0').
 export const CHAR_ASPECT: Record<string, [number, number]> = {
-  '1': [0.08, 0.5],
+  '1': [0.08, 0.75],
   '/': [0.08, 0.55],
   '%': [0.5, 2.0], // small captures merge the two circles + slash into one wide half-height box
 };
@@ -195,7 +195,31 @@ export function extractGlyphs(
   config: GlyphPipelineConfig = GLYPH_PIPELINE_CONFIGS[0],
 ): { mask: BinMask; boxes: TileBox[] } {
   const mask = shearMask(cleanMask(rawMask, config.runFactor), config.shear);
-  return { mask, boxes: splitWideBoxes(mask, projectColumns(mask)) };
+  const projected = projectColumns(mask).map((box) => trimBoxVertically(mask, box));
+  return { mask, boxes: splitWideBoxes(mask, projected).map((box) => trimBoxVertically(mask, box)) };
+}
+
+function trimBoxVertically(mask: BinMask, box: TileBox): TileBox {
+  const rowInk: number[] = [];
+  let peak = 0;
+  let peakRow = 0;
+  for (let y = box.y; y < box.y + box.h; y++) {
+    let c = 0;
+    for (let x = box.x; x < box.x + box.w; x++) {
+      if (x >= 0 && y >= 0 && x < mask.w && y < mask.h && mask.bits[y * mask.w + x]) c++;
+    }
+    if (c > peak) {
+      peak = c;
+      peakRow = rowInk.length;
+    }
+    rowInk.push(c);
+  }
+  if (peak === 0) return box;
+  let first = peakRow;
+  let last = peakRow;
+  while (first > 0 && rowInk[first - 1] >= 1) first--;
+  while (last < rowInk.length - 1 && rowInk[last + 1] >= 1) last++;
+  return { x: box.x, y: box.y + first, w: box.w, h: last - first + 1 };
 }
 
 // Antialiased italic digits can stay fused even after deskewing. A digit is
@@ -435,10 +459,12 @@ function measureHpBarFillIn(img: RgbaImage, panel: TileBox, heightFactor: number
   // row to row. Pick the longest-run row that has band support.
   const aligned = (a: { run: number; start: number }, b: { run: number; start: number }) =>
     b.run >= a.run * 0.7 && Math.abs(b.start - a.start) < Math.max(6, panel.w * 0.06);
+  const minBarY = panel.y + panel.h * 0.6;
   let barY = -1;
   let bestRun = 0;
   for (let k = 1; k < rows.length - 1; k++) {
     const r = rows[k];
+    if (r.y < minBarY) continue;
     if (r.run < panel.w * 0.08 || r.start < 0) continue;
     const support = [rows[k - 1], rows[k + 1]].filter((n) => n.start >= 0 && aligned(r, n)).length;
     if (support < 2) continue;
@@ -594,6 +620,7 @@ export function readHpFromPanel(
   img: RgbaImage,
   panel: TileBox,
   templates: GlyphTemplate[] = HP_GLYPH_TEMPLATES,
+  kind?: 'percent' | 'fraction',
 ): HpReading | null {
   if (templates.length === 0) return null;
   const bar = measureHpBarFill(img, panel);
@@ -660,10 +687,18 @@ export function readHpFromPanel(
   }
 
   }
-  const ranked = [...best.values()].sort((a, b) => a.cost - b.cost);
+  let ranked = [...best.values()].sort((a, b) => a.cost - b.cost);
+  // Opponent plates only ever show a percentage, player plates only a fraction
+  // — a known side rejects the other format's junk decodes structurally.
+  if (kind === 'percent') ranked = ranked.filter((c) => c.current == null);
+  else if (kind === 'fraction') ranked = ranked.filter((c) => c.current != null);
   if (ranked.length === 0 || ranked[0].cost > MAX_PHRASE_DIST) return null;
 
   let chosen = ranked[0];
+  const fullBarCandidate =
+    bar != null && bar >= 0.9
+      ? ranked.find((c) => c.current == null && c.percent === 100 && c.cost <= MAX_PHRASE_DIST)
+      : undefined;
   // A contender must be close in ABSOLUTE terms and not dominated in RELATIVE
   // terms — an exact (near-zero-cost) match is not "ambiguous" merely because
   // some phrase costs 0.008.
@@ -673,8 +708,32 @@ export function readHpFromPanel(
   if (contenders.length > 1) {
     // Two different values are nearly as cheap — only the bar may arbitrate.
     const corroborated = contenders.filter((c) => bar != null && Math.abs(c.percent - bar * 100) <= 12);
-    if (corroborated.length !== 1) return null;
-    chosen = corroborated[0];
+    if (corroborated.length === 1) {
+      chosen = corroborated[0];
+    } else if (fullBarCandidate) {
+      chosen = fullBarCandidate;
+    } else {
+      // Last resort before bailing: a window that drops a cleanly-segmented
+      // LEADING glyph yields a phrase whose text is a suffix of the fuller read
+      // ("3%" from "73%", "3/193" from "193/193"). When the fuller read is
+      // equally cheap, the shorter one is a segmentation phantom, not a rival
+      // value — prefer the fuller read (the downstream bar gate still guards it).
+      const survivors = contenders.filter(
+        (c) => !contenders.some((o) => o !== c && o.text.length > c.text.length && o.text.endsWith(c.text)),
+      );
+      if (survivors.length === 1) {
+        chosen = survivors[0];
+      } else {
+        return null;
+      }
+    }
+  } else if (
+    fullBarCandidate &&
+    chosen.current == null &&
+    bar != null &&
+    Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT
+  ) {
+    chosen = fullBarCandidate;
   }
 
   // Every wrong read this system has produced was a PERCENT-ONLY value with
@@ -683,10 +742,17 @@ export function readHpFromPanel(
   // redundancy (two consistent numbers, max >= 100) and only get a loose
   // sanity gate — the bar itself mis-measures on subtitled plates.
   if (chosen.current == null) {
-    if (bar == null || Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT) return null;
-    // Truncation shadows of 100% and bare short reads need the bar CLOSE.
-    if (chosen.percent === 10 || chosen.percent === 1 || chosen.text.length <= 2) {
-      if (Math.abs(chosen.percent - bar * 100) > 12) return null;
+    // A known-opponent panel is ALWAYS a percent, so it no longer needs a bar to
+    // prove it isn't a mis-segmented fraction; the bar only vetoes on disagreement.
+    const barRequired = kind !== 'percent';
+    if (bar == null) {
+      if (barRequired) return null;
+    } else {
+      if (Math.abs(chosen.percent - bar * 100) > BAR_DISAGREE_PCT) return null;
+      // Truncation shadows of 100% and bare short reads need the bar CLOSE.
+      if (chosen.percent === 10 || chosen.percent === 1 || chosen.text.length <= 2) {
+        if (Math.abs(chosen.percent - bar * 100) > 12) return null;
+      }
     }
   } else if (bar != null && Math.abs(chosen.percent - bar * 100) > 35) {
     return null;

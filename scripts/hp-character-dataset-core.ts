@@ -114,11 +114,19 @@ function isLikelySplitPercent(boxes: TileBox[]): boolean {
     left.h >= lineHeight * 0.6 &&
     right.h >= lineHeight * 0.6 &&
     Math.abs(left.y + left.h / 2 - (right.y + right.h / 2)) <= lineHeight * 0.3;
+  const diagonalPair =
+    left.w <= merged.h * 0.6 &&
+    right.w <= merged.h * 0.8 &&
+    left.h <= merged.h * 0.7 &&
+    right.h <= merged.h * 0.7 &&
+    right.x > left.x &&
+    right.y > left.y &&
+    right.y - left.y <= merged.h * 0.65;
 
   return (
     plausibleGlyphShape('%', merged) &&
     gap <= Math.max(1, Math.round(lineHeight * 0.2)) &&
-    ((smallPiece && tallPiece) || compactPair)
+    ((smallPiece && tallPiece) || compactPair || diagonalPair)
   );
 }
 

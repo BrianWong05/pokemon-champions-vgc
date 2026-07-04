@@ -133,6 +133,32 @@ describe('selectGlyphBoxes', () => {
     ]);
   });
 
+  it('prefers a diagonally split percent cluster over unrelated exact-count noise', () => {
+    const validSplitPercent: TileBox[] = [
+      { x: 175, y: 30, w: 8, h: 18 },
+      { x: 189, y: 29, w: 14, h: 19 },
+      { x: 209, y: 37, w: 5, h: 6 },
+      { x: 214, y: 42, w: 8, h: 6 },
+    ];
+    const noisyExact: TileBox[] = [
+      { x: 69, y: 58, w: 5, h: 8 },
+      { x: 74, y: 59, w: 5, h: 7 },
+      { x: 84, y: 59, w: 6, h: 7 },
+    ];
+
+    const selected = selectGlyphBoxes(
+      maskWithBoxes(240, 72, [...validSplitPercent, ...noisyExact]),
+      [validSplitPercent, noisyExact],
+      '16%',
+    );
+
+    expect(selected).toEqual([
+      { x: 175, y: 30, w: 8, h: 18 },
+      { x: 189, y: 29, w: 14, h: 19 },
+      { x: 209, y: 37, w: 13, h: 11 },
+    ]);
+  });
+
   it('sheds an isolated left blob and keeps the rightmost N (right-aligned text)', () => {
     // 3 boxes for a 2-char label: the box at x=0 sits far from the digits, so
     // drop it (the icon/plate-edge blob) and keep the rightmost two.

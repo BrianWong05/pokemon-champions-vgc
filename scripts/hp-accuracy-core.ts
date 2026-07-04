@@ -95,7 +95,7 @@ export function sweep(golden: GoldenFile, load: (name: string) => RgbaImage): Sw
           side,
           index: i,
           expected: expected[i],
-          got: readingToString(readHpFromPanel(img, panel)),
+          got: readingToString(readHpFromPanel(img, panel, undefined, side === 'opponent' ? 'percent' : 'fraction')),
         });
       });
     }

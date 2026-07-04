@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   decodeWindow,
   clusterGlyphBoxes,
+  extractGlyphs,
   matchGlyph,
+  measureHpBarFill,
   normalizeGlyph,
   parseHpText,
   readHpFromPanel,
@@ -22,6 +24,24 @@ function maskOf(rows: string[]): BinMask {
     });
   });
   return { bits, w, h };
+}
+
+function blankImage(w: number, h: number): RgbaImage {
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0; i < w * h; i++) data[i * 4 + 3] = 255;
+  return { data, width: w, height: h };
+}
+
+function fillRgb(img: RgbaImage, x0: number, y0: number, w: number, h: number, r: number, g: number, b: number): void {
+  for (let y = y0; y < y0 + h; y++) {
+    for (let x = x0; x < x0 + w; x++) {
+      const i = (y * img.width + x) * 4;
+      img.data[i] = r;
+      img.data[i + 1] = g;
+      img.data[i + 2] = b;
+      img.data[i + 3] = 255;
+    }
+  }
 }
 
 describe('parseHpText', () => {
@@ -75,6 +95,25 @@ describe('segmentGlyphs', () => {
     const boxes = segmentGlyphs(mask);
     expect(boxes.length).toBe(3);
     expect(boxes[0].x).toBeLessThan(boxes[1].x);
+  });
+});
+
+describe('extractGlyphs', () => {
+  it('trims disconnected vertical noise before splitting a wide glyph run', () => {
+    const w = 20;
+    const h = 30;
+    const bits = new Uint8Array(w * h);
+    for (let y = 5; y <= 15; y++) {
+      for (let x = 2; x < 16; x++) bits[y * w + x] = 1;
+    }
+    for (let x = 2; x < 16; x++) bits[25 * w + x] = 1;
+
+    const { boxes } = extractGlyphs({ bits, w, h }, { shear: 0, runFactor: 2 });
+
+    expect(boxes).toHaveLength(2);
+    expect(boxes.every((box) => box.y === 5 && box.h === 11)).toBe(true);
+    expect(boxes[0].x).toBe(2);
+    expect(boxes[0].w + boxes[1].w).toBe(14);
   });
 });
 
@@ -152,6 +191,18 @@ describe('whiteMask threshold factor', () => {
     const loose = whiteMask(img, { x: 0, y: 0, w: 4, h: 4 }, 0.72);
     expect(strict.bits[1]).toBe(0);
     expect(loose.bits[1]).toBe(1);
+  });
+});
+
+describe('measureHpBarFill', () => {
+  it('uses the lower HP bar band instead of an upper nameplate-colored band', () => {
+    const img = blankImage(130, 80);
+    const panel: TileBox = { x: 10, y: 10, w: 100, h: 50 };
+    fillRgb(img, 10, 36, 80, 3, 255, 0, 0);
+    fillRgb(img, 10, 45, 100, 5, 20, 20, 20);
+    fillRgb(img, 10, 45, 25, 5, 255, 220, 0);
+
+    expect(measureHpBarFill(img, panel)).toBeCloseTo(0.25, 2);
   });
 });
 

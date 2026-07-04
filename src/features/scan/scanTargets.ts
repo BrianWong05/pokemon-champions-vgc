@@ -38,7 +38,7 @@ function battleTargets(img: RgbaImage, side: ScanSide): ScanTarget[] {
   return panels.map((panel, i) => ({
     box: icons[i],
     side,
-    hpPercent: readHpFromPanel(img, panel)?.percent ?? null,
+    hpPercent: readHpFromPanel(img, panel, undefined, side === 'opponent' ? 'percent' : 'fraction')?.percent ?? null,
   })).filter((target) => target.box != null);
 }
 

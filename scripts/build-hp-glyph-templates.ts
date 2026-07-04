@@ -110,14 +110,14 @@ export function glyphTemplatesFromPanel(
     const cluster = selectCluster(mask, clusters, expectedText);
     if (!cluster) continue;
 
-    // Keep only glyphs whose box shape is plausible for their assigned char —
-    // mis-split slivers must never become templates. If most of the plate is
-    // implausible the assignment itself is suspect: try the next config.
+    // Keep only glyphs whose box shape is plausible for their assigned char.
+    // A partial assignment can poison the template set and prevent a later,
+    // cleaner config from contributing the missing glyphs.
     const lineH = Math.max(...cluster.map((b) => b.h));
     const kept = cluster
       .map((box, i) => ({ box, char: chars[i] }))
       .filter(({ box, char }) => plausibleGlyphShape(char, box));
-    if (kept.length < chars.length * 0.7) continue;
+    if (kept.length !== chars.length) continue;
     return kept.map(({ box, char }) => ({
       char,
       bits: Array.from(normalizeGlyph(mask, box)).join(''),
