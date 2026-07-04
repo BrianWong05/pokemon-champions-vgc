@@ -22,6 +22,8 @@ interface ScanTeamModalProps {
   onLoadAttacker?: (pokemonId: number, opts?: { hpPercent?: number | null }) => void;
   /** Calc mode: when provided, shows an optional button to save the scanned roster as a Team. */
   onSaveTeam?: (sets: ParsedShowdownSet[]) => void;
+  /** A screenshot captured externally (e.g. one-tap Android capture) to scan when the modal opens. */
+  externalBlob?: Blob | null;
 }
 
 interface RosterEntry {
@@ -31,7 +33,7 @@ interface RosterEntry {
   hpPercent?: number | null;
 }
 
-const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam }) => {
+const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob }) => {
   const legalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const { status, slots, mode, error, scan, reset } = useTeamScan(legalIds);
@@ -62,6 +64,15 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
       await scan(frame.blob);
     }
   };
+
+  // Scan an externally-captured screenshot (one-tap Android capture) when it arrives.
+  React.useEffect(() => {
+    if (isOpen && externalBlob) {
+      setPendingBlob(externalBlob);
+      void scan(externalBlob);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, externalBlob]);
 
   // Seed the editable roster from the scan results once a scan completes.
   React.useEffect(() => {

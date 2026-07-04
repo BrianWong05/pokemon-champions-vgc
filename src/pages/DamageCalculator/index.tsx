@@ -23,6 +23,8 @@ import { AttackerPanel } from '@/features/damage-calculator/components/AttackerP
 import { DefenderPanel } from '@/features/damage-calculator/components/DefenderPanel';
 import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
+import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
+import type { CapturedFrame } from '@/features/scan/captureSource';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
@@ -33,8 +35,14 @@ const DamageCalculatorPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
+
+  const handleCaptured = React.useCallback((frame: CapturedFrame) => {
+    setCapturedBlob(frame.blob);
+    setIsScanModalOpen(true);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -205,7 +213,8 @@ const DamageCalculatorPage: React.FC = () => {
       }
       defenderPanel={
         <div className="space-y-3">
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <OneTapCaptureToggle onCaptured={handleCaptured} />
             <button
               onClick={() => setIsScanModalOpen(true)}
               className="px-4 py-2 rounded bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors"
@@ -224,11 +233,12 @@ const DamageCalculatorPage: React.FC = () => {
     />
     <ScanTeamModal
       isOpen={isScanModalOpen}
-      onClose={() => setIsScanModalOpen(false)}
+      onClose={() => { setIsScanModalOpen(false); setCapturedBlob(null); }}
       pokemonList={pokemonList}
       onLoadPokemon={handleLoadDefender}
       onLoadAttacker={handleLoadAttacker}
       onSaveTeam={handleSaveOppTeam}
+      externalBlob={capturedBlob}
     />
     </>
   );
