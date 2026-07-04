@@ -1,7 +1,7 @@
 # Pokémon Champions damage calculator — Spec 3: regulation format selector
 
 Date: 2026-06-29
-Status: draft for review
+Status: implemented — global regulation format selector shipped and merged to main via PR #5.
 
 A UI slice that surfaced from Spec 2: the Reg M-B dataset is on `main`, but **"Regulation M-A"
 is hardcoded in every data fetch**, so users can't actually pick M-B. This adds a global

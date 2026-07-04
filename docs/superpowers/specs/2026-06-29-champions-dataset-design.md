@@ -1,7 +1,7 @@
 # Pokémon Champions damage calculator — Spec 2: Champions dataset (Mega + Reg M-B)
 
 Date: 2026-06-29
-Status: implemented (2026-06-29) — Reg M-B format + legality added (M-A set ∪ 38 additions; M-A 270, M-B 309). Champions Megas were already present in the DB with stats; abilities loaded for the 11 M-B-legal Megas that lacked them (NCP, MIT). Discovery during execution: Megas were pre-loaded (original Tasks 1–3 dropped), and 6 legal Megas use Champions-original abilities @smogon/calc doesn't model yet (documented in docs/champions-new-abilities.md, tracked as a follow-up).
+Status: implemented (2026-06-29) — Reg M-B format + legality added (M-A set ∪ 38 additions; M-A 270, M-B 309). Champions Megas were already present in the DB with stats; abilities loaded for the 11 M-B-legal Megas that lacked them (NCP, MIT). Discovery during execution: Megas were pre-loaded (original Tasks 1–3 dropped), and 6 legal Megas use Champions-original abilities @smogon/calc doesn't model (documented in docs/champions-new-abilities.md). Follow-up COMPLETE: those 6 abilities are implemented in src/features/damage-calculator/utils/damage-calc.ts and covered by champions-abilities.test.ts (14 tests).
 
 Spec 2 from the program decomposition (see Part A of
 `docs/superpowers/specs/2026-06-28-champions-calc-core-correctness-design.md`). With the
