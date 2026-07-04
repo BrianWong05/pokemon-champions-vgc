@@ -16,7 +16,10 @@ const OneTapCaptureToggle: React.FC<Props> = ({ onCaptured }) => {
     void ScreenCapture.addListener('overlayTap', async () => {
       try {
         const frame = await mediaProjectionSource.capture();
-        if (frame) onCaptured(frame);
+        if (frame) {
+          await ScreenCapture.bringToFront();
+          onCaptured(frame);
+        }
       } catch (e) {
         console.error('[capture] failed', e);
       }

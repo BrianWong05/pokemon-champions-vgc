@@ -7,6 +7,7 @@ export interface ScreenCapturePlugin {
   startSession(): Promise<{ started: boolean }>;
   stopSession(): Promise<void>;
   capture(): Promise<{ pngBase64: string; width: number; height: number }>;
+  bringToFront(): Promise<void>;
   addListener(eventName: 'overlayTap', cb: () => void): Promise<{ remove: () => Promise<void> }>;
 }
 

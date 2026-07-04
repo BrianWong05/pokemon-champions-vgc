@@ -77,6 +77,14 @@ public class ScreenCapturePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void bringToFront(PluginCall call) {
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        getContext().startActivity(intent);
+        call.resolve();
+    }
+
+    @PluginMethod
     public void capture(PluginCall call) {
         ScreenCaptureService svc = ScreenCaptureService.instance;
         if (svc == null) {
