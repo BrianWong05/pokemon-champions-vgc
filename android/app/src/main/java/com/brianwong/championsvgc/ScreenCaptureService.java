@@ -21,6 +21,11 @@ import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.graphics.Bitmap;
+import android.media.Image;
+import android.util.Base64;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 
 public class ScreenCaptureService extends Service {
     public static ScreenCaptureService instance;
@@ -109,6 +114,31 @@ public class ScreenCaptureService extends Service {
         lp.x = 24;
         lp.y = 240;
         windowManager.addView(floatingButton, lp);
+    }
+
+    /** Grab the latest mirrored frame as a base64 PNG. Runs on the caller's thread. */
+    public String captureLatestPng() {
+        if (imageReader == null) return null;
+        Image image = imageReader.acquireLatestImage();
+        if (image == null) return null;
+        try {
+            Image.Plane plane = image.getPlanes()[0];
+            ByteBuffer buffer = plane.getBuffer();
+            int pixelStride = plane.getPixelStride();
+            int rowStride = plane.getRowStride();
+            int rowPadding = rowStride - pixelStride * width;
+            Bitmap bitmap = Bitmap.createBitmap(
+                    width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888);
+            bitmap.copyPixelsFromBuffer(buffer);
+            Bitmap cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height);
+            bitmap.recycle();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            cropped.compress(Bitmap.CompressFormat.PNG, 100, out);
+            cropped.recycle();
+            return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
+        } finally {
+            image.close();
+        }
     }
 
     private void teardown() {

@@ -78,6 +78,22 @@ public class ScreenCapturePlugin extends Plugin {
 
     @PluginMethod
     public void capture(PluginCall call) {
-        call.reject("not implemented yet");
+        ScreenCaptureService svc = ScreenCaptureService.instance;
+        if (svc == null) {
+            call.reject("no active capture session");
+            return;
+        }
+        getActivity().runOnUiThread(() -> {
+            String png = svc.captureLatestPng();
+            if (png == null) {
+                call.reject("no frame available");
+                return;
+            }
+            JSObject ret = new JSObject();
+            ret.put("pngBase64", png);
+            ret.put("width", svc.width);
+            ret.put("height", svc.height);
+            call.resolve(ret);
+        });
     }
 }
