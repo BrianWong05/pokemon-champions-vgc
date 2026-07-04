@@ -41,6 +41,7 @@ export interface SideState {
   movesForceCrit: boolean[];
   movesHits: number[];
   faintedCount: number;
+  loadedFromScan: boolean;
   form?: 'Shield' | 'Blade';
 }
 
@@ -81,6 +82,10 @@ export type SideAction =
   | { type: 'TOGGLE_TYPE_OVERRIDE', payload: { side: 'p1' | 'p2' } }
   | { type: 'TOGGLE_AEGISLASH_FORM', payload: { side: 'p1' | 'p2' } }
   | { type: 'APPLY_PRESET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], preset: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
+  | { type: 'APPLY_SPREAD', payload: { side: 'p1' | 'p2', sp: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }, nature: string } }
+  | { type: 'APPLY_SAVED_BUILD', payload: { side: 'p1' | 'p2', build: import('../utils/build-store').SavedBuild } }
+  | { type: 'SET_SCAN_LOADED', payload: { side: 'p1' | 'p2', val: boolean } }
+  | { type: 'RESET_BUILD', payload: { side: 'p1' | 'p2' } }
   | { type: 'IMPORT_SHOWDOWN_SET', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], set: any, natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'LOAD_CONFIG', payload: { side: 'p1' | 'p2', config: any, pokemon: PokemonBaseStats, abilities: string[], movesData: (MoveData | null)[], natureStats: { boostedStat: string | null, hinderedStat: string | null } } }
   | { type: 'SET_FAINTED_COUNT', payload: { side: 'p1' | 'p2', val: number } }
@@ -121,6 +126,7 @@ export const initialSide: SideState = {
   movesForceCrit: [false, false, false, false],
   movesHits: [3, 3, 3, 3],
   faintedCount: 0,
+  loadedFromScan: false,
 };
 
 export const initialState: CalcState = {
@@ -207,6 +213,37 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         spSpa: 0,
         spSpd: 0,
         spSpe: 0,
+      };
+    }
+    case 'APPLY_SPREAD': {
+      const { sp, nature } = action.payload;
+      const stats = getNatureStats(nature);
+      return {
+        ...state,
+        spHp: sp.hp, spAtk: sp.atk, spDef: sp.def, spSpa: sp.spa, spSpd: sp.spd, spSpe: sp.spe,
+        nature, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat,
+      };
+    }
+    case 'APPLY_SAVED_BUILD': {
+      const { build } = action.payload;
+      const stats = getNatureStats(build.nature);
+      return {
+        ...state,
+        spHp: build.sp.hp, spAtk: build.sp.atk, spDef: build.sp.def,
+        spSpa: build.sp.spa, spSpd: build.sp.spd, spSpe: build.sp.spe,
+        nature: build.nature, boostedStat: stats.boostedStat, hinderedStat: stats.hinderedStat,
+        activeAbility: build.ability, item: build.item,
+      };
+    }
+    case 'SET_SCAN_LOADED': {
+      return { ...state, loadedFromScan: action.payload.val };
+    }
+    case 'RESET_BUILD': {
+      return {
+        ...state,
+        spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
+        nature: 'Hardy', boostedStat: null, hinderedStat: null,
+        item: null, loadedFromScan: false,
       };
     }
     case 'SELECT_POKEMON': {
