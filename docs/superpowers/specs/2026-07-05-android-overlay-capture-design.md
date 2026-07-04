@@ -1,7 +1,12 @@
 # Pokémon Champions damage calculator — Spec 5 (decomposition #4): Android overlay + one-tap capture
 
 Date: 2026-07-05
-Status: draft for review
+Status: approved 2026-07-05. **Build target = Task 1** (the device-independent `CaptureSource`
+seam + `ingestFrame` + `FilePickerSource` refactor + CI tests). **Task 0 (FLAG_SECURE spike) and
+Task 2 (native `MediaProjectionSource`) are DEFERRED** — no Android device with Champions is
+available to run the spike or test the plugin, so the native source stays a future device-gated
+task. The seam is designed so this deferral costs nothing: Task 1 stands on its own and directly
+improves the existing screenshot-import flow.
 
 Slice #4 of the program decomposition (see Part A of
 `docs/superpowers/specs/2026-06-28-champions-calc-core-correctness-design.md`): the signature
