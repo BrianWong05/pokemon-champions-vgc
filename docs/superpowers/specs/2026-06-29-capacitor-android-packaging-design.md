@@ -1,7 +1,7 @@
 # Pokémon Champions damage calculator — Spec 4 (decomposition #3): Capacitor Android packaging
 
 Date: 2026-06-29
-Status: draft for review
+Status: implemented — Android Capacitor shell shipped (commit 36ec343), verified end-to-end on an emulator; merged to main via PR #6. Packaging only; the native overlay/capture plugins remain slice #4.
 
 Slice #3 of the program decomposition (see Part A of
 `docs/superpowers/specs/2026-06-28-champions-calc-core-correctness-design.md`): wrap the
