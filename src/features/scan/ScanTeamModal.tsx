@@ -7,7 +7,7 @@ import type { Candidate, ScanSide } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
 import { useTeamScan, type ScanEngine } from './useTeamScan';
 import { loadClassifier } from './classifier';
-import { pickImage } from './capture';
+import { filePickerSource } from './captureSource';
 import { toParsedSets } from './toParsedSets';
 import CropStep from './CropStep';
 
@@ -56,10 +56,10 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
   };
 
   const startPick = async () => {
-    const blob = await pickImage();
-    if (blob) {
-      setPendingBlob(blob);
-      await scan(blob);
+    const frame = await filePickerSource.capture();
+    if (frame) {
+      setPendingBlob(frame.blob);
+      await scan(frame.blob);
     }
   };
 
