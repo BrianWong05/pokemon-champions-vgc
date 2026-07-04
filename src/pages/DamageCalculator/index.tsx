@@ -25,8 +25,20 @@ import { ResultSummary } from '@/features/damage-calculator/components/ResultSum
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import type { CapturedFrame } from '@/features/scan/captureSource';
+import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
+import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+
+const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
+  list.find((p) => p.id === side.selectedId)?.nameEn ?? null;
+const buildOf = (side: SideState): SavedBuild => ({
+  nature: side.nature, ability: side.activeAbility, item: side.item,
+  sp: { hp: side.spHp, atk: side.spAtk, def: side.spDef, spa: side.spSpa, spd: side.spSpd, spe: side.spSpe },
+});
+const isDefaultBuild = (side: SideState) =>
+  side.spHp === 0 && side.spAtk === 0 && side.spDef === 0 && side.spSpa === 0 && side.spSpd === 0 && side.spSpe === 0
+  && side.nature === 'Hardy' && side.item == null;
 
 const DamageCalculatorPage: React.FC = () => {
   const { state, dispatch } = useCalculatorState();
@@ -83,18 +95,46 @@ const DamageCalculatorPage: React.FC = () => {
 
   const { p1MaxHp, p2MaxHp, p1Results, p2Results } = useDamageCalc(state, pokemonList, efficacyMap);
 
-  const handleLoadDefender = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
+  const handleLoadDefender = async (pokemonId: number, opts?: { hpPercent?: number | null }) => {
     const p = pokemonList.find((p) => p.id === pokemonId);
     if (!p) return;
-    actions.handleSelectPokemon('p2', p);
+    await actions.handleSelectPokemon('p2', p);
     if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: opts.hpPercent } });
+    const build = loadSavedBuild(p.nameEn);
+    if (build) dispatch({ type: 'APPLY_SAVED_BUILD', payload: { side: 'p2', build } });
+    dispatch({ type: 'SET_SCAN_LOADED', payload: { side: 'p2', val: true } });
   };
 
-  const handleLoadAttacker = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
+  const handleLoadAttacker = async (pokemonId: number, opts?: { hpPercent?: number | null }) => {
     const p = pokemonList.find((p) => p.id === pokemonId);
     if (!p) return;
-    actions.handleSelectPokemon('p1', p);
+    await actions.handleSelectPokemon('p1', p);
     if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val: opts.hpPercent } });
+    const build = loadSavedBuild(p.nameEn);
+    if (build) dispatch({ type: 'APPLY_SAVED_BUILD', payload: { side: 'p1', build } });
+    dispatch({ type: 'SET_SCAN_LOADED', payload: { side: 'p1', val: true } });
+  };
+
+  const persistIfScanLoaded = (side: SideState) => {
+    if (!side.loadedFromScan || isDefaultBuild(side)) return;
+    const species = speciesNameOf(side, pokemonList);
+    if (species) saveBuild(species, buildOf(side));
+  };
+  useEffect(() => { persistIfScanLoaded(state.p1); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.p1.loadedFromScan, state.p1.nature, state.p1.item, state.p1.activeAbility,
+     state.p1.spHp, state.p1.spAtk, state.p1.spDef, state.p1.spSpa, state.p1.spSpd, state.p1.spSpe]);
+  useEffect(() => { persistIfScanLoaded(state.p2); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.p2.loadedFromScan, state.p2.nature, state.p2.item, state.p2.activeAbility,
+     state.p2.spHp, state.p2.spAtk, state.p2.spDef, state.p2.spSpa, state.p2.spSpd, state.p2.spSpe]);
+
+  const handleApplySpread = (side: 'p1' | 'p2', spread: Spread) =>
+    dispatch({ type: 'APPLY_SPREAD', payload: { side, sp: spread.sp, nature: spread.nature } });
+  const handleResetBuild = (side: 'p1' | 'p2') => {
+    const species = speciesNameOf(state[side], pokemonList);
+    if (species) clearBuild(species);
+    dispatch({ type: 'RESET_BUILD', payload: { side } });
   };
 
   const handleSaveOppTeam = async (sets: ParsedShowdownSet[]) => {
@@ -204,11 +244,13 @@ const DamageCalculatorPage: React.FC = () => {
         />
       }
       attackerPanel={
-        <AttackerPanel 
-          state={state} 
-          dispatch={dispatch} 
-          pokemonList={pokemonList} 
-          moveList={moveList} 
+        <AttackerPanel
+          state={state}
+          dispatch={dispatch}
+          pokemonList={pokemonList}
+          moveList={moveList}
+          onApplySpread={handleApplySpread}
+          onResetBuild={handleResetBuild}
         />
       }
       defenderPanel={
@@ -227,6 +269,8 @@ const DamageCalculatorPage: React.FC = () => {
             dispatch={dispatch}
             pokemonList={pokemonList}
             moveList={moveList}
+            onApplySpread={handleApplySpread}
+            onResetBuild={handleResetBuild}
           />
         </div>
       }
