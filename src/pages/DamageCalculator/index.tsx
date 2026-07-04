@@ -17,10 +17,14 @@ import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
 import { useFormat } from '@/features/formats/FormatContext';
 import { useCalculatorState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
+import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageCalc } from '@/features/damage-calculator/hooks/useDamageCalc';
 import { AttackerPanel } from '@/features/damage-calculator/components/AttackerPanel';
 import { DefenderPanel } from '@/features/damage-calculator/components/DefenderPanel';
 import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
+import ScanTeamModal from '@/features/scan/ScanTeamModal';
+import { useTeams } from '@/features/teams/hooks/useTeams';
+import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 
 const DamageCalculatorPage: React.FC = () => {
   const { state, dispatch } = useCalculatorState();
@@ -28,6 +32,9 @@ const DamageCalculatorPage: React.FC = () => {
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const { createTeam } = useTeams();
+  const actions = useCalculatorActions(dispatch, pokemonList, moveList);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,7 +75,103 @@ const DamageCalculatorPage: React.FC = () => {
 
   const { p1MaxHp, p2MaxHp, p1Results, p2Results } = useDamageCalc(state, pokemonList, efficacyMap);
 
+  const handleLoadDefender = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
+    const p = pokemonList.find((p) => p.id === pokemonId);
+    if (!p) return;
+    actions.handleSelectPokemon('p2', p);
+    if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: opts.hpPercent } });
+  };
+
+  const handleLoadAttacker = (pokemonId: number, opts?: { hpPercent?: number | null }) => {
+    const p = pokemonList.find((p) => p.id === pokemonId);
+    if (!p) return;
+    actions.handleSelectPokemon('p1', p);
+    if (opts?.hpPercent != null) dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p1', val: opts.hpPercent } });
+  };
+
+  const handleSaveOppTeam = async (sets: ParsedShowdownSet[]) => {
+    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const newMembers: PokemonConfig[] = [];
+    const db = await getDb();
+
+    for (const set of sets.slice(0, 6)) {
+      const showdownNorm = normalizeName(set.species);
+      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+
+      if (!p) {
+        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
+        if (megaMatch) {
+          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
+          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
+        }
+      }
+
+      if (!p && showdownNorm === 'indeedeef') {
+        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+      }
+
+      if (!p) {
+        const prefix = set.species.toLowerCase().split('-')[0];
+        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) ||
+            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
+      }
+
+      if (!p) continue;
+
+      let abilityNames: string[] = [];
+      try {
+        const abilityResult = await db.select({ name: abilities.nameEn })
+          .from(pokemonAbilities)
+          .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+          .where(eq(pokemonAbilities.pokemonId, p.id))
+          .orderBy(pokemonAbilities.slot);
+        abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      } catch (e) {}
+
+      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+      while (movesData.length < 4) movesData.push(null);
+      const natureStats = getNatureStats(set.nature);
+
+      newMembers.push({
+        selectedId: p.id,
+        type1: p.type1,
+        type2: p.type2,
+        baseHp: p.baseHp,
+        baseAtk: p.baseAttack,
+        baseDef: p.baseDefense,
+        baseSpa: p.baseSpAtk,
+        baseSpd: p.baseSpDef,
+        baseSpe: p.baseSpeed,
+        spHp: set.evs.hp,
+        spAtk: set.evs.atk,
+        spDef: set.evs.def,
+        spSpa: set.evs.spa,
+        spSpd: set.evs.spd,
+        spSpe: set.evs.spe,
+        nature: getFormattedNature(set.nature),
+        boostedStat: natureStats.boostedStat,
+        hinderedStat: natureStats.hinderedStat,
+        moves: movesData.slice(0, 4),
+        activeMoveIndex: 0,
+        abilities: abilityNames,
+        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
+        item: set.item,
+        hpPercent: 100,
+        isTypeOverridden: false,
+      });
+    }
+
+    if (newMembers.length === 0) {
+      alert('Could not find any Pokémon from the scanned team in our database.');
+      return;
+    }
+
+    const teamName = sets[0].species + "'s Team";
+    await createTeam(teamName, newMembers);
+  };
+
   return (
+    <>
     <DamageCalculatorTemplate
       activeWeather={state.weather}
       onWeatherChange={(w) => dispatch({ type: 'SET_WEATHER', payload: w })}
@@ -101,14 +204,33 @@ const DamageCalculatorPage: React.FC = () => {
         />
       }
       defenderPanel={
-        <DefenderPanel 
-          state={state} 
-          dispatch={dispatch} 
-          pokemonList={pokemonList} 
-          moveList={moveList} 
-        />
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <button
+              onClick={() => setIsScanModalOpen(true)}
+              className="px-4 py-2 rounded bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors"
+            >
+              Scan opponent
+            </button>
+          </div>
+          <DefenderPanel
+            state={state}
+            dispatch={dispatch}
+            pokemonList={pokemonList}
+            moveList={moveList}
+          />
+        </div>
       }
     />
+    <ScanTeamModal
+      isOpen={isScanModalOpen}
+      onClose={() => setIsScanModalOpen(false)}
+      pokemonList={pokemonList}
+      onLoadPokemon={handleLoadDefender}
+      onLoadAttacker={handleLoadAttacker}
+      onSaveTeam={handleSaveOppTeam}
+    />
+    </>
   );
 };
 

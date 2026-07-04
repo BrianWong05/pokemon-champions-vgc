@@ -5,6 +5,7 @@ import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
+import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { getDb } from '@/db';
@@ -26,6 +27,7 @@ const TeamsPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -185,6 +187,12 @@ const TeamsPage: React.FC = () => {
             Import Team
           </button>
           <button
+            onClick={() => setIsScanModalOpen(true)}
+            className="px-4 py-2 rounded bg-purple-600 text-white"
+          >
+            Scan Team
+          </button>
+          <button
             onClick={() => setIsCreating(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
           >
@@ -317,6 +325,13 @@ const TeamsPage: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImport={handleImportTeam}
+      />
+
+      <ScanTeamModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        onImport={handleImportTeam}
+        pokemonList={pokemonList}
       />
     </div>
   );
