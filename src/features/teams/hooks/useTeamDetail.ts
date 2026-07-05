@@ -282,6 +282,9 @@ export function useTeamDetail(id: string | undefined) {
       if (resolvedAbility.isFuzzy) {
         corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
       }
+    } else if (set.ability) {
+      alert(`Could not find Ability matching "${set.ability}"`);
+      return;
     }
 
     const resolvedItem = set.item ? matchItem(set.item) : null;
@@ -291,18 +294,24 @@ export function useTeamDetail(id: string | undefined) {
       if (resolvedItem.isFuzzy) {
         corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
       }
+    } else if (set.item) {
+      alert(`Could not find Item matching "${set.item}"`);
+      return;
     }
 
-    const movesData = set.moves.map(mName => {
+    const movesData: (MoveData | null)[] = [];
+    for (const mName of set.moves) {
       const mm = matchMove(mName, moveList);
       if (mm) {
         if (mm.isFuzzy) {
           corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
         }
-        return mm.match;
+        movesData.push(mm.match);
+      } else {
+        alert(`Could not find Move matching "${mName}"`);
+        return;
       }
-      return null;
-    });
+    }
 
     while (movesData.length < 4) movesData.push(null);
     const natureStats = getNatureStats(set.nature);

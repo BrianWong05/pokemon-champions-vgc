@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useTeamDetail } from './useTeamDetail';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { renderHook, act } from '@testing-library/react';
@@ -57,6 +57,17 @@ vi.mock('@/hooks/useModalRegistry', () => ({
 }));
 
 describe('useTeamDetail - handleImportSingleShowdown with fuzzy matches', () => {
+  let alertSpy: any;
+
+  beforeEach(() => {
+    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    mockUpdateTeam.mockClear();
+  });
+
+  afterEach(() => {
+    alertSpy.mockRestore();
+  });
+
   it('correctly imports fuzzy matched set, logs corrections and triggers event', async () => {
     const { result } = renderHook(() => useTeamDetail('123'));
 
@@ -108,5 +119,101 @@ describe('useTeamDetail - handleImportSingleShowdown with fuzzy matches', () => 
 
     expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
     dispatchEventSpy.mockRestore();
+  });
+
+  it('alerts and returns early if species match fails', async () => {
+    const { result } = renderHook(() => useTeamDetail('123'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const set: ParsedShowdownSet = {
+      species: 'UnknownPoke',
+      ability: 'Regenerator',
+      item: 'Rocky Helmet',
+      nature: 'Bold',
+      evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['Spore']
+    };
+
+    await act(async () => {
+      await result.current.handleImportSingleShowdown(set);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith('Could not find Pokémon matching "UnknownPoke"');
+    expect(mockUpdateTeam).not.toHaveBeenCalled();
+  });
+
+  it('alerts and returns early if ability match fails', async () => {
+    const { result } = renderHook(() => useTeamDetail('123'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const set: ParsedShowdownSet = {
+      species: 'Amoonguss',
+      ability: 'Huge Power', // not in Amoonguss's ability list
+      item: 'Rocky Helmet',
+      nature: 'Bold',
+      evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['Spore']
+    };
+
+    await act(async () => {
+      await result.current.handleImportSingleShowdown(set);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith('Could not find Ability matching "Huge Power"');
+    expect(mockUpdateTeam).not.toHaveBeenCalled();
+  });
+
+  it('alerts and returns early if item match fails', async () => {
+    const { result } = renderHook(() => useTeamDetail('123'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const set: ParsedShowdownSet = {
+      species: 'Amoonguss',
+      ability: 'Regenerator',
+      item: 'Fake Item Name Here',
+      nature: 'Bold',
+      evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['Spore']
+    };
+
+    await act(async () => {
+      await result.current.handleImportSingleShowdown(set);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith('Could not find Item matching "Fake Item Name Here"');
+    expect(mockUpdateTeam).not.toHaveBeenCalled();
+  });
+
+  it('alerts and returns early if move match fails', async () => {
+    const { result } = renderHook(() => useTeamDetail('123'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const set: ParsedShowdownSet = {
+      species: 'Amoonguss',
+      ability: 'Regenerator',
+      item: 'Rocky Helmet',
+      nature: 'Bold',
+      evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['Fake Move Name']
+    };
+
+    await act(async () => {
+      await result.current.handleImportSingleShowdown(set);
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith('Could not find Move matching "Fake Move Name"');
+    expect(mockUpdateTeam).not.toHaveBeenCalled();
   });
 });
