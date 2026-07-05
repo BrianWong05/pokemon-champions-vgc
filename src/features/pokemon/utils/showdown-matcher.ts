@@ -5,7 +5,48 @@ const SIMPLIFIED_TO_TRADITIONAL: Record<string, string> = {
   '鸟': '鳥', '兰': '蘭', '丽': '麗', '亚': '亞', '败': '敗', '球': '球', '菇': '菇', '发': '髮',
   '药': '藥', '草': '草', '虫': '蟲', '兽': '獸', '极': '極', '速': '速', '折': '折', '返': '返',
   '无': '無', '线': '線', '盖': '蓋', '罗': '羅', '双': '雙', '翼': '翼', '钢': '鋼', '铁': '鐵',
-  '银': '銀', '铜': '銅', '金': '金', '钟': '鐘', '锋': '鋒', '剑': '劍', '盾': '盾', '铠': '鎧'
+  '银': '銀', '铜': '銅', '金': '金', '钟': '鐘', '锋': '鋒', '伤': '傷', '响': '響',
+  '玛': '瑪', '骑': '騎', '纳': '納', '欧': '歐', '轰': '轟', '闪': '閃', '伟': '偉', '颈': '頸',
+  '恶': '惡', '简': '簡', '蜗': '蝸', '尔': '爾', '战': '戰', '圣': '聖', '连': '連', '强': '強',
+  '万': '萬', '冻': '凍', '动': '動', '剑': '劍', '盾': '盾', '铠': '鎧',
+  // Additional comprehensive VGC character mappings
+  '饭': '飯', '头': '頭', '气': '氣', '势': '勢', '带': '帶'
+};
+
+const CHINESE_TO_ENGLISH_ITEMS: Record<string, string> = {
+  '凹凸頭盔': 'Rocky Helmet',
+  '突擊背心': 'Assault Vest',
+  '生命寶珠': 'Life Orb',
+  '生命珠': 'Life Orb',
+  '命玉': 'Life Orb',
+  '吃剩的東西': 'Leftovers',
+  '剩飯': 'Leftovers',
+  '氣勢披帶': 'Focus Sash',
+  '氣勢披帶 ': 'Focus Sash',
+  '氣腰': 'Focus Sash',
+  '文柚果': 'Sitrus Berry',
+  '講究頭帶': 'Choice Band',
+  '專愛頭帶': 'Choice Band',
+  '講究眼鏡': 'Choice Specs',
+  '專愛眼鏡': 'Choice Specs',
+  '講究圍巾': 'Choice Scarf',
+  '專愛圍巾': 'Choice Scarf',
+  '木子果': 'Lum Berry',
+  '避難背包': 'Eject Pack',
+  '紅線': 'Destiny Knot',
+  '黑鐵球': 'Iron Ball',
+  '光之黏土': 'Light Clay',
+  '弱點保險': 'Weakness Policy',
+  '安全護目鏡': 'Safety Goggles',
+  '防塵護目鏡': 'Safety Goggles',
+  '氣球': 'Air Balloon',
+  '紅牌': 'Red Card',
+  '脫逃按鍵': 'Eject Button',
+  '逃脫按鍵': 'Eject Button',
+  '特性護具': 'Ability Shield',
+  '密探斗篷': 'Covert Cloak',
+  '清淨墜飾': 'Clear Amulet',
+  '驅動能量': 'Booster Energy'
 };
 
 export function convertSCtoTC(str: string): string {
@@ -51,31 +92,31 @@ function normalize(str: string | undefined | null): string {
 
 function normalizeZh(str: string | undefined | null): string {
   if (!str) return '';
-  return convertSCtoTC(str).replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+  return convertSCtoTC(str).toLowerCase().replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
 }
 
 export function matchSpecies(query: string, pokemonList: any[]): MatchResult<any> | null {
   if (!query) return null;
   const isChinese = /[\u4e00-\u9fa5]/.test(query);
 
-  // Regex for Mega translation in Chinese/English
   if (isChinese) {
+    const tcQuery = normalizeZh(query);
+    
+    // 1. Exact match first
+    const exact = pokemonList.find(p => p.nameZh && normalizeZh(p.nameZh) === tcQuery);
+    if (exact) return { match: exact, originalQuery: query, resolvedName: exact.nameZh || exact.nameEn, isFuzzy: false };
+
+    // 2. Chinese Mega regex translation match
     const megaMatch = query.match(/^超級(.+)|(.+)[- ]?(mega|超級|超|m)[- ]?(x|y)?$/i);
     if (megaMatch) {
       const base = (megaMatch[1] || megaMatch[2] || '').replace(/[- ]+$/, '').trim();
       const suffix = (megaMatch[4] || '').toUpperCase();
       const translatedQuery = `超級${convertSCtoTC(base)}${suffix}`;
-      const exact = pokemonList.find(p => p.nameZh === translatedQuery || normalizeZh(p.nameZh || '') === normalizeZh(translatedQuery));
-      if (exact) return { match: exact, originalQuery: query, resolvedName: exact.nameZh || exact.nameEn, isFuzzy: true };
+      const exactMega = pokemonList.find(p => p.nameZh === translatedQuery || normalizeZh(p.nameZh || '') === normalizeZh(translatedQuery));
+      if (exactMega) return { match: exactMega, originalQuery: query, resolvedName: exactMega.nameZh || exactMega.nameEn, isFuzzy: true };
     }
-  }
 
-  if (isChinese) {
-    const tcQuery = normalizeZh(query);
-    const exact = pokemonList.find(p => p.nameZh && normalizeZh(p.nameZh) === tcQuery);
-    if (exact) return { match: exact, originalQuery: query, resolvedName: exact.nameZh || exact.nameEn, isFuzzy: false };
-
-    // Fuzzy matching Chinese
+    // 3. Fuzzy matching Chinese
     let bestMatch: any = null, maxSim = 0.0;
     for (const p of pokemonList) {
       if (!p.nameZh) continue;
@@ -172,10 +213,31 @@ const allItems = Array.from(Generations.get(9).items).map(item => item.name);
 export function matchItem(query: string): MatchResult<string> | null {
   if (!query || query.toLowerCase() === 'none') return null;
   const isChinese = /[\u4e00-\u9fa5]/.test(query);
+  
   if (isChinese) {
-    // Items are not translated in db, so we store standard string or attempt English conversion
+    const tcQuery = convertSCtoTC(query);
+    const normTcQuery = normalizeZh(tcQuery);
+    
+    let resolvedEnglishName = CHINESE_TO_ENGLISH_ITEMS[tcQuery];
+    if (!resolvedEnglishName) {
+      for (const [zhKey, enName] of Object.entries(CHINESE_TO_ENGLISH_ITEMS)) {
+        if (normalizeZh(zhKey) === normTcQuery) {
+          resolvedEnglishName = enName;
+          break;
+        }
+      }
+    }
+    
+    if (resolvedEnglishName) {
+      const exact = allItems.find(item => normalize(item) === normalize(resolvedEnglishName));
+      if (exact) {
+        return { match: exact, originalQuery: query, resolvedName: exact, isFuzzy: false };
+      }
+    }
+    
     return { match: query, originalQuery: query, resolvedName: query, isFuzzy: false };
   }
+  
   const normQuery = normalize(query);
   const exact = allItems.find(item => normalize(item) === normQuery);
   if (exact) return { match: exact, originalQuery: query, resolvedName: exact, isFuzzy: false };

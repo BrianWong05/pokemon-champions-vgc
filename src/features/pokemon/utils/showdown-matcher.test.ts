@@ -5,7 +5,8 @@ describe('showdown-matcher', () => {
   const mockPokemonList = [
     { id: 591, nameEn: 'Amoonguss', nameZh: '敗露球菇' },
     { id: 6, nameEn: 'Charizard', nameZh: '噴火龍' },
-    { id: 10035, nameEn: 'Mega Charizard Y', nameZh: '超級噴火龍Y' }
+    { id: 10035, nameEn: 'Mega Charizard Y', nameZh: '超級噴火龍Y' },
+    { id: 137, nameEn: 'Porygon2', nameZh: '3D龍II' }
   ];
   const mockMoveList = [
     { id: 1, nameEn: 'Spore', nameZh: '蘑菇孢子' },
@@ -41,9 +42,26 @@ describe('showdown-matcher', () => {
     expect(res2!.isFuzzy).toBe(true);
   });
 
+  it('matches exact Megas without fuzzy flag', () => {
+    const res = matchSpecies('超級噴火龍Y', mockPokemonList);
+    expect(res!.match.id).toBe(10035);
+    expect(res!.isFuzzy).toBe(false);
+  });
+
   it('matches Megas correctly using regex rules in Chinese', () => {
     const res = matchSpecies('噴火龍-Mega-Y', mockPokemonList);
     expect(res!.match.id).toBe(10035);
+    expect(res!.isFuzzy).toBe(true);
+  });
+
+  it('matches hybrid English/Chinese terms case-insensitively', () => {
+    const res1 = matchSpecies('3D龍ii', mockPokemonList);
+    expect(res1!.match.id).toBe(137);
+    expect(res1!.isFuzzy).toBe(false);
+
+    const res2 = matchSpecies('3d龍II', mockPokemonList);
+    expect(res2!.match.id).toBe(137);
+    expect(res2!.isFuzzy).toBe(false);
   });
 
   it('matches moves fuzzily', () => {
@@ -83,5 +101,19 @@ describe('showdown-matcher', () => {
     const resFuzzyTypo = matchItem('Choic Band');
     expect(resFuzzyTypo!.match).toBe('Choice Band');
     expect(resFuzzyTypo!.isFuzzy).toBe(true);
+  });
+
+  it('translates common VGC items from Chinese', () => {
+    const res1 = matchItem('命玉');
+    expect(res1!.match).toBe('Life Orb');
+    expect(res1!.isFuzzy).toBe(false);
+
+    const res2 = matchItem('剩饭');
+    expect(res2!.match).toBe('Leftovers');
+    expect(res2!.isFuzzy).toBe(false);
+
+    const res3 = matchItem('凹凸頭盔');
+    expect(res3!.match).toBe('Rocky Helmet');
+    expect(res3!.isFuzzy).toBe(false);
   });
 });
