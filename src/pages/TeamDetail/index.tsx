@@ -9,9 +9,13 @@ import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { useTeamDetail } from '@/features/teams/hooks/useTeamDetail';
 import { TeamHeader } from '@/features/teams/components/TeamHeader';
 import { TeamMemberGrid } from '@/features/teams/components/TeamMemberGrid';
+import { useToast } from '@/hooks/useToast';
+import { ToastNotification } from '@/components/atoms/ToastNotification';
 
 const TeamDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+
   const {
     team,
     loading,
@@ -104,6 +108,7 @@ const TeamDetailPage: React.FC = () => {
         onClose={() => modals.closeModal('importSingle')}
         onImport={handleImportSingleShowdown}
       />
+      <ToastNotification message={toast} />
     </div>
   );
 };

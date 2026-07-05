@@ -9,6 +9,7 @@ import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pok
 import { useModalRegistry } from '@/hooks/useModalRegistry';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { useFormat } from '@/features/formats/FormatContext';
+import { matchSpecies, matchAbility, matchMove, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 
 export function useTeamDetail(id: string | undefined) {
   const { getTeam, updateTeam, loading: teamsLoading } = useTeams();
@@ -257,39 +258,69 @@ export function useTeamDetail(id: string | undefined) {
   const handleImportSingleShowdown = async (set: ParsedShowdownSet) => {
     if (!team) return;
 
-    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const showdownNorm = normalizeName(set.species);
-    let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+    const corrections: string[] = [];
 
-    if (!p) {
-      const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
-      if (megaMatch) {
-        const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
-        p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
-      }
-    }
-
-    if (!p && showdownNorm === 'indeedeef') {
-      p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
-    }
-
-    if (!p) {
-      const prefix = set.species.toLowerCase().split('-')[0];
-      p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
-          pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
-    }
-
-    if (!p) {
+    const speciesMatch = matchSpecies(set.species, pokemonList);
+    if (!speciesMatch) {
       alert(`Could not find Pokémon matching "${set.species}"`);
       return;
     }
+    const p = speciesMatch.match;
+    if (speciesMatch.isFuzzy) {
+      corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
+    }
 
-    let abilityNames: string[] = [];
+    let abilityResult: { nameEn: string; nameZh: string | null }[] = [];
     try {
-      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
+      abilityResult = await pokemonRepository.getPokemonAbilitiesBilingual(p.id);
     } catch (e) {}
 
-    const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+    const abilityNames = abilityResult.map(a => a.nameEn);
+    const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
+    const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
+
+    if (set.ability && !resolvedAbility) {
+      alert(`Could not find Ability matching "${set.ability}"`);
+      return;
+    }
+
+    let activeAbility = abilityResult[0]?.nameEn || null;
+    if (resolvedAbility) {
+      const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
+      if (dbRow?.nameEn) {
+        activeAbility = dbRow.nameEn;
+        if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
+          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
+        }
+      }
+    }
+
+    const resolvedItem = set.item ? matchItem(set.item) : null;
+    let item = set.item;
+    if (resolvedItem) {
+      item = resolvedItem.match;
+      if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
+        corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
+      }
+    } else if (set.item) {
+      alert(`Could not find Item matching "${set.item}"`);
+      return;
+    }
+
+    const movesData: (MoveData | null)[] = [];
+    for (const mName of set.moves) {
+      const mm = matchMove(mName, moveList);
+      if (mm) {
+        if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
+          corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
+        }
+        movesData.push(mm.match);
+      } else {
+        alert(`Could not find Move matching "${mName}"`);
+        return;
+      }
+    }
+
     while (movesData.length < 4) movesData.push(null);
     const natureStats = getNatureStats(set.nature);
 
@@ -315,8 +346,8 @@ export function useTeamDetail(id: string | undefined) {
       moves: movesData.slice(0, 4),
       activeMoveIndex: 0,
       abilities: abilityNames,
-      activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
-      item: set.item,
+      activeAbility,
+      item,
       hpPercent: 100,
       isTypeOverridden: false,
     };
@@ -329,6 +360,12 @@ export function useTeamDetail(id: string | undefined) {
     } catch (err) {
       console.error('Failed to add Pokémon via Showdown:', err);
     }
+
+    if (corrections.length > 0) {
+      window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side: 'single', corrections } }));
+    }
+
+    return corrections;
   };
 
   return {
