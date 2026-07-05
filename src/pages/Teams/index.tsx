@@ -15,6 +15,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { useFormat } from '@/features/formats/FormatContext';
+import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
@@ -28,6 +29,24 @@ const TeamsPage: React.FC = () => {
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const handleShowdownImported = (e: Event) => {
+      const corrections = (e as CustomEvent).detail?.corrections as string[];
+      if (corrections && corrections.length > 0) {
+        setToast(`Auto-corrected:\n${corrections.join('\n')}`);
+        clearTimeout(timer);
+        timer = setTimeout(() => setToast(null), 4000);
+      }
+    };
+    window.addEventListener('showdown-imported', handleShowdownImported);
+    return () => {
+      window.removeEventListener('showdown-imported', handleShowdownImported);
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -65,33 +84,19 @@ const TeamsPage: React.FC = () => {
   }, [format]);
 
   const handleImportTeam = async (sets: ParsedShowdownSet[]) => {
-    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
     const newMembers: PokemonConfig[] = [];
     const db = await getDb();
+    const corrections: string[] = [];
 
     for (const set of sets.slice(0, 6)) {
-      const showdownNorm = normalizeName(set.species);
-      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
-
-      if (!p) {
-        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
-        if (megaMatch) {
-          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
-          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
-        }
+      const speciesMatch = matchSpecies(set.species, pokemonList);
+      if (!speciesMatch) {
+        continue;
       }
-
-      if (!p && showdownNorm === 'indeedeef') {
-        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
+      const p = speciesMatch.match;
+      if (speciesMatch.isFuzzy) {
+        corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
       }
-
-      if (!p) {
-        const prefix = set.species.toLowerCase().split('-')[0];
-        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) || 
-            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
-      }
-
-      if (!p) continue;
 
       let abilityNames: string[] = [];
       try {
@@ -103,7 +108,36 @@ const TeamsPage: React.FC = () => {
         abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
       } catch (e) {}
 
-      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+      const resolvedAbility = set.ability ? matchAbility(set.ability, abilityNames) : null;
+      let activeAbility = abilityNames[0] || null;
+      if (resolvedAbility) {
+        activeAbility = resolvedAbility.match;
+        if (resolvedAbility.isFuzzy) {
+          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
+        }
+      }
+
+      const resolvedItem = set.item ? matchItem(set.item) : null;
+      let item = set.item;
+      if (resolvedItem) {
+        item = resolvedItem.match;
+        if (resolvedItem.isFuzzy) {
+          corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
+        }
+      }
+
+      const movesData: (MoveData | null)[] = [];
+      for (const mName of set.moves) {
+        const mm = matchMove(mName, moveList);
+        if (mm) {
+          if (mm.isFuzzy) {
+            corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
+          }
+          movesData.push(mm.match);
+        } else {
+          movesData.push(null);
+        }
+      }
       while (movesData.length < 4) movesData.push(null);
       const natureStats = getNatureStats(set.nature);
 
@@ -129,8 +163,8 @@ const TeamsPage: React.FC = () => {
         moves: movesData.slice(0, 4),
         activeMoveIndex: 0,
         abilities: abilityNames,
-        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
-        item: set.item,
+        activeAbility,
+        item,
         hpPercent: 100,
         isTypeOverridden: false,
       });
@@ -144,6 +178,11 @@ const TeamsPage: React.FC = () => {
     const teamName = sets[0].species + "'s Team";
     const teamId = await createTeam(teamName, newMembers);
     setIsImportModalOpen(false);
+
+    if (corrections.length > 0) {
+      window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side: 'team', corrections } }));
+    }
+
     navigate(`/teams/${teamId}`);
   };
 
@@ -333,6 +372,12 @@ const TeamsPage: React.FC = () => {
         onImport={handleImportTeam}
         pokemonList={pokemonList}
       />
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-gray-800 animate-bounce flex items-center gap-2 whitespace-pre-line">
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-ping shrink-0" />
+          <span>{toast}</span>
+        </div>
+      )}
     </div>
   );
 };
