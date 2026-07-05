@@ -101,6 +101,15 @@ describe('showdown-matcher', () => {
     const resFuzzyTypo = matchItem('Choic Band');
     expect(resFuzzyTypo!.match).toBe('Choice Band');
     expect(resFuzzyTypo!.isFuzzy).toBe(true);
+
+    // None and (No Item) matches
+    const resNone = matchItem('None');
+    expect(resNone!.match).toBe('None');
+    expect(resNone!.isFuzzy).toBe(false);
+
+    const resNoItem = matchItem('(No Item)');
+    expect(resNoItem!.match).toBe('(No Item)');
+    expect(resNoItem!.isFuzzy).toBe(false);
   });
 
   it('translates common VGC items from Chinese', () => {

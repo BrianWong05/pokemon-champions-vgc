@@ -210,8 +210,12 @@ export function matchAbility(query: string, abilityNames: string[]): MatchResult
 }
 
 const allItems = Array.from(Generations.get(9).items).map(item => item.name);
+
 export function matchItem(query: string): MatchResult<string> | null {
-  if (!query || query.toLowerCase() === 'none') return null;
+  if (!query) return null;
+  if (query.toLowerCase() === 'none' || query.toLowerCase() === '(no item)') {
+    return { match: query, originalQuery: query, resolvedName: query, isFuzzy: false };
+  }
   const isChinese = /[\u4e00-\u9fa5]/.test(query);
   
   if (isChinese) {
