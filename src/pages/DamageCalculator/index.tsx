@@ -30,6 +30,8 @@ import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
+import { useToast } from '@/hooks/useToast';
+import { ToastNotification } from '@/components/atoms/ToastNotification';
 
 const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
   list.find((p) => p.id === side.selectedId)?.nameEn ?? null;
@@ -51,24 +53,7 @@ const DamageCalculatorPage: React.FC = () => {
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    const handleShowdownImported = (e: Event) => {
-      const corrections = (e as CustomEvent).detail?.corrections as string[];
-      if (corrections && corrections.length > 0) {
-        setToast(`Auto-corrected:\n${corrections.join('\n')}`);
-        clearTimeout(timer);
-        timer = setTimeout(() => setToast(null), 4000);
-      }
-    };
-    window.addEventListener('showdown-imported', handleShowdownImported);
-    return () => {
-      window.removeEventListener('showdown-imported', handleShowdownImported);
-      clearTimeout(timer);
-    };
-  }, []);
+  const { toast } = useToast();
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -160,10 +145,12 @@ const DamageCalculatorPage: React.FC = () => {
     const newMembers: PokemonConfig[] = [];
     const db = await getDb();
     const corrections: string[] = [];
+    const errors: string[] = [];
 
     for (const set of sets.slice(0, 6)) {
       const speciesMatch = matchSpecies(set.species, pokemonList);
       if (!speciesMatch) {
+        errors.push(`Pokémon: ${set.species}`);
         continue;
       }
       const p = speciesMatch.match;
@@ -171,26 +158,37 @@ const DamageCalculatorPage: React.FC = () => {
         corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
       }
 
-      let abilityNames: string[] = [];
+      let abilityResult: { nameEn: string | null; nameZh: string | null }[] = [];
       try {
-        const abilityResult = await db.select({ name: abilities.nameEn })
+        abilityResult = await db.select({ nameEn: abilities.nameEn, nameZh: abilities.nameZh })
           .from(pokemonAbilities)
           .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
           .where(eq(pokemonAbilities.pokemonId, p.id))
           .orderBy(pokemonAbilities.slot);
-        abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
       } catch (e) {}
 
-      const resolvedAbility = set.ability ? matchAbility(set.ability, abilityNames) : null;
-      let activeAbility = abilityNames[0] || null;
+      const abilityNames = abilityResult.map(a => a.nameEn).filter((name): name is string => !!name);
+      const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
+
+      const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
+      if (set.ability && !resolvedAbility) {
+        errors.push(`Ability: ${set.ability}`);
+      }
+      let activeAbility = abilityResult[0]?.nameEn || null;
       if (resolvedAbility) {
-        activeAbility = resolvedAbility.match;
-        if (resolvedAbility.isFuzzy) {
-          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
+        const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
+        if (dbRow?.nameEn) {
+          activeAbility = dbRow.nameEn;
+          if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
+            corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
+          }
         }
       }
 
       const resolvedItem = set.item ? matchItem(set.item) : null;
+      if (set.item && !resolvedItem) {
+        errors.push(`Item: ${set.item}`);
+      }
       let item = set.item;
       if (resolvedItem) {
         item = resolvedItem.match;
@@ -208,6 +206,7 @@ const DamageCalculatorPage: React.FC = () => {
           }
           movesData.push(mm.match);
         } else {
+          errors.push(`Move: ${mName}`);
           movesData.push(null);
         }
       }
@@ -241,6 +240,10 @@ const DamageCalculatorPage: React.FC = () => {
         hpPercent: 100,
         isTypeOverridden: false,
       });
+    }
+
+    if (errors.length > 0) {
+      alert(`The following terms could not be recognized:\n${errors.join('\n')}`);
     }
 
     if (newMembers.length === 0) {
@@ -322,12 +325,7 @@ const DamageCalculatorPage: React.FC = () => {
       onSaveTeam={handleSaveOppTeam}
       externalBlob={capturedBlob}
     />
-    {toast && (
-      <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-gray-800 animate-bounce flex items-center gap-2 whitespace-pre-line">
-        <div className="w-2 h-2 rounded-full bg-green-400 animate-ping shrink-0" />
-        <span>{toast}</span>
-      </div>
-    )}
+    <ToastNotification message={toast} />
     </>
   );
 };
