@@ -50,6 +50,24 @@ const DamageCalculatorPage: React.FC = () => {
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const handleShowdownImported = (e: Event) => {
+      const corrections = (e as CustomEvent).detail?.corrections as string[];
+      if (corrections && corrections.length > 0) {
+        setToast(`Auto-corrected:\n${corrections.join('\n')}`);
+        clearTimeout(timer);
+        timer = setTimeout(() => setToast(null), 4000);
+      }
+    };
+    window.addEventListener('showdown-imported', handleShowdownImported);
+    return () => {
+      window.removeEventListener('showdown-imported', handleShowdownImported);
+      clearTimeout(timer);
+    };
+  }, []);
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -284,6 +302,12 @@ const DamageCalculatorPage: React.FC = () => {
       onSaveTeam={handleSaveOppTeam}
       externalBlob={capturedBlob}
     />
+    {toast && (
+      <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-gray-800 animate-bounce flex items-center gap-2 whitespace-pre-line">
+        <div className="w-2 h-2 rounded-full bg-green-400 animate-ping shrink-0" />
+        <span>{toast}</span>
+      </div>
+    )}
     </>
   );
 };

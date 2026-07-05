@@ -7,6 +7,7 @@ import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
+import { matchSpecies, matchAbility, matchMove, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 
 export function useCalculatorActions(
   dispatch: React.Dispatch<CalcAction>,
@@ -69,35 +70,16 @@ export function useCalculatorActions(
   };
 
   const handleImportShowdown = async (side: 'p1' | 'p2', set: ParsedShowdownSet) => {
-    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const showdownNorm = normalizeName(set.species);
-    
-    let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
+    const corrections: string[] = [];
 
-    if (!p) {
-      const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
-      if (megaMatch) {
-        const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
-        p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
-      }
-    }
-    
-    if (!p && showdownNorm === 'indeedeef') {
-      p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
-    }
-
-    if (!p) {
-      const prefix = set.species.toLowerCase().split('-')[0];
-      p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix);
-      
-      if (!p) {
-        p = pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
-      }
-    }
-    
-    if (!p) {
+    const speciesMatch = matchSpecies(set.species, pokemonList);
+    if (!speciesMatch) {
       alert(`Could not find Pokémon matching "${set.species}"`);
       return;
+    }
+    const p = speciesMatch.match;
+    if (speciesMatch.isFuzzy) {
+      corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
     }
 
     let abilityNames: string[] = [];
@@ -111,12 +93,47 @@ export function useCalculatorActions(
       abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
     } catch (e) {}
 
-    const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+    const resolvedAbility = set.ability ? matchAbility(set.ability, abilityNames) : null;
+    let activeAbility = abilityNames[0] || null;
+    if (resolvedAbility) {
+      activeAbility = resolvedAbility.match;
+      if (resolvedAbility.isFuzzy) {
+        corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
+      }
+    }
+
+    const resolvedItem = set.item ? matchItem(set.item) : null;
+    let item = set.item;
+    if (resolvedItem) {
+      item = resolvedItem.match;
+      if (resolvedItem.isFuzzy) {
+        corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
+      }
+    }
+
+    const movesData = set.moves.map(mName => {
+      const mm = matchMove(mName, moveList);
+      if (mm) {
+        if (mm.isFuzzy) {
+          corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
+        }
+        return mm.match;
+      }
+      return null;
+    });
+
     const natureStats = getNatureStats(set.nature);
 
     while (movesData.length < 4) {
       movesData.push(null);
     }
+
+    const updatedSet = {
+      ...set,
+      species: p.nameEn,
+      ability: activeAbility,
+      item: item,
+    };
 
     dispatch({
       type: 'IMPORT_SHOWDOWN_SET',
@@ -125,10 +142,16 @@ export function useCalculatorActions(
         pokemon: p,
         abilities: abilityNames,
         movesData: movesData.slice(0, 4),
-        set,
+        set: updatedSet,
         natureStats
       }
     });
+
+    if (corrections.length > 0) {
+      window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side, corrections } }));
+    }
+
+    return corrections;
   };
 
   const handleLoadConfig = async (side: 'p1' | 'p2', config: any) => {
