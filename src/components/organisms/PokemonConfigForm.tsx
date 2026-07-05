@@ -121,6 +121,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
                   </div>
                   <div className="flex-1 overflow-y-auto">
                     <TeamImportSelector 
+                      pokemonList={pokemonList}
                       onSelect={(loadedConfig) => {
                         onLoadConfig(loadedConfig);
                         setIsTeamSelectorOpen(false);
