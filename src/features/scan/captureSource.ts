@@ -1,4 +1,4 @@
-import { pickImage } from './capture';
+import { pickImage, takePhoto } from './capture';
 
 export type CaptureSourceKind = 'file' | 'mediaProjection' | 'camera';
 
@@ -22,5 +22,15 @@ export const filePickerSource: CaptureSource = {
     const blob = await pickImage();
     if (!blob) return null;
     return { blob, sourceKind: 'file', capturedAt: Date.now() };
+  },
+};
+
+export const cameraSource: CaptureSource = {
+  kind: 'camera',
+  isAvailable: async () => true,
+  async capture() {
+    const blob = await takePhoto();
+    if (!blob) return null;
+    return { blob, sourceKind: 'camera', capturedAt: Date.now() };
   },
 };
