@@ -5,6 +5,8 @@ import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { isMultiHitMove, getMultiHitLimits } from '@/features/damage-calculator/utils/damage-calc';
 import { PokemonPreset } from '@/features/pokemon/utils/pokemon-presets';
 import PokemonConfigForm from '@/components/organisms/PokemonConfigForm';
+import BuildPresets from '@/features/damage-calculator/components/BuildPresets';
+import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { calculateHP } from '@/features/damage-calculator/utils/damage-calc';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 
@@ -21,6 +23,8 @@ interface PokemonPanelProps {
   stats: any;
   onSpChange: (key: string, val: number) => void;
   onNatureChange: (nature: string) => void;
+  onApplySpread: (spread: Spread) => void;
+  onResetBuild: () => void;
   boostedStat: string | null;
   hinderedStat: string | null;
   onToggleNature: (stat: string, mod: '+' | '-') => void;
@@ -162,6 +166,8 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
         sideColor={sideColor}
         renderMoveActions={renderMoveActions}
       />
+
+      <BuildPresets onApplySpread={props.onApplySpread} onReset={props.onResetBuild} />
 
       <div className="bg-gray-50/50 p-2 rounded-xl border border-gray-100 flex items-center gap-3">
         <div className="flex flex-col min-w-[70px]">

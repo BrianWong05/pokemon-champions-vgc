@@ -4,15 +4,18 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { CalcState, CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
+import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 
 interface Props {
   state: CalcState;
   dispatch: React.Dispatch<CalcAction>;
   pokemonList: PokemonBaseStats[];
   moveList: MoveData[];
+  onApplySpread: (side: 'p1' | 'p2', spread: Spread) => void;
+  onResetBuild: (side: 'p1' | 'p2') => void;
 }
 
-export const AttackerPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList }) => {
+export const AttackerPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList, onApplySpread, onResetBuild }) => {
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const side = 'p1';
 
@@ -30,6 +33,8 @@ export const AttackerPanel: React.FC<Props> = ({ state, dispatch, pokemonList, m
       stats={state[side]}
       onSpChange={(key, val) => dispatch({ type: 'SET_SP', payload: { side, key, val } })}
       onNatureChange={(nature) => dispatch({ type: 'SET_NATURE', payload: { side, nature } })}
+      onApplySpread={(spread) => onApplySpread(side, spread)}
+      onResetBuild={() => onResetBuild(side)}
       boostedStat={state[side].boostedStat}
       hinderedStat={state[side].hinderedStat}
       onToggleNature={(stat, mod) => dispatch({ type: 'TOGGLE_NATURE', payload: { side, stat, mod } })}
