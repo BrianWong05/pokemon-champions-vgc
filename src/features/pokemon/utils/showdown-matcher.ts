@@ -235,7 +235,21 @@ export function matchItem(query: string): MatchResult<string> | null {
       }
     }
     
-    return { match: query, originalQuery: query, resolvedName: query, isFuzzy: false };
+    // Check English allItems list as a fallback
+    const normQuery = normalize(query);
+    const exact = allItems.find(item => normalize(item) === normQuery);
+    if (exact) return { match: exact, originalQuery: query, resolvedName: exact, isFuzzy: false };
+
+    let bestMatch: string | null = null, maxSim = 0.0;
+    for (const item of allItems) {
+      const sim = getSimilarity(normQuery, normalize(item));
+      if (sim > maxSim) { maxSim = sim; bestMatch = item; }
+    }
+    if (bestMatch && maxSim >= 0.75) {
+      return { match: bestMatch, originalQuery: query, resolvedName: bestMatch, isFuzzy: true };
+    }
+
+    return null;
   }
   
   const normQuery = normalize(query);

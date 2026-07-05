@@ -47,5 +47,22 @@ export const pokemonRepository = {
     .orderBy(pokemonAbilities.slot);
 
     return abilityResult.map(r => r.name).filter((name): name is string => !!name);
+  },
+
+  async getPokemonAbilitiesBilingual(pokemonId: number): Promise<{ nameEn: string; nameZh: string | null }[]> {
+    const db = await getDb();
+    const abilityResult = await db.select({
+      nameEn: abilities.nameEn,
+      nameZh: abilities.nameZh
+    })
+    .from(pokemonAbilities)
+    .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+    .where(eq(pokemonAbilities.pokemonId, pokemonId))
+    .orderBy(pokemonAbilities.slot);
+
+    return abilityResult.map(r => ({
+      nameEn: r.nameEn || '',
+      nameZh: r.nameZh
+    })).filter(r => !!r.nameEn);
   }
 };

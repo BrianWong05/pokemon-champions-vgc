@@ -116,4 +116,9 @@ describe('showdown-matcher', () => {
     expect(res3!.match).toBe('Rocky Helmet');
     expect(res3!.isFuzzy).toBe(false);
   });
+
+  it('returns null for unrecognized items', () => {
+    const res = matchItem('未知道具');
+    expect(res).toBeNull();
+  });
 });

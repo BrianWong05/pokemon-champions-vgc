@@ -192,7 +192,7 @@ const DamageCalculatorPage: React.FC = () => {
       let item = set.item;
       if (resolvedItem) {
         item = resolvedItem.match;
-        if (resolvedItem.isFuzzy) {
+        if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
           corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
         }
       }
@@ -201,7 +201,7 @@ const DamageCalculatorPage: React.FC = () => {
       for (const mName of set.moves) {
         const mm = matchMove(mName, moveList);
         if (mm) {
-          if (mm.isFuzzy) {
+          if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
             corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
           }
           movesData.push(mm.match);

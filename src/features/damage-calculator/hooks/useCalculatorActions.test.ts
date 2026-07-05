@@ -11,8 +11,8 @@ vi.mock('@/db', () => ({
         innerJoin: vi.fn(() => ({
           where: vi.fn(() => ({
             orderBy: vi.fn(() => Promise.resolve([
-              { name: 'Regenerator' },
-              { name: 'Chlorophyll' }
+              { nameEn: 'Regenerator', nameZh: '再生力' },
+              { nameEn: 'Chlorophyll', nameZh: '葉綠素' }
             ]))
           }))
         }))
@@ -150,5 +150,42 @@ describe('useCalculatorActions - handleImportShowdown with fuzzy matches', () =>
     await actions.handleImportShowdown('p1', set);
     expect(alertSpy).toHaveBeenCalledWith('Could not find Move matching "Fake Move Name"');
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('correctly imports Chinese/bilingual set, resolves Chinese terms, logs corrections, and updates state', async () => {
+    const dispatch = vi.fn();
+    const actions = useCalculatorActions(dispatch, mockPokemonList, mockMoveList);
+
+    const set: ParsedShowdownSet = {
+      species: '敗露球菇',
+      ability: '再生力',
+      item: '凹凸頭盔',
+      nature: 'Bold',
+      evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['蘑菇孢子', '愤怒粉']
+    };
+
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+
+    const corrections = await actions.handleImportShowdown('p1', set);
+
+    expect(corrections).toContain('Ability: 再生力 ➔ Regenerator');
+    expect(corrections).toContain('Item: 凹凸頭盔 ➔ Rocky Helmet');
+
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'IMPORT_SHOWDOWN_SET',
+      payload: expect.objectContaining({
+        pokemon: expect.objectContaining({ id: 591, nameEn: 'Amoonguss' }),
+        set: expect.objectContaining({
+          species: 'Amoonguss',
+          ability: 'Regenerator',
+          item: 'Rocky Helmet'
+        })
+      })
+    }));
+
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+    dispatchEventSpy.mockRestore();
   });
 });

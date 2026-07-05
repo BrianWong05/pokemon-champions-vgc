@@ -38,6 +38,10 @@ vi.mock('@/db/repositories/pokemon.repo', () => ({
     getPokemonAbilities: vi.fn(() => Promise.resolve([
       'Regenerator',
       'Chlorophyll'
+    ])),
+    getPokemonAbilitiesBilingual: vi.fn(() => Promise.resolve([
+      { nameEn: 'Regenerator', nameZh: '再生力' },
+      { nameEn: 'Chlorophyll', nameZh: '葉綠素' }
     ]))
   }
 }));
@@ -215,5 +219,53 @@ describe('useTeamDetail - handleImportSingleShowdown with fuzzy matches', () => 
 
     expect(alertSpy).toHaveBeenCalledWith('Could not find Move matching "Fake Move Name"');
     expect(mockUpdateTeam).not.toHaveBeenCalled();
+  });
+
+  it('correctly imports Chinese/bilingual set, resolves Chinese terms, logs corrections, and updates state', async () => {
+    const { result } = renderHook(() => useTeamDetail('123'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const set: ParsedShowdownSet = {
+      species: '敗露球菇',
+      ability: '再生力',
+      item: '凹凸頭盔',
+      nature: 'Bold',
+      evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 4, spe: 0 },
+      ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
+      moves: ['蘑菇孢子', '愤怒粉']
+    };
+
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+
+    let corrections: string[] | undefined;
+    await act(async () => {
+      corrections = await result.current.handleImportSingleShowdown(set);
+    });
+
+    expect(corrections).toContain('Ability: 再生力 ➔ Regenerator');
+    expect(corrections).toContain('Item: 凹凸頭盔 ➔ Rocky Helmet');
+
+    expect(mockUpdateTeam).toHaveBeenCalledWith(
+      '123',
+      'My Team',
+      expect.arrayContaining([
+        expect.objectContaining({
+          selectedId: 591,
+          activeAbility: 'Regenerator',
+          item: 'Rocky Helmet',
+          moves: [
+            expect.objectContaining({ nameEn: 'Spore' }),
+            expect.objectContaining({ nameEn: 'Rage Powder' }),
+            null,
+            null
+          ]
+        })
+      ])
+    );
+
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+    dispatchEventSpy.mockRestore();
   });
 });

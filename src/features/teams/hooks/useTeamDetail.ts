@@ -270,28 +270,36 @@ export function useTeamDetail(id: string | undefined) {
       corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
     }
 
-    let abilityNames: string[] = [];
+    let abilityResult: { nameEn: string; nameZh: string | null }[] = [];
     try {
-      abilityNames = await pokemonRepository.getPokemonAbilities(p.id);
+      abilityResult = await pokemonRepository.getPokemonAbilitiesBilingual(p.id);
     } catch (e) {}
 
-    const resolvedAbility = set.ability ? matchAbility(set.ability, abilityNames) : null;
-    let activeAbility = abilityNames[0] || null;
-    if (resolvedAbility) {
-      activeAbility = resolvedAbility.match;
-      if (resolvedAbility.isFuzzy) {
-        corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
-      }
-    } else if (set.ability) {
+    const abilityNames = abilityResult.map(a => a.nameEn);
+    const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
+    const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
+
+    if (set.ability && !resolvedAbility) {
       alert(`Could not find Ability matching "${set.ability}"`);
       return;
+    }
+
+    let activeAbility = abilityResult[0]?.nameEn || null;
+    if (resolvedAbility) {
+      const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
+      if (dbRow?.nameEn) {
+        activeAbility = dbRow.nameEn;
+        if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
+          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
+        }
+      }
     }
 
     const resolvedItem = set.item ? matchItem(set.item) : null;
     let item = set.item;
     if (resolvedItem) {
       item = resolvedItem.match;
-      if (resolvedItem.isFuzzy) {
+      if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
         corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
       }
     } else if (set.item) {
@@ -303,7 +311,7 @@ export function useTeamDetail(id: string | undefined) {
     for (const mName of set.moves) {
       const mm = matchMove(mName, moveList);
       if (mm) {
-        if (mm.isFuzzy) {
+        if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
           corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
         }
         movesData.push(mm.match);

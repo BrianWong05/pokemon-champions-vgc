@@ -82,34 +82,41 @@ export function useCalculatorActions(
       corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
     }
 
-    let abilityNames: string[] = [];
+    let abilityResult: { nameEn: string | null; nameZh: string | null }[] = [];
     try {
       const db = await getDb();
-      const abilityResult = await db.select({ name: abilities.nameEn })
+      abilityResult = await db.select({ nameEn: abilities.nameEn, nameZh: abilities.nameZh })
         .from(pokemonAbilities)
         .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
         .where(eq(pokemonAbilities.pokemonId, p.id))
         .orderBy(pokemonAbilities.slot);
-      abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
     } catch (e) {}
 
-    const resolvedAbility = set.ability ? matchAbility(set.ability, abilityNames) : null;
-    let activeAbility = abilityNames[0] || null;
-    if (resolvedAbility) {
-      activeAbility = resolvedAbility.match;
-      if (resolvedAbility.isFuzzy) {
-        corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${resolvedAbility.resolvedName}`);
-      }
-    } else if (set.ability) {
+    const abilityNames = abilityResult.map(a => a.nameEn).filter((name): name is string => !!name);
+    const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
+    const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
+
+    if (set.ability && !resolvedAbility) {
       alert(`Could not find Ability matching "${set.ability}"`);
       return;
+    }
+
+    let activeAbility = abilityResult[0]?.nameEn || null;
+    if (resolvedAbility) {
+      const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
+      if (dbRow?.nameEn) {
+        activeAbility = dbRow.nameEn;
+        if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
+          corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
+        }
+      }
     }
 
     const resolvedItem = set.item ? matchItem(set.item) : null;
     let item = set.item;
     if (resolvedItem) {
       item = resolvedItem.match;
-      if (resolvedItem.isFuzzy) {
+      if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
         corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
       }
     } else if (set.item) {
@@ -121,7 +128,7 @@ export function useCalculatorActions(
     for (const mName of set.moves) {
       const mm = matchMove(mName, moveList);
       if (mm) {
-        if (mm.isFuzzy) {
+        if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
           corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
         }
         movesData.push(mm.match);
