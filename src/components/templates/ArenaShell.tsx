@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AppBar, RegPill, TabBar, ARENA_TABS, Sheet, Chip, ChipGroup } from '@/design-system/arena';
+import { AppBar, RegPill, TabBar, ARENA_TABS, Sheet, Chip, ChipGroup, ThemeToggle } from '@/design-system/arena';
 import { useFormat } from '@/features/formats/FormatContext';
 
 const ROUTE_BY_TAB: Record<string, string> = {
@@ -41,7 +41,15 @@ const ArenaShell: React.FC = () => {
       fontFamily: 'var(--font-ui)',
       color: 'var(--text-body)',
     }}>
-      <AppBar title={TITLE_BY_TAB[active]} right={<RegPill value={format} onClick={() => setRegOpen(true)} />} />
+      <AppBar
+        title={TITLE_BY_TAB[active]}
+        right={
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <ThemeToggle />
+            <RegPill value={format} onClick={() => setRegOpen(true)} />
+          </div>
+        }
+      />
       <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         <Outlet />
       </main>
