@@ -8,17 +8,17 @@ interface Props {
 
 const BuildPresets: React.FC<Props> = ({ onApplySpread, onReset }) => (
   <div className="flex items-center gap-2 text-sm">
-    <span className="text-gray-500 font-semibold">Build</span>
+    <span className="text-ink-3 font-semibold">Build</span>
     {COMMON_SPREADS.map((s) => (
       <button
         key={s.id}
         onClick={() => onApplySpread(s)}
-        className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 font-medium"
+        className="px-2 py-1 rounded bg-inset hover:bg-raise text-ink-2 font-medium"
       >
         {s.label}
       </button>
     ))}
-    <button onClick={onReset} className="px-2 py-1 rounded text-red-600 hover:bg-red-50 font-medium">
+    <button onClick={onReset} className="px-2 py-1 rounded text-danger hover:bg-danger-soft font-medium">
       reset
     </button>
   </div>

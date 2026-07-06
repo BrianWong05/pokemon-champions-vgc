@@ -74,7 +74,7 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-6">
+    <div className="bg-card rounded-3xl border border-line p-6 space-y-6">
       <ShowdownImportModal 
         isOpen={isImportModalOpen} 
         onClose={() => setIsImportModalOpen(false)} 
@@ -92,27 +92,27 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
       {/* 1. Title Bar */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 shrink-0">
-          <div className={`w-1.5 h-6 ${sideColor || 'bg-blue-600'} rounded-full`} />
-          <h2 className="text-lg font-bold text-gray-800 whitespace-nowrap">{title || "Pokémon 1"}</h2>
+          <div className={`w-1.5 h-6 ${sideColor || 'bg-accent'} rounded-full`} />
+          <h2 className="text-lg font-bold text-ink-1 whitespace-nowrap">{title || "Pokémon 1"}</h2>
         </div>
         
         {/* Actions Selection moved to top right */}
         <div className="flex gap-1.5 items-center justify-end shrink">
           {onLoadConfig && (
             <div className="relative shrink-0">
-              <button 
+              <button
                 onClick={() => setIsTeamSelectorOpen(!isTeamSelectorOpen)}
-                className="text-[9px] font-black text-indigo-500 hover:text-indigo-600 uppercase tracking-widest bg-indigo-50 hover:bg-indigo-100 px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                className="text-[9px] font-black text-accent hover:text-accent uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap"
               >
                 Teams
               </button>
               {isTeamSelectorOpen && (
-                <div className="absolute right-0 top-full mt-2 w-[400px] max-h-[500px] bg-white border border-gray-200 rounded-xl shadow-2xl z-30 overflow-hidden flex flex-col">
-                  <div className="flex justify-between items-center p-3 border-b border-gray-100 bg-gray-50/50">
-                    <span className="text-xs font-bold text-gray-700">Import from Team</span>
-                    <button 
+                <div className="absolute right-0 top-full mt-2 w-[400px] max-h-[500px] bg-card border border-line rounded-xl shadow-[var(--shadow-pop)] z-30 overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center p-3 border-b border-line bg-inset">
+                    <span className="text-xs font-bold text-ink-2">Import from team</span>
+                    <button
                       onClick={() => setIsTeamSelectorOpen(false)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-ink-3 hover:text-ink-1"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -142,16 +142,16 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
 
           {onImportShowdown && (
             <div className="flex gap-1.5 shrink-0">
-              <button 
+              <button
                 onClick={() => setIsImportModalOpen(true)}
-                className="text-[9px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
+                className="text-[9px] font-black text-accent hover:text-accent uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
               >
                 Import
               </button>
               {selectedPokemon && (
-                <button 
+                <button
                   onClick={handleExportShowdown}
-                  className="text-[9px] font-black text-green-500 hover:text-green-600 uppercase tracking-widest bg-green-50 hover:bg-green-100 px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
+                  className="text-[9px] font-black text-accent hover:text-accent uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-2 py-1.5 rounded-full transition-colors whitespace-nowrap"
                 >
                   Export
                 </button>
@@ -161,10 +161,10 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
 
           {selectedPokemon && availablePresets.length > 0 ? (
             <div className="relative group shrink-0">
-              <button className="text-[9px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap">
-                Presets <span className="bg-blue-200 text-blue-700 px-1.5 rounded-full text-[9px] leading-tight">{availablePresets.length}</span>
+              <button className="text-[9px] font-black text-accent hover:text-accent uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-2 py-1.5 rounded-full transition-colors flex items-center gap-1.5 whitespace-nowrap">
+                Presets <span className="bg-accent-soft text-accent px-1.5 rounded-full text-[9px] leading-tight">{availablePresets.length}</span>
               </button>
-              <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-line rounded-xl shadow-[var(--shadow-pop)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden">
                 <div className="max-h-60 overflow-y-auto">
                   {availablePresets.map(preset => (
                     <button
@@ -176,17 +176,17 @@ const PokemonConfigForm: React.FC<PokemonConfigFormProps> = ({
                           setTimeout(() => setLastAppliedPreset(null), 3000);
                         }
                       }}
-                      className={`w-full text-left px-3 py-2 text-xs transition-colors border-b last:border-0 border-gray-50 flex flex-col gap-0.5 ${
-                        lastAppliedPreset === preset.name 
-                          ? 'bg-green-50 text-green-700' 
-                          : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                      className={`w-full text-left px-3 py-2 text-xs transition-colors border-b last:border-0 border-line flex flex-col gap-0.5 ${
+                        lastAppliedPreset === preset.name
+                          ? 'bg-safe-soft text-safe'
+                          : 'text-ink-2 hover:bg-accent-soft hover:text-accent'
                       }`}
                     >
                       <span className="font-bold flex justify-between items-center">
                         {preset.name}
-                        {lastAppliedPreset === preset.name && <span className="text-[10px] text-green-600 bg-green-200 px-1.5 rounded-full">Applied</span>}
+                        {lastAppliedPreset === preset.name && <span className="text-[10px] text-safe bg-safe-soft px-1.5 rounded-full">Applied</span>}
                       </span>
-                      <span className="text-[9px] text-gray-400 uppercase tracking-wider">{preset.nature} • {preset.item}</span>
+                      <span className="text-[9px] text-ink-3 uppercase tracking-wider">{preset.nature} • {preset.item}</span>
                     </button>
                   ))}
                 </div>

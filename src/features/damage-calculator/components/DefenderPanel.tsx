@@ -22,7 +22,7 @@ export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, m
   return (
     <PokemonPanel 
       title="Pokémon 2"
-      sideColor="bg-red-600"
+      sideColor="bg-danger"
       side={side}
       pokemonList={pokemonList}
       selectedId={state[side].selectedId}
