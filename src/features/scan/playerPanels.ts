@@ -96,6 +96,50 @@ export function carveRegions(panel: TileBox, kind: PlayerScreenKind): PanelRegio
   return { panel, sprite: frac(panel, STATS_FRAC.sprite), statCells: cells };
 }
 
+// CALIBRATE: real panels are near-identical in area; drop outliers before the top-6 pick
+// so an oversized/undersized intruder blob can't displace a true panel.
+const MEDIAN_AREA_MIN_RATIO = 0.55;
+const MEDIAN_AREA_MAX_RATIO = 1.8;
+
+function medianAreaFilter(boxes: TileBox[]): TileBox[] {
+  const areas = boxes.map(b => b.w * b.h).sort((a, b) => a - b);
+  const mid = areas.length / 2;
+  const median = areas.length % 2 ? areas[Math.floor(mid)] : (areas[mid - 1] + areas[mid]) / 2;
+  return boxes.filter(b => {
+    const ratio = (b.w * b.h) / median;
+    return ratio >= MEDIAN_AREA_MIN_RATIO && ratio <= MEDIAN_AREA_MAX_RATIO;
+  });
+}
+
+// CALIBRATE: tolerance for row/column alignment, as a fraction of panel height/width.
+const ROW_Y_TOLERANCE = 0.3;
+const COL_X_TOLERANCE = 0.3;
+
+// Validates that 6 row-major-ordered boxes (2 per row, 3 rows) actually form a
+// 2x3 grid: each row's pair shares a y-center, rows are vertically distinct,
+// and each column's x-center is consistent across rows.
+function isValidGrid(ordered: TileBox[]): boolean {
+  const avgH = ordered.reduce((s, b) => s + b.h, 0) / ordered.length;
+  const avgW = ordered.reduce((s, b) => s + b.w, 0) / ordered.length;
+  const rows = [0, 1, 2].map(r => ordered.slice(r * 2, r * 2 + 2));
+
+  for (const row of rows) {
+    const [a, b] = row.map(box => box.y + box.h / 2);
+    if (Math.abs(a - b) > avgH * ROW_Y_TOLERANCE) return false;
+  }
+
+  const rowCy = rows.map(row => (row[0].y + row[0].h / 2 + row[1].y + row[1].h / 2) / 2);
+  if (!(rowCy[1] - rowCy[0] > avgH * ROW_Y_TOLERANCE && rowCy[2] - rowCy[1] > avgH * ROW_Y_TOLERANCE)) return false;
+
+  for (const col of [0, 1]) {
+    const cxs = rows.map(row => row[col].x + row[col].w / 2);
+    const spread = Math.max(...cxs) - Math.min(...cxs);
+    if (spread > avgW * COL_X_TOLERANCE) return false;
+  }
+
+  return true;
+}
+
 export function detectPlayerPanels(img: RgbaImage): PlayerFrameDetection | null {
   const mask = new Uint8Array(img.width * img.height);
   for (let i = 0, px = 0; i < img.data.length; i += 4, px++) {
@@ -104,6 +148,8 @@ export function detectPlayerPanels(img: RgbaImage): PlayerFrameDetection | null 
   const minArea = Math.max(2000, Math.round(img.width * img.height * 0.008)); // CALIBRATE
   let boxes = connectedComponents(mask, img.width, img.height, minArea)
     .filter(b => b.w / b.h > 2 && b.w / b.h < 6 && b.w >= img.width * 0.22);
+  if (boxes.length < 6) return null;
+  boxes = medianAreaFilter(boxes);
   if (boxes.length < 6) return null;
   boxes = boxes.sort((a, b) => b.w * b.h - a.w * a.h).slice(0, 6);
 
@@ -114,6 +160,7 @@ export function detectPlayerPanels(img: RgbaImage): PlayerFrameDetection | null 
   for (let r = 0; r < 3; r++) {
     ordered.push(...byCy.slice(r * 2, r * 2 + 2).sort((p, q) => p.cx - q.cx).map(p => p.b));
   }
+  if (!isValidGrid(ordered)) return null;
   const kind = classifyScreenKind(img, ordered);
   return { kind, panels: ordered.map(box => carveRegions(box, kind)) };
 }

@@ -46,6 +46,43 @@ describe('detectPlayerPanels', () => {
     expect(detectPlayerPanels(img)).toBeNull();
   });
 
+  it('ignores a spurious oversized purple blob instead of displacing a real panel', () => {
+    const img = blank(1400, 900);
+    const boxes = paintSixPanels(img);
+    // Intruder: wider than a real panel (still passes aspect 2-6 and width>=22% filters),
+    // and larger in area than every real panel (480*120 = 57600).
+    const intruder = { x: 100, y: 700, w: 700, h: 130 };
+    fillRect(img, intruder.x, intruder.y, intruder.w, intruder.h, PURPLE);
+    const det = detectPlayerPanels(img);
+    if (det) {
+      expect(det.panels).toHaveLength(6);
+      const panelBoxes = det.panels.map(p => p.panel);
+      // every returned box must match one of the 6 true panels
+      for (const b of boxes) {
+        expect(panelBoxes.some(p => p.x === b.x && p.y === b.y && p.w === b.w && p.h === b.h)).toBe(true);
+      }
+      // the intruder must never appear in the result
+      expect(panelBoxes.some(p => p.x === intruder.x && p.y === intruder.y && p.w === intruder.w && p.h === intruder.h)).toBe(false);
+    } else {
+      expect(det).toBeNull();
+    }
+  });
+
+  it('returns null when 6 similarly-sized blobs do not form a 2x3 grid', () => {
+    const img = blank(1400, 900);
+    // 6 boxes that all pass area/aspect/width filters but are scattered, not a clean grid.
+    const scattered = [
+      { x: 100, y: 100, w: 480, h: 120 },
+      { x: 700, y: 160, w: 480, h: 120 },
+      { x: 100, y: 400, w: 480, h: 120 },
+      { x: 750, y: 420, w: 480, h: 120 },
+      { x: 120, y: 650, w: 480, h: 120 },
+      { x: 680, y: 700, w: 480, h: 120 },
+    ];
+    for (const b of scattered) fillRect(img, b.x, b.y, b.w, b.h, PURPLE);
+    expect(detectPlayerPanels(img)).toBeNull();
+  });
+
   it('classifies stats screen by orange bars', () => {
     const img = blank(1280, 720);
     const boxes = paintSixPanels(img);
