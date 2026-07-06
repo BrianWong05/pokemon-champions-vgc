@@ -142,7 +142,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
   };
 
   const confirmRosterIds = () =>
-    roster.filter((e) => e.side !== 'player' && e.id != null).map((e) => e.id as number);
+    [...new Set(roster.filter((e) => e.side !== 'player' && e.id != null).map((e) => e.id as number))];
 
   const confirmRoster = () => {
     const ids = confirmRosterIds();
