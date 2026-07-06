@@ -60,3 +60,10 @@ __pycache__/
 *.pyc
 # Colab dataset bundle (regenerate: zip -r glyph-dataset.zip hp-reader/dataset scripts/train_glyph_net.py)
 glyph-dataset.zip
+
+# Local scratch (planning-with-files + tools)
+findings.md
+progress.md
+task_plan.md
+.antigravitycli/
+training/screenshots/
