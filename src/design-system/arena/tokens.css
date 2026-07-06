@@ -185,17 +185,17 @@
   --accent-soft-line: rgba(61,103,230,0.38);
 
   /* --- Semantic: darkened to hold AA as text on white --- */
-  --safe: #1D9160;
-  --safe-soft: rgba(29,145,96,0.13);
-  --safe-line: rgba(29,145,96,0.40);
+  --safe: #18784F;
+  --safe-soft: rgba(24,120,79,0.13);
+  --safe-line: rgba(24,120,79,0.40);
 
-  --danger: #D63A52;
-  --danger-soft: rgba(214,58,82,0.12);
-  --danger-line: rgba(214,58,82,0.40);
+  --danger: #C72942;
+  --danger-soft: rgba(199,41,66,0.12);
+  --danger-line: rgba(199,41,66,0.40);
 
-  --field: #B27A10;
-  --field-soft: rgba(178,122,16,0.13);
-  --field-line: rgba(178,122,16,0.40);
+  --field: #8E610D;
+  --field-soft: rgba(142,97,13,0.13);
+  --field-line: rgba(142,97,13,0.40);
 
   /* --- Surfaces --- */
   --bg-page: #F3F5FA;

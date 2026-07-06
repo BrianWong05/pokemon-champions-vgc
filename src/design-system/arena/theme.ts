@@ -27,8 +27,6 @@ export function useTheme(): [Theme, (t: Theme) => void] {
   useEffect(() => {
     const mql = query();
     const onChange = () => {
-      const stored = localStorage.getItem(KEY);
-      if (stored === 'light' || stored === 'dark') return; // user override wins
       const next = resolveTheme();
       applyTheme(next);
       setState(next);
