@@ -69,4 +69,17 @@ describe('useDamageScenarios', () => {
     expect(invested.current.noSp!.maxPercent).toBeGreaterThanOrEqual(base.current.maxBulk!.maxPercent);
     expect(invested.current.noSp!.maxPercent).toBeGreaterThan(invested.current.maxBulk!.maxPercent);
   });
+
+  it('invests bulk in the defending stat that matches the move category', () => {
+    // Moonblast is special; give the defender high Def / low SpD so bulk must
+    // land in SpD — if the category were swapped, maxBulk would barely drop.
+    const asym = {
+      ...baseState,
+      p2: side({ selectedId: 887, baseHp: 88, baseAtk: 120, baseDef: 150, baseSpa: 100, baseSpd: 40, baseSpe: 142 }),
+    };
+    const { result } = renderHook(() => useDamageScenarios(asym, pokemonList, 'p1'));
+    const { maxBulk, noSp } = result.current;
+    expect(maxBulk && noSp).toBeTruthy();
+    expect(maxBulk!.maxPercent).toBeLessThan(noSp!.maxPercent * 0.75);
+  });
 });
