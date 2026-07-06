@@ -101,4 +101,73 @@ describe('usePlayerTeamScan', () => {
 
     expect(result.current.merged?.slots[0].species).toEqual([{ id: 8, score: 1 }]);
   });
+
+  it('busy is true while addFrame is in flight and false once it resolves', async () => {
+    let resolveScan!: (v: any) => void;
+    const d = {
+      ...baseDeps,
+      scan: () => new Promise(resolve => { resolveScan = resolve; }),
+    };
+    const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));
+
+    expect(result.current.busy).toBe(false);
+
+    let addFramePromise!: Promise<void>;
+    act(() => { addFramePromise = result.current.addFrame(blobOf(1)); });
+
+    expect(result.current.busy).toBe(true);
+
+    // let the loadVocab/blobToRgbaImage microtasks ahead of deps.scan() settle so resolveScan is assigned
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    await act(async () => { resolveScan(movesFrame); await addFramePromise; });
+
+    expect(result.current.busy).toBe(false);
+  });
+
+  it('lastError: failure sets it, a subsequent failing attempt keeps it set, success clears it', async () => {
+    // Get both slots to 'done' first so a null scan routes to lastError instead of a slot.
+    const d = mkDeps({ 1: movesFrame, 2: statsFrame });
+    const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));
+
+    await act(() => result.current.addFrame(blobOf(1)));
+    await act(() => result.current.addFrame(blobOf(2)));
+
+    await act(() => result.current.addFrame(blobOf(3))); // detection failure
+    expect(result.current.lastError).toBe('No team panels found — try cropping around the six panels.');
+
+    await act(() => result.current.addFrame(blobOf(3))); // another failing attempt: still set after it resolves
+    expect(result.current.lastError).toBe('No team panels found — try cropping around the six panels.');
+
+    await act(() => result.current.addFrame(blobOf(1))); // success: cleared
+    expect(result.current.lastError).toBeNull();
+  });
+
+  it('removeImage clears only the given slot to idle; the other and merged are unaffected', async () => {
+    const d = mkDeps({ 1: movesFrame, 2: statsFrame });
+    const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));
+
+    await act(() => result.current.addFrame(blobOf(1)));
+    await act(() => result.current.addFrame(blobOf(2)));
+    expect(result.current.merged?.slots[0].statReads).toHaveLength(6);
+
+    act(() => result.current.removeImage('moves'));
+
+    expect(result.current.movesImage).toEqual({ status: 'idle', error: null, blob: null });
+    expect(result.current.statsImage.status).toBe('done');
+    expect(result.current.merged).not.toBeNull();
+    expect(result.current.merged?.slots[0].statReads).toHaveLength(6);
+  });
+
+  it('setSlotSpecies with only a stats image overrides that slot species to a pinned candidate', async () => {
+    const d = mkDeps({ 2: statsFrame });
+    const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));
+
+    await act(() => result.current.addFrame(blobOf(2)));
+    expect(result.current.statsImage.status).toBe('done');
+
+    act(() => result.current.setSlotSpecies(0, 8));
+
+    expect(result.current.merged?.slots[0].species).toEqual([{ id: 8, score: 1 }]);
+  });
 });

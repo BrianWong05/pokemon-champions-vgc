@@ -8,6 +8,8 @@ import type { PlayerScreenKind } from './playerTypes';
 import type { RgbaImage } from './types';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
+// 'scanning' is intentionally unused: the hook can't attribute an in-flight frame to a
+// slot until deps.scan resolves the kind. Use the hook-level `busy` flag instead.
 export type PlayerImageStatus = 'idle' | 'scanning' | 'done' | 'error';
 export interface PlayerImageState {
   status: PlayerImageStatus;
@@ -39,6 +41,7 @@ export function usePlayerTeamScan(pokemonList: PokemonBaseStats[], deps: PlayerT
   const [lastError, setLastError] = useState<string | null>(null);
   const [vocab, setVocab] = useState<PlayerScanVocab | null>(null);
   const [version, setVersion] = useState(0);
+  const [pending, setPending] = useState(0);
 
   const movesScanRef = useRef<Extract<PlayerFrameScan, { kind: 'moves' }> | null>(null);
   const statsScanRef = useRef<Extract<PlayerFrameScan, { kind: 'stats' }> | null>(null);
@@ -56,36 +59,41 @@ export function usePlayerTeamScan(pokemonList: PokemonBaseStats[], deps: PlayerT
   }, [basesById, version]);
 
   const addFrame = useCallback(async (blob: Blob) => {
-    const v = vocabRef.current ?? await deps.loadVocab();
-    if (!vocabRef.current) { vocabRef.current = v; setVocab(v); }
-    setLastError(null);
+    setPending(p => p + 1);
+    try {
+      const v = vocabRef.current ?? await deps.loadVocab();
+      if (!vocabRef.current) { vocabRef.current = v; setVocab(v); }
+      setLastError(null);
 
-    const img = await deps.blobToRgbaImage(blob);
-    const scan = await deps.scan(img, legalIds, v, deps.scanDeps);
+      const img = await deps.blobToRgbaImage(blob);
+      const scan = await deps.scan(img, legalIds, v, deps.scanDeps);
 
-    if (!scan) {
-      // The kind isn't known on a detection failure. Both slots already done: don't
-      // clobber a good scan — surface the error on the transient banner instead.
-      // Otherwise route it to whichever slot is empty (moves first) for crop-retry.
-      if (movesImage.status === 'done' && statsImage.status === 'done') {
-        setLastError(NO_PANELS_ERROR);
+      if (!scan) {
+        // The kind isn't known on a detection failure. Both slots already done: don't
+        // clobber a good scan — surface the error on the transient banner instead.
+        // Otherwise route it to whichever slot is empty (moves first) for crop-retry.
+        if (movesImage.status === 'done' && statsImage.status === 'done') {
+          setLastError(NO_PANELS_ERROR);
+          return;
+        }
+        const setTarget = movesImage.status !== 'done' ? setMovesImage : setStatsImage;
+        setTarget({ status: 'error', error: NO_PANELS_ERROR, blob });
         return;
       }
-      const setTarget = movesImage.status !== 'done' ? setMovesImage : setStatsImage;
-      setTarget({ status: 'error', error: NO_PANELS_ERROR, blob });
-      return;
-    }
 
-    if (scan.kind === 'moves') {
-      movesScanRef.current = scan;
-      movesRgbaRef.current = img;
-      setMovesImage({ status: 'done', error: null, blob });
-    } else {
-      statsScanRef.current = scan;
-      statsRgbaRef.current = img;
-      setStatsImage({ status: 'done', error: null, blob });
+      if (scan.kind === 'moves') {
+        movesScanRef.current = scan;
+        movesRgbaRef.current = img;
+        setMovesImage({ status: 'done', error: null, blob });
+      } else {
+        statsScanRef.current = scan;
+        statsRgbaRef.current = img;
+        setStatsImage({ status: 'done', error: null, blob });
+      }
+      setVersion(v2 => v2 + 1);
+    } finally {
+      setPending(p => p - 1);
     }
-    setVersion(v2 => v2 + 1);
   }, [deps, legalIds, movesImage.status, statsImage.status]);
 
   const setSlotSpecies = useCallback((slot: number, speciesId: number) => {
@@ -135,5 +143,18 @@ export function usePlayerTeamScan(pokemonList: PokemonBaseStats[], deps: PlayerT
     setVersion(v => v + 1);
   }, []);
 
-  return { movesImage, statsImage, merged, vocab, lastError, addFrame, setSlotSpecies, removeImage, reset };
+  return {
+    movesImage,
+    statsImage,
+    merged,
+    vocab,
+    /** cleared when a new frame attempt starts (and on reset); re-set if that attempt fails. */
+    lastError,
+    /** true while any addFrame call is decoding/scanning; ref-counted so overlapping calls stay correct. */
+    busy: pending > 0,
+    addFrame,
+    setSlotSpecies,
+    removeImage,
+    reset,
+  };
 }
