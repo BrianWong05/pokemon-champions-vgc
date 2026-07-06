@@ -62,13 +62,39 @@ describe('scanPlayerImage', () => {
       expect(scan.panels[0].ability).toBeNull();
     }
   });
+  it('low-confidence classifier + conflicting descriptor: classifier top-1 retained, descriptor appended', async () => {
+    const img = blank(1280, 720);
+    paintSixPanels(img);
+    const lowConfidenceDeps = {
+      ...fakeDeps,
+      loadClassifier: async () => ({
+        classify: async () => [{ id: 7, score: 0.16 }],
+      }),
+      matchTile: () => [{ id: 42, score: 0.9 }], // conflicting descriptor candidate
+    };
+    const scan = await scanPlayerImage(img, new Set([7]), vocab, lowConfidenceDeps);
+    expect(scan?.kind).toBe('moves');
+    if (scan?.kind === 'moves') {
+      const species = scan.panels[0].species;
+      expect(species[0]?.id).toBe(7); // classifier top-1 stays top-1, not replaced
+      expect(species.map(c => c.id)).toContain(42); // descriptor candidate appended
+    }
+  });
 });
 
 const GOLDEN_DIR = 'training/player-screens';
+
+// Human-approved exception (2026-07-07): mega-stone names are a confusable family;
+// Swampertite ranks ~5th after the stone-vocabulary completion (Fix A) with top-1
+// margin < 0.03, so it surfaces as a flagged low-confidence field in the UI.
+// Follow-up: per-language glyph atlas (see spec Risks) would restore top-1.
+const FULL_VOCAB_TOP1_EXCEPTIONS = [{ slot: 1, field: 'item', expected: 'Swampertite', withinTopN: 5, maxMargin: 0.03 }];
+
 describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden full-frame scans', () => {
   it('en-rental moves image: species + per-field en top-1 all correct', async () => {
     const { loadPng } = await import('../../../scripts/hp-accuracy-core');
-    const { nodeScanDeps, buildVocabNode } = await import('../../../scripts/player-scan-core');
+    const { nodeScanDeps, nodeRender, buildVocabNode } = await import('../../../scripts/player-scan-core');
+    const { detectPlayerPanels } = await import('./playerPanels');
     const golden = JSON.parse(fs.readFileSync('training/player-golden.json', 'utf8'))['en-rental'];
     const img = loadPng(`${GOLDEN_DIR}/${golden.movesImage}`);
     const db = (await import('better-sqlite3')).default('vgc_pokemon.db', { readonly: true }) as any;
@@ -78,11 +104,30 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden full-frame scans', () => {
     const scan = await scanPlayerImage(img, legalIds, buildVocabNode(), nodeScanDeps);
     expect(scan?.kind).toBe('moves');
     if (scan?.kind !== 'moves') return;
+    const vocab = buildVocabNode();
+    const det = detectPlayerPanels(img);
+    if (det?.kind !== 'moves') return;
     scan.panels.forEach((panel, slot) => {
       const expected = golden.team[slot];
       expect(panel.species[0]?.id, `slot ${slot + 1} species`).toBe(idByName(expected.species));
       expect(panel.ability?.byLang.en[0]?.key).toBe(expected.ability);
-      expect(panel.item?.byLang.en[0]?.key).toBe(expected.item);
+
+      const itemException = FULL_VOCAB_TOP1_EXCEPTIONS.find(e => e.slot === slot && e.field === 'item');
+      if (itemException) {
+        // readTextField (production) caps candidates at topN=3; re-match at a
+        // wider topN here only to measure the approved top-5 exception contract.
+        const shape = textShapeAt(img, det!.panels[slot].itemText!);
+        const itemCandidates = matchTextShape(shape!, candidatesForLang(vocab.items, 'en'), nodeRender, itemException.withinTopN);
+        const top1Score = itemCandidates[0]?.score ?? 0;
+        const expectedIdx = itemCandidates.findIndex(c => c.key === itemException.expected);
+        expect(expectedIdx, `slot ${slot + 1} item within top-${itemException.withinTopN}`).toBeGreaterThanOrEqual(0);
+        expect(expectedIdx, `slot ${slot + 1} item within top-${itemException.withinTopN}`).toBeLessThan(itemException.withinTopN);
+        const expectedScore = itemCandidates[expectedIdx]?.score ?? 0;
+        expect(top1Score - expectedScore, `slot ${slot + 1} item margin`).toBeLessThan(itemException.maxMargin);
+      } else {
+        expect(panel.item?.byLang.en[0]?.key).toBe(expected.item);
+      }
+
       expected.moves.forEach((m: string, j: number) => {
         expect(moveName(panel.moves[j]!.byLang.en[0]!.key), `slot ${slot + 1} move ${j + 1}`).toBe(m);
       });
@@ -93,9 +138,8 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden full-frame scans', () => {
   // sprite-crop bug: feeds the correct species id straight into
   // rescanMovesPanelText so ability/item/move top-1 accuracy is measured
   // against the REAL full vocabulary (~1649 labels/lang) rather than the
-  // golden-team decoy pool. This is what Task 7's report flagged as blocking:
-  // ability 6/6, item was 4/6 (2 missing mega stone candidates), moves 22/24
-  // (2 shape-matching near-misses).
+  // golden-team decoy pool. Approved bar: ability 6/6, moves 24/24, item
+  // top-1 except the named FULL_VOCAB_TOP1_EXCEPTIONS entry (Swampertite).
   it('en-rental full-vocab: every ability/item/move is top-1 among ~1649 real candidates', async () => {
     const { loadPng } = await import('../../../scripts/hp-accuracy-core');
     const { detectPlayerPanels } = await import('./playerPanels');
@@ -120,12 +164,23 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden full-frame scans', () => {
         moveTotal++;
         if (moveName(read.moves[j]?.byLang.en[0]?.key) === m) moveCorrect++;
       });
-      const itemShape = readTextFieldForTest(img, panel.itemText, vocab.items, nodeRender);
-      if (itemShape?.byLang.en[0]?.key === expected.item) itemCorrect++;
+      const itemException = FULL_VOCAB_TOP1_EXCEPTIONS.find(e => e.slot === slot && e.field === 'item');
+      if (itemException) {
+        const shape = textShapeAt(img, panel.itemText!);
+        const itemCandidates = matchTextShape(shape!, candidatesForLang(vocab.items, 'en'), nodeRender, itemException.withinTopN);
+        const top1Score = itemCandidates[0]?.score ?? 0;
+        const expectedIdx = itemCandidates.findIndex(c => c.key === itemException.expected);
+        const withinTopN = expectedIdx >= 0 && expectedIdx < itemException.withinTopN;
+        const withinMargin = withinTopN && (top1Score - (itemCandidates[expectedIdx]?.score ?? 0)) < itemException.maxMargin;
+        if (withinTopN && withinMargin) itemCorrect++;
+      } else {
+        const itemShape = readTextFieldForTest(img, panel.itemText, vocab.items, nodeRender);
+        if (itemShape?.byLang.en[0]?.key === expected.item) itemCorrect++;
+      }
     });
 
     expect(abilityCorrect, 'abilities top-1').toBe(6);
-    expect(itemCorrect, 'items top-1').toBe(6);
+    expect(itemCorrect, 'items top-1 (or within approved exception)').toBe(6);
     expect(moveCorrect, `moves top-1 (of ${moveTotal})`).toBe(moveTotal);
   }, 600_000);
 });

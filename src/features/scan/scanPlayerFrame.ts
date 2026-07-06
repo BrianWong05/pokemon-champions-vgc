@@ -72,11 +72,26 @@ export async function scanPlayerImage(
   const refs = filterByFormatLegal(await deps.loadRefs(), legalIds);
   const classifier = await deps.loadClassifier();
 
+  // Species candidate policy (player path only — differs from scanFrame.ts's
+  // opponent path, which replaces classifier candidates with descriptor
+  // candidates below the confidence gate). Here the classifier is ALWAYS
+  // primary when it returns anything: its top-1 stays top-1 even under the
+  // gate. Below CLASSIFIER_CONFIDENCE_THRESHOLD we APPEND descriptor
+  // candidates instead, so a low top-score still flags the field as
+  // low-confidence downstream while offering correction options — the
+  // descriptor metric is measurably weaker on panel crops than on opponent
+  // battle-box crops (task-7-report.md Fix C/D: descriptor top-1 is 1/6 on
+  // these crops, vs. the classifier's 6/6), so replacing would make things
+  // worse, not better. Descriptor-only behavior when no classifier is loaded
+  // is unchanged.
   const speciesFor = async (panel: PanelRegions): Promise<Candidate[]> => {
     const tile = deps.cropImage(img, panel.sprite);
     const fromClassifier = classifier ? await classifier.classify(tile, legalIds, 3) : [];
-    const useFallback = !classifier || (fromClassifier[0]?.score ?? 0) < CLASSIFIER_CONFIDENCE_THRESHOLD;
-    return useFallback ? deps.matchTile(tile, refs, 3) : fromClassifier;
+    if (fromClassifier.length === 0) return deps.matchTile(tile, refs, 3);
+    if ((fromClassifier[0]?.score ?? 0) >= CLASSIFIER_CONFIDENCE_THRESHOLD) return fromClassifier;
+    const seen = new Set(fromClassifier.map(c => c.id));
+    const descriptorExtras = deps.matchTile(tile, refs, 3).filter(c => !seen.has(c.id));
+    return [...fromClassifier, ...descriptorExtras];
   };
 
   if (det.kind === 'stats') {
