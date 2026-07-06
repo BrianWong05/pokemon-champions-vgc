@@ -6,7 +6,8 @@ import { MEGA_STONES } from '@/features/pokemon/utils/items';
 
 import type { ScanLang } from '@/features/scan/playerTypes';
 export type { ScanLang } from '@/features/scan/playerTypes';
-export interface TextCandidate { key: string; label: string }
+import type { TextCandidate } from '@/features/scan/textMatch';
+export type { TextCandidate } from '@/features/scan/textMatch';
 
 export interface LocalizedNames { en: string; ja: string | null; zhHant: string | null; zhHans: string | null }
 export interface MoveVocabEntry { moveId: number; names: LocalizedNames }
