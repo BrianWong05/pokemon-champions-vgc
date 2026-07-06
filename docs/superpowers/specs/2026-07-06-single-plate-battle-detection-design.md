@@ -155,6 +155,15 @@ pass the plate aspect filters and become junk anchor candidates. Every
 candidate blob's hypotheses go through the same validation; junk anchors
 produce rects with no verified plate inside and are rejected.
 
+Implementation note (2026-07-07): for an ISOLATED plate both slot
+hypotheses validate (near-identical solved widths; the plate lands inside
+the opponent search region under either), so the right-first tie-break
+wins and left-slot frames accept a rect shifted left by the slot offset.
+This is accepted: targets are detected on real pixels inside the crop and
+shifted back to source coordinates, so mode, boxes, and HP are correct
+regardless; the leftward bias cannot crop out the bottom-left player
+plates. Slot-exact rect reconstruction is NOT a guarantee of this design.
+
 ### 4. Golden seed + runner (harness-shaped fixtures)
 
 - `training/scan-golden.json`: one entry per frame —
