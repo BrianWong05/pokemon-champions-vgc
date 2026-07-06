@@ -1,0 +1,155 @@
+/* ====================================================================
+   Arena VGC Design System — tokens
+   Ported verbatim from the Claude Design project
+   (Arena VGC Design System, f20e187b-0c82-44ce-879c-8c25a14c2906).
+   Fonts are self-hosted via @fontsource (see main.tsx); no @import here.
+   ==================================================================== */
+
+/* ---- colors ---- */
+:root {
+  /* --- Raw surface ramp (near-black navy -> raised) --- */
+  --navy-900: #0B0E14; /* page background */
+  --navy-850: #10141C;
+  --navy-800: #151A23; /* raised card */
+  --navy-750: #1A2030;
+  --navy-700: #1F2636; /* card-on-card / inputs */
+  --navy-650: #283042; /* hover surface */
+  --navy-600: #323C50;
+
+  /* --- Hairline borders --- */
+  --line-1: #232B3A; /* default card border */
+  --line-2: #2E3950; /* stronger / input border */
+  --line-3: #3A465F; /* focus-adjacent */
+
+  /* --- Ink (text) --- */
+  --ink-1: #F2F5FB; /* primary text, big readouts */
+  --ink-2: #A7B2C6; /* secondary text, labels */
+  --ink-3: #6B7689; /* muted, captions, footnotes */
+  --ink-4: #4A5365; /* disabled, faint */
+
+  /* --- Primary accent: electric indigo --- */
+  --accent: #4F7DFF;
+  --accent-hover: #6B92FF;
+  --accent-press: #3D67E6;
+  --accent-ink: #FFFFFF;          /* text on accent fill */
+  --accent-soft: rgba(79,125,255,0.16);  /* tinted surface */
+  --accent-soft-line: rgba(79,125,255,0.42);
+
+  /* --- Semantic: battle outcomes (used sparingly) --- */
+  --safe: #36C281;               /* survives / safe */
+  --safe-soft: rgba(54,194,129,0.15);
+  --safe-line: rgba(54,194,129,0.40);
+
+  --danger: #F2566B;             /* guaranteed KO / danger */
+  --danger-soft: rgba(242,86,107,0.15);
+  --danger-line: rgba(242,86,107,0.42);
+
+  --field: #F2B53C;              /* weather / field / amber */
+  --field-soft: rgba(242,181,60,0.15);
+  --field-line: rgba(242,181,60,0.42);
+
+  /* --- Semantic aliases (use these in components) --- */
+  --bg-page: var(--navy-900);
+  --bg-appbar: rgba(11,14,20,0.86);
+  --surface-card: var(--navy-800);
+  --surface-inset: var(--navy-700);
+  --surface-hover: var(--navy-650);
+  --border-card: var(--line-1);
+  --border-input: var(--line-2);
+
+  --text-strong: var(--ink-1);
+  --text-body: var(--ink-2);
+  --text-muted: var(--ink-3);
+
+  /* --- Pokémon type colors (badges) --- */
+  --type-normal: #9098A1;
+  --type-fire: #FF6B4A;
+  --type-water: #4F9CF5;
+  --type-electric: #F2C53C;
+  --type-grass: #54C56A;
+  --type-ice: #6FD3D6;
+  --type-fighting: #E0584E;
+  --type-poison: #B158D6;
+  --type-ground: #DBB14B;
+  --type-flying: #8C9BF0;
+  --type-psychic: #FB6F8E;
+  --type-bug: #A6C13A;
+  --type-rock: #C7B461;
+  --type-ghost: #6E6CC4;
+  --type-dragon: #6457E8;
+  --type-dark: #6A6072;
+  --type-steel: #6FB5CC;
+  --type-fairy: #ED8DD2;
+}
+
+/* ---- typography ---- */
+:root {
+  --font-display: 'Space Grotesk', system-ui, sans-serif; /* titles + numbers */
+  --font-ui: 'Manrope', system-ui, -apple-system, sans-serif; /* body / UI */
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace; /* formulas / sets */
+
+  /* Type scale — mobile-first (px). Min UI text 13px. */
+  --fs-readout: 34px;  /* hero numeric HUD readout */
+  --fs-h1: 22px;       /* screen title */
+  --fs-h2: 18px;       /* card heading */
+  --fs-h3: 16px;
+  --fs-body: 15px;     /* default body */
+  --fs-sm: 13px;       /* labels, secondary */
+  --fs-xs: 11px;       /* stat-field captions, chips */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.25;
+  --lh-body: 1.5;
+
+  --ls-readout: -0.02em;
+  --ls-tight: -0.01em;
+  --ls-wide: 0.04em;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-x: 800;
+}
+
+/* ---- spacing ---- */
+:root {
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+
+  /* Layout */
+  --screen-w: 360px;     /* target phone width */
+  --gutter: 16px;        /* page side padding */
+  --tap-min: 44px;       /* minimum tap target */
+  --appbar-h: 56px;
+  --tabbar-h: 64px;
+}
+
+/* ---- effects (radius + elevation) ---- */
+:root {
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;   /* default card radius */
+  --r-lg: 16px;   /* large card / sheet */
+  --r-xl: 20px;
+  --r-pill: 999px;
+
+  /* Subtle elevation — mostly borders do the lifting */
+  --shadow-card: none;
+  --shadow-pop: 0 8px 24px rgba(0,0,0,0.45);     /* dialogs / sheets */
+  --shadow-chrome: 0 -6px 20px rgba(0,0,0,0.40); /* bottom tab bar */
+  --shadow-hud: 0 6px 20px rgba(0,0,0,0.38);     /* pinned result HUD */
+
+  /* Focus ring */
+  --ring: 0 0 0 2px var(--navy-900), 0 0 0 4px var(--accent);
+
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
