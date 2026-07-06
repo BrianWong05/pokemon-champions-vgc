@@ -1,0 +1,120 @@
+import pandas as pd
+import requests
+import sqlite3
+import os
+import io
+
+BASE_URL = "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/"
+
+def fetch_csv(filename):
+    print(f"Fetching {filename}...")
+    url = f"{BASE_URL}{filename}"
+    response = requests.get(url)
+    response.raise_for_status()
+    return pd.read_csv(io.StringIO(response.text))
+
+def lang(df, lid, col):
+    d = df[df.local_language_id == lid][["item_id", "name"]].rename(columns={"name": col})
+    return d
+
+# Champions-only mega stones: not in PokeAPI. Synthesize zh names as "<species zh>進化石"
+# (official Champions naming, e.g. 快龍進化石) by longest-common-prefix species match.
+MEGA_STONES = [  # keep in sync with src/features/pokemon/utils/items.ts MEGA_STONES
+    "Abomasite","Absolite","Aerodactylite","Aggronite","Alakazite","Altarianite","Ampharosite",
+    "Audinite","Banettite","Beedrillite","Blastoisinite","Cameruptite","Chandelurite",
+    "Charizardite X","Charizardite Y","Chesnaughtite","Chimechite","Clefablite","Crabominite",
+    "Delphoxite","Dragoninite","Drampanite","Emboarite","Excadrite","Feraligite","Floettite",
+    "Froslassite","Galladite","Garchompite","Gardevoirite","Gengarite","Glalitite","Glimmoranite",
+    "Golurkite","Greninjite","Gyaradosite","Hawluchanite","Heracronite","Houndoominite",
+    "Kangaskhanite","Lopunnite","Lucarionite","Manectite","Medichamite","Meganiumite",
+    "Meowsticite","Pidgeotite","Pinsirite","Sablenite","Scizorite","Scovillainite","Sharpedonite",
+    "Skarmorite","Slowbronite","Starminite","Steelixite","Tyranitarite","Venusaurite","Victreebelite",
+]
+MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho"}  # extend if prefix match misfires
+
+def species_for(stone, pokemon):
+    base = stone.replace(" X", "").replace(" Y", "")
+    if stone in MANUAL_SPECIES:
+        return MANUAL_SPECIES[stone]
+    best, best_len = None, 0
+    for name in pokemon.name_en:
+        n = 0
+        while n < min(len(name), len(base)) and name[n].lower() == base[n].lower():
+            n += 1
+        if n > best_len:
+            best, best_len = name, n
+    return best if best_len >= 4 else None
+
+def main():
+    # 1. Fetch CSVs
+    items_df = fetch_csv("items.csv")
+    item_names_df = fetch_csv("item_names.csv")
+
+    # 2. Connect to Database
+    db_path = "vgc_pokemon.db"
+    if not os.path.exists(db_path):
+        print(f"Error: Database {db_path} not found.")
+        return
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY, identifier TEXT NOT NULL, name_en TEXT,
+        name_ja TEXT, name_zh TEXT, name_zh_hans TEXT)""")
+
+    print("Processing localized names...")
+    # languages: 9 (En), 1 (Ja-Hrkt), 11 (Ja), 4 (Zh-Hant), 12 (Zh-Hans)
+    merged = items_df[["id", "identifier"]]
+    for lid, col in [(9, "name_en"), (1, "name_ja"), (4, "name_zh"), (12, "name_zh_hans")]:
+        merged = merged.merge(lang(item_names_df, lid, col), left_on="id", right_on="item_id", how="left").drop(columns=["item_id"])
+    # ja fallback: some items only have language 11
+    ja11 = lang(item_names_df, 11, "name_ja11")
+    merged = merged.merge(ja11, left_on="id", right_on="item_id", how="left").drop(columns=["item_id"])
+    merged["name_ja"] = merged["name_ja"].fillna(merged["name_ja11"])
+    merged = merged.drop(columns=["name_ja11"])
+
+    print(f"Inserting items into {db_path}...")
+    item_records = merged[["id", "identifier", "name_en", "name_ja", "name_zh", "name_zh_hans"]].to_records(index=False).tolist()
+    cursor.executemany("""
+        INSERT OR REPLACE INTO items
+        (id, identifier, name_en, name_ja, name_zh, name_zh_hans)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, item_records)
+
+    print(f"Successfully inserted/updated {len(item_records)} items.")
+
+    # Champions-only mega stones (not in PokeAPI)
+    pokemon = pd.read_sql("SELECT name_en, name_ja, name_zh FROM pokemon WHERE name_en IS NOT NULL", conn)
+    existing = {r[0] for r in cursor.execute("SELECT name_en FROM items").fetchall()}
+    next_id = 100000
+
+    mega_records = []
+    for stone in MEGA_STONES:
+        if stone in existing:
+            continue  # classic stones came from PokeAPI
+        sp = species_for(stone, pokemon)
+        row = pokemon[pokemon.name_en == sp].iloc[0] if sp is not None and (pokemon.name_en == sp).any() else None
+        suffix = " X" if stone.endswith(" X") else (" Y" if stone.endswith(" Y") else "")
+        zh = (str(row.name_zh) + "進化石" + suffix) if row is not None and pd.notna(row.name_zh) else None
+        zh_hans = None  # zh-Hant name is char-convertible if needed later; matching falls back to en
+        mega_records.append((next_id, stone.lower().replace(" ", "-"), stone, None, zh, zh_hans))
+        next_id += 1
+
+    cursor.executemany("""
+        INSERT OR REPLACE INTO items
+        (id, identifier, name_en, name_ja, name_zh, name_zh_hans)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, mega_records)
+
+    print(f"Successfully inserted/updated {len(mega_records)} Champions-only mega stones.")
+
+    conn.commit()
+
+    total = cursor.execute("SELECT COUNT(*) FROM items").fetchone()[0]
+    conn.close()
+
+    print(f"Done! {total} items total.")
+
+if __name__ == "__main__":
+    main()

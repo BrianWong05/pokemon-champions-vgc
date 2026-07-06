@@ -28,6 +28,7 @@ export const moves = sqliteTable('moves', {
   nameEn: text('name_en').notNull(),
   nameJa: text('name_ja'),
   nameZh: text('name_zh'),
+  nameZhHans: text('name_zh_hans'),
   typeId: integer('type_id')
     .notNull()
     .references(() => types.id, { onDelete: 'cascade' }),
@@ -44,6 +45,16 @@ export const abilities = sqliteTable('abilities', {
   nameEn: text('name_en'),
   nameJa: text('name_ja'),
   nameZh: text('name_zh'),
+  nameZhHans: text('name_zh_hans'),
+});
+
+export const items = sqliteTable('items', {
+  id: integer('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  nameEn: text('name_en'),
+  nameJa: text('name_ja'),
+  nameZh: text('name_zh'),
+  nameZhHans: text('name_zh_hans'),
 });
 
 export const pokemonAbilities = sqliteTable('pokemon_abilities', {

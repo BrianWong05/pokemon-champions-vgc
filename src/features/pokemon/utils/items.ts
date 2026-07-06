@@ -1,4 +1,4 @@
-const MEGA_STONES = new Set([
+export const MEGA_STONES = new Set([
   "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite",
   "Altarianite", "Ampharosite", "Audinite", "Banettite", "Beedrillite",
   "Blastoisinite", "Cameruptite", "Chandelurite", "Charizardite X",

@@ -27,28 +27,35 @@ def main():
         
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    
+
+    # Self-migrate: add name_zh_hans column if missing
+    cursor.execute("PRAGMA table_info(abilities)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if "name_zh_hans" not in cols:
+        cursor.execute("ALTER TABLE abilities ADD COLUMN name_zh_hans TEXT")
+
     # Get existing pokemon IDs to filter
     cursor.execute("SELECT id FROM pokemon")
     existing_pokemon_ids = [row[0] for row in cursor.fetchall()]
     print(f"Filtering for {len(existing_pokemon_ids)} existing Pokémon in database...")
 
     print("Processing localized names...")
-    # languages: 9 (En), 11 (Ja), 4 (Zh-Hant)
+    # languages: 9 (En), 11 (Ja), 4 (Zh-Hant), 12 (Zh-Hans)
     names_en = ability_names_df[ability_names_df['local_language_id'] == 9][['ability_id', 'name']].rename(columns={'name': 'name_en'})
     names_ja = ability_names_df[ability_names_df['local_language_id'] == 11][['ability_id', 'name']].rename(columns={'name': 'name_ja'})
     names_zh = ability_names_df[ability_names_df['local_language_id'] == 4][['ability_id', 'name']].rename(columns={'name': 'name_zh'})
+    names_zh_hans = ability_names_df[ability_names_df['local_language_id'] == 12][['ability_id', 'name']].rename(columns={'name': 'name_zh_hans'})
 
     # Merge names
-    names_merged = names_en.merge(names_ja, on='ability_id', how='left').merge(names_zh, on='ability_id', how='left')
+    names_merged = names_en.merge(names_ja, on='ability_id', how='left').merge(names_zh, on='ability_id', how='left').merge(names_zh_hans, on='ability_id', how='left')
 
     # Merge with base ability data
     final_abilities_df = abilities_df.merge(names_merged, left_on='id', right_on='ability_id', how='left')
-    
+
     # Select columns matching schema.ts
-    # id, identifier, name_en, name_ja, name_zh
+    # id, identifier, name_en, name_ja, name_zh, name_zh_hans
     final_abilities_df = final_abilities_df[[
-        'id', 'identifier', 'name_en', 'name_ja', 'name_zh'
+        'id', 'identifier', 'name_en', 'name_ja', 'name_zh', 'name_zh_hans'
     ]].fillna({'name_en': 'Unknown'})
 
     print("Filtering pokemon abilities...")
@@ -61,9 +68,9 @@ def main():
     # Insert abilities
     abilities_records = final_abilities_df.to_records(index=False).tolist()
     cursor.executemany("""
-        INSERT OR REPLACE INTO abilities 
-        (id, identifier, name_en, name_ja, name_zh) 
-        VALUES (?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO abilities
+        (id, identifier, name_en, name_ja, name_zh, name_zh_hans)
+        VALUES (?, ?, ?, ?, ?, ?)
     """, abilities_records)
     
     print(f"Successfully inserted/updated {cursor.rowcount} abilities.")
