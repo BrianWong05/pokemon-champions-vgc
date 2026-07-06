@@ -11,7 +11,7 @@ export const MEGA_STONES = new Set([
   "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite",
   "Manectite", "Mawilite", "Medichamite", "Meganiumite", "Meowsticite",
   "Metagrossite", "Mewtwonite X", "Mewtwonite Y", "Pidgeotite", "Pinsirite",
-  "Sablenite", "Salamencite", "Sceptilite", "Scizorite", "Scovillainite",
+  "Sablenite", "Salamencite", "Scraftite", "Sceptilite", "Scizorite", "Scovillainite",
   "Sharpedonite", "Skarmorite", "Slowbronite", "Starminite", "Steelixite",
   "Swampertite", "Tyranitarite", "Venusaurite", "Victreebelite"
 ]);

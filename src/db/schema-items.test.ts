@@ -22,6 +22,15 @@ describe('localized scan data', () => {
     const row = db.prepare("SELECT name_zh FROM items WHERE name_en = 'Dragoninite'").get() as any;
     expect(row?.name_zh).toBe('快龍進化石');
   });
+  it('Scraftite (Scrafty mega stone) is present', () => {
+    const row = db.prepare("SELECT name_ja, name_zh FROM items WHERE name_en = 'Scraftite'").get() as any;
+    expect(row?.name_zh).toBe('頭巾混混進化石');
+    expect(row?.name_ja).toBe('ズルズキンナイト');
+  });
+  it('Champions mega stones have synthesized ja names', () => {
+    const row = db.prepare("SELECT name_ja FROM items WHERE name_en = 'Delphoxite'").get() as any;
+    expect(row?.name_ja).toBe('マフォクシーナイト');
+  });
   it('public copy is in sync', () => {
     const pub = new Database('public/vgc_pokemon.db', { readonly: true });
     const a = db.prepare('SELECT COUNT(*) AS c FROM items').get() as any;

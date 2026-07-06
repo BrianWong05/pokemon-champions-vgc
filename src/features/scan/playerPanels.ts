@@ -61,7 +61,14 @@ export const STATS_FRAC = {
   // per stat cell [col, row]: label (incl. arrow), stat digits, sp digits
   cell: (col: number, row: number) => ({
     label: [0.02 + col * 0.48, 0.30 + row * 0.235, 0.24, 0.19] as Frac,
-    stat:  [0.30 + col * 0.48, 0.30 + row * 0.235, 0.12, 0.19] as Frac,
+    // stat's left edge starts 0.02 earlier than label.x+label.w's exact 0.28 gap
+    // (was 0.30, right at the gap boundary): some captures (e.g. ja-rental-r676,
+    // a narrower-aspect screenshot) render 3-digit stat values a few px further
+    // left than en/zh captures, clipping the leading digit at the box's exact
+    // edge. Widening left (width grows to match, right edge unchanged) adds
+    // slack without reaching into the label zone (checked against en/zh: no
+    // label pixels in the reclaimed 2-10px band).
+    stat:  [0.28 + col * 0.48, 0.30 + row * 0.235, 0.14, 0.19] as Frac,
     sp:    [0.42 + col * 0.48, 0.30 + row * 0.235, 0.09, 0.19] as Frac,
   }),
 };

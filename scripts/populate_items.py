@@ -27,10 +27,21 @@ MEGA_STONES = [  # keep in sync with src/features/pokemon/utils/items.ts MEGA_ST
     "Froslassite","Galladite","Garchompite","Gardevoirite","Gengarite","Glalitite","Glimmoranite",
     "Golurkite","Greninjite","Gyaradosite","Hawluchanite","Heracronite","Houndoominite",
     "Kangaskhanite","Lopunnite","Lucarionite","Manectite","Medichamite","Meganiumite",
-    "Meowsticite","Pidgeotite","Pinsirite","Sablenite","Scizorite","Scovillainite","Sharpedonite",
+    "Meowsticite","Pidgeotite","Pinsirite","Sablenite","Scizorite","Scovillainite","Scraftite","Sharpedonite",
     "Skarmorite","Slowbronite","Starminite","Steelixite","Tyranitarite","Venusaurite","Victreebelite",
 ]
-MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho"}  # extend if prefix match misfires
+MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho", "Scraftite": "Scrafty"}  # extend if prefix match misfires
+
+# name_ja synthesis for Champions-only stones: <species name_ja> + "ナイト", eliding
+# one "ナ" when the species name already ends in "ナ" (フシギバナ -> フシギバナイト,
+# confirmed against the existing Venusaurite row). MANUAL_JA overrides anything the
+# heuristic can't express (e.g. a species name_ja carrying a stray suffix artifact).
+MANUAL_JA = {"Meowsticite": "ニャオニクスナイト"}
+
+def synthesize_ja(species_ja):
+    if not species_ja:
+        return None
+    return species_ja[:-1] + "ナイト" if species_ja.endswith("ナ") else species_ja + "ナイト"
 
 def species_for(stone, pokemon):
     base = stone.replace(" X", "").replace(" Y", "")
@@ -86,20 +97,30 @@ def main():
 
     # Champions-only mega stones (not in PokeAPI)
     pokemon = pd.read_sql("SELECT name_en, name_ja, name_zh FROM pokemon WHERE name_en IS NOT NULL", conn)
-    existing = {r[0] for r in cursor.execute("SELECT name_en FROM items").fetchall()}
-    next_id = 100000
+    # PokeAPI-sourced rows (id < 100000) are "classic, skip". Champions-only rows
+    # (id >= 100000) may already exist from a prior run of this script -- reuse
+    # their id so re-running re-synthesizes fields (e.g. backfilling name_ja)
+    # in place instead of colliding with a freshly-allocated id.
+    classic = {r[0] for r in cursor.execute("SELECT name_en FROM items WHERE id < 100000").fetchall()}
+    existing_ids = dict(cursor.execute("SELECT name_en, id FROM items WHERE id >= 100000").fetchall())
+    next_id = (max(existing_ids.values()) + 1) if existing_ids else 100000
 
     mega_records = []
     for stone in MEGA_STONES:
-        if stone in existing:
+        if stone in classic:
             continue  # classic stones came from PokeAPI
         sp = species_for(stone, pokemon)
         row = pokemon[pokemon.name_en == sp].iloc[0] if sp is not None and (pokemon.name_en == sp).any() else None
         suffix = " X" if stone.endswith(" X") else (" Y" if stone.endswith(" Y") else "")
         zh = (str(row.name_zh) + "進化石" + suffix) if row is not None and pd.notna(row.name_zh) else None
         zh_hans = None  # zh-Hant name is char-convertible if needed later; matching falls back to en
-        mega_records.append((next_id, stone.lower().replace(" ", "-"), stone, None, zh, zh_hans))
-        next_id += 1
+        ja = MANUAL_JA.get(stone) or (synthesize_ja(row.name_ja) + suffix if row is not None and pd.notna(row.name_ja) else None)
+        if stone in existing_ids:
+            item_id = existing_ids[stone]
+        else:
+            item_id = next_id
+            next_id += 1
+        mega_records.append((item_id, stone.lower().replace(" ", "-"), stone, ja, zh, zh_hans))
 
     cursor.executemany("""
         INSERT OR REPLACE INTO items
