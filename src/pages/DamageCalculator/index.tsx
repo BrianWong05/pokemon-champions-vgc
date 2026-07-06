@@ -29,6 +29,8 @@ import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/featur
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ArenaCalculator } from '@/features/damage-calculator/components/mobile/ArenaCalculator';
 
 const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
   list.find((p) => p.id === side.selectedId)?.nameEn ?? null;
@@ -50,6 +52,7 @@ const DamageCalculatorPage: React.FC = () => {
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
+  const isMobile = useIsMobile();
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -217,6 +220,36 @@ const DamageCalculatorPage: React.FC = () => {
     const teamName = sets[0].species + "'s Team";
     await createTeam(teamName, newMembers);
   };
+
+  if (isMobile) {
+    return (
+      <>
+        <ArenaCalculator
+          state={state}
+          dispatch={dispatch}
+          pokemonList={pokemonList}
+          moveList={moveList}
+          p1Results={p1Results}
+          p2Results={p2Results}
+          p1MaxHp={p1MaxHp}
+          p2MaxHp={p2MaxHp}
+          actions={actions}
+          onApplySpread={handleApplySpread}
+          onResetBuild={handleResetBuild}
+          onOpenScan={() => setIsScanModalOpen(true)}
+        />
+        <ScanTeamModal
+          isOpen={isScanModalOpen}
+          onClose={() => { setIsScanModalOpen(false); setCapturedBlob(null); }}
+          pokemonList={pokemonList}
+          onLoadPokemon={handleLoadDefender}
+          onLoadAttacker={handleLoadAttacker}
+          onSaveTeam={handleSaveOppTeam}
+          externalBlob={capturedBlob}
+        />
+      </>
+    );
+  }
 
   return (
     <>

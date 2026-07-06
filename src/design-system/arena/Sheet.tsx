@@ -9,7 +9,7 @@ export function Sheet({ open, onClose, title = null, children, maxHeight = '78vh
   open: boolean; onClose: () => void; title?: React.ReactNode; children?: React.ReactNode; maxHeight?: string;
 }) {
   return (
-    <div aria-hidden={!open} style={{ position: 'absolute', inset: 0, zIndex: 60, pointerEvents: open ? 'auto' : 'none' }}>
+    <div aria-hidden={!open} style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: open ? 'auto' : 'none' }}>
       <div
         onClick={onClose}
         style={{ position: 'absolute', inset: 0, background: 'rgba(4,6,10,0.62)', opacity: open ? 1 : 0, transition: 'opacity var(--dur) var(--ease)' }}
