@@ -77,6 +77,16 @@ built to prevent. No model retrain involved; this is pure detection logic.
   an orange/tan arena tint (warm complement to frame 5's green), with a
   fully CJK action menu and a shiny purple Basculegion model as frame-left
   color noise.
+- **Dataset status (2026-07-07):** frames 2–8 plus 9 more are SAVED — 16
+  files in `training/screenshots/` (`Xnip2026-07-06_23-38-43` …
+  `Xnip2026-07-07_00-12-02`), machine-classified into
+  `training/scan-golden.draft.json` (uncommitted; needs human spot-check).
+  All 16 are 1-opponent-plate battle frames; all six slot combinations are
+  represented (opp R×pair 6, L×pair 3, R×pL 2, R×pR 2, L×pR 2, L×pL 1);
+  extremes include a 1/155 near-dead player bar, snow/sandstorm/harsh-
+  sunlight/tailwind weather, purple/green/gold/yellow arena tints, 8
+  glowing player plates, and several letterboxed frames. Frame 1 (Raichu)
+  is NOT yet saved.
 - **Singleton plates occur at BOTH slot positions of the doubles pair**
   (frames 1–3 and 5 show the right slot; frames 4 and 6 the left), so both
   rect hypotheses are mandatory — neither may be skipped as an
@@ -148,10 +158,18 @@ produce rects with no verified plate inside and are rejected.
 ### 4. Golden seed + runner (harness-shaped fixtures)
 
 - `training/scan-golden.json`: one entry per frame —
-  `{ file, mode, opponentPlates, playerPlates }`. Seeded with the two
-  reference frames, at least 4 existing 2v2 battle frames from the HP
-  golden set, and at least 2 team-preview screenshots as mode-regression
-  guards.
+  `{ file, mode, opponentPlates, playerPlates }`. Seed composition:
+  - The 16 saved single-plate frames (`training/screenshots/`
+    `Xnip2026-07-06_23-38-43.jpg` … `Xnip2026-07-07_00-12-02.jpg`),
+    machine-classified in `training/scan-golden.draft.json` — promotion to
+    the real golden requires a human spot-check of the draft, especially
+    the `opponentSlot`/`playerSlot` columns (slot truth drives the
+    rect-anchor tests). Draft annotations (slots, HP text, glow, features)
+    stay as optional fields; harness truth is mode + plate counts.
+  - At least 4 existing 2v2 battle frames from the HP golden set, and at
+    least 2 team-preview screenshots, as mode-regression guards.
+  - The Raichu reference frame (frame 1) once saved — still the only
+    2%-bar + 1-opp-vs-2-player + glowing-Swampert-mask case.
   Schema deliberately extensible (species per slot, HP truths) so the
   future classifier harness grows on this file.
 - `scripts/scan-mode-accuracy.ts`: mirrors the HP harness shape (including
