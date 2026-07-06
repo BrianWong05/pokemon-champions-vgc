@@ -42,7 +42,7 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
   };
 
   return (
-    <div className={`bg-card border border-line rounded-xl shadow-[var(--shadow-pop)] p-6 ${className}`}>
+    <div className={`bg-card border border-line rounded-xl p-6 ${className}`}>
       <div className="space-y-2 divide-y divide-line">
         {stats.map(({ key, label }) => (
           <StatConverterRow

@@ -27,7 +27,7 @@ const TeamExportModal: React.FC<TeamExportModalProps> = ({ isOpen, onClose, team
         <textarea
           readOnly
           value={showdownText}
-          className="w-full h-96 p-4 font-mono bg-inset border-line-2 text-ink-1 rounded-lg text-xs"
+          className="w-full h-96 p-4 font-mono bg-inset border border-line-2 text-ink-1 rounded-lg text-xs"
         />
         <div className="flex justify-end gap-3">
           <button

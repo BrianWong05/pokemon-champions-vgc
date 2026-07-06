@@ -25,7 +25,7 @@ const ShowdownExportModal: React.FC<ShowdownExportModalProps> = ({ isOpen, onClo
         <textarea
           readOnly
           value={exportText}
-          className="w-full h-64 p-4 font-mono bg-inset border-line-2 text-ink-1 rounded-xl text-sm outline-none"
+          className="w-full h-64 p-4 font-mono bg-inset border border-line-2 text-ink-1 rounded-xl text-sm outline-none"
         />
         <div className="flex justify-end gap-3 pt-4 border-t border-line">
           <button

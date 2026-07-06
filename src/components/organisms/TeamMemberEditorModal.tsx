@@ -73,7 +73,7 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           <button
             onClick={handleSave}
             disabled={!state.selectedId}
-            className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-45 disabled:cursor-not-allowed"
           >
             {initialConfig?.selectedId ? "Save Changes" : "Add to Team"}
           </button>

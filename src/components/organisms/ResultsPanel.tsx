@@ -93,7 +93,7 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
 
           <div className="flex justify-between items-center bg-page/50 p-2 rounded-2xl border border-line">
             <div className="flex flex-col">
-               <span className="text-xl font-display text-ink-1 leading-none tracking-tighter">
+               <span className="text-xl font-display font-black text-ink-1 leading-none tracking-tighter">
                   {impactResult ? `${isNaN(impactResult.minPercent) ? '0.0' : impactResult.minPercent}% - ${isNaN(impactResult.maxPercent) ? '0.0' : impactResult.maxPercent}%` : '--'}
                </span>
                <span className="text-[10px] font-bold text-ink-3 mt-1 uppercase tracking-widest">
@@ -158,7 +158,7 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end justify-center">
-                    <span className="text-lg font-display text-ink-1 whitespace-nowrap leading-none tracking-tighter">
+                    <span className="text-lg font-display font-black text-ink-1 whitespace-nowrap leading-none tracking-tighter">
                       {isNaN(result.minPercent) ? '0.0' : result.minPercent}% - {isNaN(result.maxPercent) ? '0.0' : result.maxPercent}%
                     </span>
                   </div>
@@ -196,7 +196,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
   const p2Impact = p1Results[p1ActiveIndex];
 
   return (
-    <div className="bg-card p-4 rounded-3xl shadow-[var(--shadow-pop)] text-ink-1 space-y-4 border border-line h-full">
+    <div className="bg-card p-4 rounded-3xl text-ink-1 space-y-4 border border-line h-full">
       <div className="flex justify-between items-center border-b border-line pb-3">
         <Typography variant="h2" className="text-ink-1 flex items-center gap-3 font-black uppercase tracking-tighter">
           <span className="w-1.5 h-6 bg-accent rounded-full" />

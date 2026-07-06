@@ -31,7 +31,7 @@ const ShowdownImportModal: React.FC<ShowdownImportModalProps> = ({ isOpen, onClo
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Amoonguss @ Sitrus Berry&#10;Ability: Regenerator&#10;Level: 50&#10;SPs: 32 HP / 20 Def / 13 SpD&#10;Quiet Nature&#10;- Spore&#10;- Rage Powder&#10;- Pollen Puff&#10;- Protect"
-          className="w-full h-64 p-4 font-mono bg-inset border-line-2 text-ink-1 rounded-xl focus:ring-2 focus:ring-accent outline-none text-sm"
+          className="w-full h-64 p-4 font-mono bg-inset border border-line-2 text-ink-1 rounded-xl focus:ring-2 focus:ring-accent outline-none text-sm"
         />
         {error && <p className="text-danger text-sm font-bold">{error}</p>}
         <div className="flex justify-end gap-3 pt-4 border-t border-line">
@@ -44,7 +44,7 @@ const ShowdownImportModal: React.FC<ShowdownImportModalProps> = ({ isOpen, onClo
           <button
             onClick={handleImport}
             disabled={!text.trim()}
-            className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-45 disabled:cursor-not-allowed"
           >
             Import
           </button>

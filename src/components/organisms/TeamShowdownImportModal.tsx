@@ -62,7 +62,7 @@ const TeamShowdownImportModal: React.FC<TeamShowdownImportModalProps> = ({ isOpe
             <button
               onClick={handleFetchUrl}
               disabled={isFetching || !url.trim()}
-              className="px-4 py-2 bg-accent text-accent-ink rounded-lg text-xs font-black uppercase tracking-widest hover:bg-accent-hover disabled:opacity-50 transition-colors shrink-0"
+              className="px-4 py-2 bg-accent text-accent-ink rounded-lg text-xs font-black uppercase tracking-widest hover:bg-accent-hover disabled:opacity-45 transition-colors shrink-0"
             >
               {isFetching ? 'Fetching...' : 'Fetch URL'}
             </button>
@@ -73,7 +73,7 @@ const TeamShowdownImportModal: React.FC<TeamShowdownImportModalProps> = ({ isOpe
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={`Incineroar @ Figy Berry\nAbility: Intimidate\nLevel: 50\nSPs: 32 HP / 32 Atk / 4 Spe\nAdamant Nature\n- Fake Out\n- Flare Blitz\n- Knock Off\n- Parting Shot\n\nAmoonguss @ Sitrus Berry\nAbility: Regenerator\nLevel: 50\nSPs: 32 HP / 20 Def / 13 SpD\nQuiet Nature\n- Spore\n- Rage Powder\n- Pollen Puff\n- Protect`}
-          className="w-full h-80 p-4 font-mono bg-inset border-line-2 text-ink-1 rounded-xl focus:ring-2 focus:ring-accent outline-none text-sm leading-tight"
+          className="w-full h-80 p-4 font-mono bg-inset border border-line-2 text-ink-1 rounded-xl focus:ring-2 focus:ring-accent outline-none text-sm leading-tight"
         />
 
         {error && <p className="text-danger text-sm font-bold bg-danger-soft p-2 rounded-lg">{error}</p>}
@@ -92,7 +92,7 @@ const TeamShowdownImportModal: React.FC<TeamShowdownImportModalProps> = ({ isOpe
             <button
               onClick={handleImport}
               disabled={!text.trim()}
-              className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-45 disabled:cursor-not-allowed"
             >
               Import Team
             </button>

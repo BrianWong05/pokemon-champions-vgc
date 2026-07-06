@@ -262,7 +262,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   {onLoadPokemon && entry.side !== 'player' && (
                     <button
                       type="button"
-                      className="px-2 py-1 text-xs font-semibold text-accent border border-accent-soft-line rounded hover:bg-accent-soft disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="px-2 py-1 text-xs font-semibold text-accent border border-accent-soft-line rounded hover:bg-accent-soft disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap"
                       onClick={() => entry.id != null && onLoadPokemon(entry.id, { hpPercent: entry.hpPercent })}
                       disabled={entry.id == null}
                     >
@@ -272,7 +272,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   {onLoadAttacker && entry.side === 'player' && (
                     <button
                       type="button"
-                      className="px-2 py-1 text-xs font-semibold text-safe border border-safe-line rounded hover:bg-safe-soft disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="px-2 py-1 text-xs font-semibold text-safe border border-safe-line rounded hover:bg-safe-soft disabled:opacity-45 disabled:cursor-not-allowed whitespace-nowrap"
                       onClick={() => entry.id != null && onLoadAttacker(entry.id, { hpPercent: entry.hpPercent })}
                       disabled={entry.id == null}
                     >
@@ -319,7 +319,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               <button className="px-4 py-2 rounded border border-line-2 text-ink-2 hover:bg-raise" onClick={handleClose}>Cancel</button>
               {onSaveTeam && (
                 <button
-                  className="px-4 py-2 rounded border border-safe-line text-safe disabled:opacity-50"
+                  className="px-4 py-2 rounded border border-safe-line text-safe disabled:opacity-45"
                   onClick={saveTeam}
                   disabled={roster.every((e) => e.id == null)}
                 >
@@ -328,7 +328,7 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               )}
               {onImport && (
                 <button
-                  className="px-4 py-2 rounded bg-safe-soft text-safe disabled:opacity-50"
+                  className="px-4 py-2 rounded bg-safe-soft text-safe disabled:opacity-45"
                   onClick={confirm}
                   disabled={roster.every((e) => e.id == null)}
                 >
