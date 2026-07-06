@@ -4,8 +4,8 @@ import { getDb } from '../index';
 import { moves, pokemonMoves, abilities, pokemonAbilities, items } from '../schema';
 import { MEGA_STONES } from '@/features/pokemon/utils/items';
 
-// Task 3/5 will re-export or alias these; define locally for now
-export type ScanLang = 'en' | 'ja' | 'zh-Hant' | 'zh-Hans';
+import type { ScanLang } from '@/features/scan/playerTypes';
+export type { ScanLang } from '@/features/scan/playerTypes';
 export interface TextCandidate { key: string; label: string }
 
 export interface LocalizedNames { en: string; ja: string | null; zhHant: string | null; zhHans: string | null }
