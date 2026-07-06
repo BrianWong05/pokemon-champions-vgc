@@ -5,8 +5,8 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
-import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import { ArenaPokemonPicker } from './ArenaPokemonPicker';
+import { ArenaItemPicker } from './ArenaItemPicker';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { NATURES } from '@/features/pokemon/utils/pokemon-natures';
 import { Sheet } from '@/design-system/arena';
@@ -112,7 +112,7 @@ export function ArenaCalculator({
       />
 
       {/* Species / item / ability / nature picker */}
-      <Sheet open={!!picker} onClose={() => setPicker(null)} title={picker ? pickerTitle(picker.field) : ''} height={picker?.field === 'species' ? '80vh' : undefined}>
+      <Sheet open={!!picker} onClose={() => setPicker(null)} title={picker ? pickerTitle(picker.field) : ''} height={picker?.field === 'species' || picker?.field === 'item' ? '80vh' : undefined}>
         {picker && picker.field === 'species' && (
           <ArenaPokemonPicker
             pokemonList={pokemonList}
@@ -120,8 +120,7 @@ export function ArenaCalculator({
           />
         )}
         {picker && picker.field === 'item' && (
-          <ItemSearchSelect
-            label="Item"
+          <ArenaItemPicker
             selectedItem={state[picker.side].item}
             onSelect={(it) => { dispatch({ type: 'SET_ITEM', payload: { side: picker.side, item: it } }); setPicker(null); }}
           />
