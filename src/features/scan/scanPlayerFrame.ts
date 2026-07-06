@@ -3,7 +3,7 @@ import { detectPlayerPanels } from './playerPanels';
 import type { PanelRegions, ScanLang } from './playerTypes';
 import { readStatCell, type StatRowRead } from './statDigits';
 import { textShapeAt, matchTextShape, browserTextRenderer, type TextRenderer, type TextMatchResult } from './textMatch';
-import { loadReferenceDescriptors, filterByFormatLegal } from './referenceData';
+import { loadPlayerPanelDescriptors, filterByFormatLegal } from './referenceData';
 import { loadClassifier, type Classifier } from './classifier';
 import { computeDescriptor } from './fingerprint';
 import { matchTile } from './match';
@@ -33,7 +33,7 @@ export interface PlayerScanDeps {
 }
 
 export const PLAYER_SCAN_DEPS: PlayerScanDeps = {
-  loadRefs: loadReferenceDescriptors,
+  loadRefs: loadPlayerPanelDescriptors,
   loadClassifier,
   matchTile: (img, refs, topN) => matchTile(computeDescriptor(img), refs, topN),
   cropImage,

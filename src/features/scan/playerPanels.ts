@@ -1,5 +1,5 @@
 import type { RgbaImage, TileBox } from './types';
-import { rgbToHsv, connectedComponents } from './segmentation';
+import { rgbToHsv, connectedComponents, refineSpritePanelBox } from './segmentation';
 import type { PanelRegions, PlayerFrameDetection, PlayerScreenKind, StatCellRegions } from './playerTypes';
 
 // CALIBRATE: purple panel body of the team-detail screens (both layouts)
@@ -162,5 +162,11 @@ export function detectPlayerPanels(img: RgbaImage): PlayerFrameDetection | null 
   }
   if (!isValidGrid(ordered)) return null;
   const kind = classifyScreenKind(img, ordered);
-  return { kind, panels: ordered.map(box => carveRegions(box, kind)) };
+  return {
+    kind,
+    panels: ordered.map(box => {
+      const regions = carveRegions(box, kind);
+      return { ...regions, sprite: refineSpritePanelBox(img, box, regions.sprite, isPanelPurplePixel) };
+    }),
+  };
 }

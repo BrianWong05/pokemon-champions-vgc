@@ -12,7 +12,7 @@ import type { PlayerScanDeps } from '../src/features/scan/scanPlayerFrame';
 export const nodeRender = makeTextRenderer((w, h) => createCanvas(w, h));
 
 export function loadNodeRefs() {
-  const map = JSON.parse(fs.readFileSync('public/images/pokemon/reference-descriptors.json', 'utf8'));
+  const map = JSON.parse(fs.readFileSync('public/images/pokemon/player-panel-descriptors.json', 'utf8'));
   return parseReferenceMap(map);
 }
 
