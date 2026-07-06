@@ -60,6 +60,75 @@ describe('detectScanTargets', () => {
   });
 });
 
+// Battle plate WITH an HP bar strip (fill-anchored, dark remainder) so the
+// single-plate verifier rung can accept it. Colors match the existing tests'
+// plate colors (opponent magenta 220/40/120, player indigo 80/60/190).
+function paintBattlePlate(
+  img: RgbaImage, x: number, y: number, w: number, h: number,
+  side: 'opponent' | 'player', fillFrac = 0.5,
+) {
+  const [r, g, b] = side === 'opponent' ? [220, 40, 120] : [80, 60, 190];
+  fillRect(img, x, y, w, h, r, g, b);
+  const barY = y + Math.round(h * 0.72);
+  const barH = Math.max(3, Math.round(h * 0.15));
+  const fillW = Math.max(2, Math.round((w - 12) * fillFrac));
+  fillRect(img, x + 6, barY, fillW, barH, 60, 200, 80);
+  if (fillW < w - 12) fillRect(img, x + 6 + fillW, barY, w - 12 - fillW, barH, 35, 35, 40);
+}
+
+describe('single-plate battle detection (mode-vote rung 3)', () => {
+  // Slot x-positions inside a full 1250x700 frame, per the pair geometry the
+  // existing pair test uses (left plate at 720, right at 960).
+  const OPP = { left: 720, right: 960, y: 30, w: 160, h: 40 };
+  const PLAYER = { left: 40, right: 300, y: 600, w: 160, h: 40 };
+
+  it('1 opponent plate + 2 player plates -> battle', () => {
+    const img = blank(1250, 700);
+    paintBattlePlate(img, OPP.right, OPP.y, OPP.w, OPP.h, 'opponent', 0.02); // near-empty bar
+    paintBattlePlate(img, PLAYER.left, PLAYER.y, PLAYER.w, PLAYER.h, 'player');
+    paintBattlePlate(img, PLAYER.right, PLAYER.y, PLAYER.w, PLAYER.h, 'player');
+    const { mode, targets } = detectScanTargets(img);
+    expect(mode).toBe('battle');
+    expect(targets.filter((t) => t.side === 'opponent').length).toBe(1);
+    expect(targets.filter((t) => t.side === 'player').length).toBe(2);
+  });
+
+  it('1v1 -> battle, at every slot combination on both sides', () => {
+    for (const oppX of [OPP.left, OPP.right]) for (const playerX of [PLAYER.left, PLAYER.right]) {
+      const img = blank(1250, 700);
+      paintBattlePlate(img, oppX, OPP.y, OPP.w, OPP.h, 'opponent');
+      paintBattlePlate(img, playerX, PLAYER.y, PLAYER.w, PLAYER.h, 'player');
+      const { mode, targets } = detectScanTargets(img);
+      expect(mode, `opp@${oppX} player@${playerX}`).toBe('battle');
+      expect(targets.length, `opp@${oppX} player@${playerX}`).toBe(2);
+    }
+  });
+
+  it('1 opponent plate + 0 player plates -> battle', () => {
+    const img = blank(1250, 700);
+    paintBattlePlate(img, OPP.right, OPP.y, OPP.w, OPP.h, 'opponent', 1.0); // full bar
+    const { mode, targets } = detectScanTargets(img);
+    expect(mode).toBe('battle');
+    expect(targets.length).toBe(1);
+  });
+
+  it('0 opponent + 1 verified player plate -> battle (either-side evidence)', () => {
+    const img = blank(1250, 700);
+    paintBattlePlate(img, PLAYER.left, PLAYER.y, PLAYER.w, PLAYER.h, 'player');
+    const { mode, targets } = detectScanTargets(img);
+    expect(mode).toBe('battle');
+    expect(targets.filter((t) => t.side === 'player').length).toBe(1);
+  });
+
+  it('a bare magenta banner (no bar strip) on an empty frame stays team', () => {
+    const img = blank(1250, 700);
+    fillRect(img, 900, 20, 200, 40, 210, 45, 120);
+    const { mode, targets } = detectScanTargets(img);
+    expect(mode).toBe('team');
+    expect(targets.length).toBe(0);
+  });
+});
+
 describe('game-rect inference (margins)', () => {
   it('recovers the game rect and targets from a framed screenshot', () => {
     const img = blank(1600, 1200);
