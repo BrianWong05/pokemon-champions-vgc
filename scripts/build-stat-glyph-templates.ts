@@ -1,5 +1,5 @@
 /**
- * Build stat/SP digit glyph templates from the golden stats screenshot.
+ * Build stat/SP digit glyph templates from the golden stats screenshot(s).
  *
  * The HP-text glyph templates (italic, sheared font from battle plates) do
  * not match the stats-screen font: even after isolating a digit from its
@@ -8,24 +8,26 @@
  * wrong ('7' beats '2', '1' beats '6'). This builder captures the stats
  * screen's own upright digit font instead.
  *
+ * Like the HP builder (build-hp-glyph-templates.ts), this reads BOTH pixel
+ * sources — pngjs-decoded training/player-screens AND browser-decoded
+ * training/player-fixtures — because the two decoders differ on ~40% of
+ * bytes and templates built from one systematically mismatch glyphs masked
+ * from the other. Regenerate the browser twins with:
+ *   python3 scripts/capture-player-browser-fixtures.py
+ *
  * Usage: npx tsx scripts/build-stat-glyph-templates.ts
- * (reads training/player-golden.json + training/player-screens, the only
- * fixture pair with ground truth so far)
+ * (reads training/player-golden.json; labels apply to both source dirs)
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { PNG } from 'pngjs';
 import { detectPlayerPanels } from '../src/features/scan/playerPanels';
-import { whiteMask, filterSpecks, normalizeGlyph, type BinMask, type GlyphTemplate } from '../src/features/scan/hpText';
+import { whiteMask, filterSpecks, normalizeGlyph, MASK_THRESHOLDS, type BinMask, type GlyphTemplate } from '../src/features/scan/hpText';
 import type { RgbaImage, TileBox } from '../src/features/scan/types';
+import { readPng as loadPng, mergeTemplates, pruneConflicts } from './build-hp-glyph-templates';
 
 const GOLDEN_DIR = 'training/player-screens';
+const FIXTURES_DIR = 'training/player-fixtures';
 const TS_PATH = path.resolve('src/features/scan/statGlyphTemplates.ts');
-
-function loadPng(file: string): RgbaImage {
-  const png = PNG.sync.read(fs.readFileSync(file));
-  return { data: new Uint8ClampedArray(png.data), width: png.width, height: png.height };
-}
 
 // Mirrors statDigits.ts's segmentDigitGlyphs: plain column-projection, no
 // hpText cleanMask left-edge-component strip (that removes the HP plate's
@@ -68,8 +70,8 @@ function isolateColumns(mask: BinMask, box: TileBox): BinMask {
   return { bits, w: mask.w, h: mask.h };
 }
 
-function templatesFromCell(img: RgbaImage, box: TileBox, expectedText: string): GlyphTemplate[] {
-  const mask = whiteMask(img, box);
+function templatesFromCell(img: RgbaImage, box: TileBox, expectedText: string, thresholdFactor = 0.8): GlyphTemplate[] {
+  const mask = whiteMask(img, box, thresholdFactor);
   // Background sheen near some panels' edges catches whiteMask's threshold and
   // segments as an extra short blob. Every digit in a stat/SP cell renders at
   // the SAME height (unlike HP text's two-tier current/max sizes), so — unlike
@@ -90,14 +92,6 @@ function templatesFromCell(img: RgbaImage, box: TileBox, expectedText: string): 
   }));
 }
 
-function mergeTemplates(existing: GlyphTemplate[], additions: GlyphTemplate[]): GlyphTemplate[] {
-  const merged = [...existing];
-  for (const t of additions) {
-    if (!merged.some((m) => m.char === t.char && m.bits === t.bits)) merged.push(t);
-  }
-  return merged;
-}
-
 function writeTemplateFile(templates: GlyphTemplate[]): void {
   fs.writeFileSync(
     TS_PATH,
@@ -110,33 +104,49 @@ export const STAT_GLYPH_TEMPLATES: Array<{ char: string; bits: string; hFrac: nu
 
 function main(): void {
   const golden = JSON.parse(fs.readFileSync('training/player-golden.json', 'utf8'));
+  const sources = [GOLDEN_DIR, FIXTURES_DIR].filter((d) => fs.existsSync(d));
   let templates: GlyphTemplate[] = [];
   let built = 0;
   let skipped = 0;
-  for (const [key, pair] of Object.entries<any>(golden)) {
-    if (key.startsWith('_') || !pair.statsImage) continue;
-    const img = loadPng(`${GOLDEN_DIR}/${pair.statsImage}`);
-    const det = detectPlayerPanels(img);
-    if (!det || det.kind !== 'stats') { console.log(`  skip ${key}: no stats panels detected`); continue; }
-    det.panels.forEach((panel, slot) => {
-      const mon = pair.team[slot];
-      panel.statCells!.forEach((cell, i) => {
-        for (const [box, expected] of [[cell.stat, mon.stats[i]], [cell.sp, mon.sp[i]]] as const) {
-          try {
-            templates = mergeTemplates(templates, templatesFromCell(img, box, String(expected)));
-            built++;
-          } catch (error) {
-            skipped++;
-            console.log(`  skip ${key} slot${slot} cell${i}: ${(error as Error).message}`);
+  for (const dir of sources) {
+    for (const [key, pair] of Object.entries<any>(golden)) {
+      if (key.startsWith('_') || !pair.statsImage) continue;
+      const file = `${dir}/${pair.statsImage}`;
+      if (!fs.existsSync(file)) continue;
+      const img = loadPng(file);
+      const det = detectPlayerPanels(img);
+      if (!det || det.kind !== 'stats') { console.log(`  skip ${dir}/${key}: no stats panels detected`); continue; }
+      det.panels.forEach((panel, slot) => {
+        const mon = pair.team[slot];
+        panel.statCells!.forEach((cell, i) => {
+          for (const [box, expected] of [[cell.stat, mon.stats[i]], [cell.sp, mon.sp[i]]] as const) {
+            // Sweep every mask threshold the reader tries: glyph stroke weight
+            // changes with the threshold, and templates from one weight do not
+            // match masks produced at another (mirrors the HP builder).
+            let ok = false;
+            for (const thresholdFactor of MASK_THRESHOLDS) {
+              try {
+                templates = mergeTemplates(templates, templatesFromCell(img, box, String(expected), thresholdFactor));
+                ok = true;
+              } catch {
+                // a threshold variant failing is fine as long as one succeeds
+              }
+            }
+            if (ok) built++;
+            else {
+              skipped++;
+              console.log(`  skip ${path.basename(dir)}/${key} slot${slot} cell${i} "${expected}": no threshold variant segmented`);
+            }
           }
-        }
+        });
       });
-    });
+    }
   }
-  writeTemplateFile(templates);
-  const chars = [...new Set(templates.map((t) => t.char))].sort().join('');
-  console.log(`Built from ${built} cell(s), skipped ${skipped}.`);
-  console.log(`${templates.length} templates covering: ${chars}`);
+  const pruned = pruneConflicts(templates);
+  writeTemplateFile(pruned);
+  const chars = [...new Set(pruned.map((t) => t.char))].sort().join('');
+  console.log(`Built from ${built} cell(s) across ${sources.length} source(s), skipped ${skipped}.`);
+  console.log(`${pruned.length} templates (${templates.length - pruned.length} conflicted pruned) covering: ${chars}`);
 }
 
 main();

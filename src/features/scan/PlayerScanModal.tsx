@@ -11,6 +11,7 @@ import CropStep from './CropStep';
 import { filePickerSource, cameraSource } from './captureSource';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs, type MergedPlayerScan, type PlayerSlot } from './mergePlayerScan';
+import { loadClassifier } from './classifier';
 
 interface PlayerScanModalProps {
   isOpen: boolean;
@@ -49,6 +50,12 @@ const PlayerScanModal: React.FC<PlayerScanModalProps> = ({ isOpen, onClose, poke
 
   // ponytail: dev-only harness for golden verification in-browser
   if (import.meta.env.DEV) (window as any).__playerScanDebug = { addFrame };
+
+  // Warm up the classifier as soon as the modal opens, same as ScanTeamModal,
+  // so the first scan doesn't pay the full load cost synchronously.
+  React.useEffect(() => {
+    if (isOpen) void loadClassifier();
+  }, [isOpen]);
 
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
