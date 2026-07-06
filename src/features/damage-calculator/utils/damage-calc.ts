@@ -487,3 +487,14 @@ export const calculateSmogonDamage = (
   const gen = Generations.get(9);
   return calculate(gen, attacker, defender, move, field);
 };
+
+/** Flatten @smogon/calc damage output (multi-hit = array of arrays summed) to [min..max]. */
+export const flattenDamage = (arr: any[]): number[] => {
+  if (arr.length === 0) return [0];
+  if (Array.isArray(arr[0])) {
+    const min = arr.reduce((acc, sub) => acc + (typeof sub[0] === 'number' ? sub[0] : 0), 0);
+    const max = arr.reduce((acc, sub) => acc + (typeof sub[sub.length - 1] === 'number' ? sub[sub.length - 1] : 0), 0);
+    return [min, max];
+  }
+  return arr.filter((d) => typeof d === 'number');
+};
