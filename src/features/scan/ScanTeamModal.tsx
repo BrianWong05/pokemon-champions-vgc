@@ -10,7 +10,7 @@ import type { LegalIdsBySide } from './scanFrame';
 import { loadClassifier } from './classifier';
 import { filePickerSource, cameraSource } from './captureSource';
 import { toParsedSets } from './toParsedSets';
-import { formFamilyIds } from './battleRoster';
+import { formFamilyIds, buildLegalIdsResolver } from './battleRoster';
 import CropStep from './CropStep';
 
 interface ScanTeamModalProps {
@@ -30,6 +30,8 @@ interface ScanTeamModalProps {
   battleRoster?: number[] | null;
   /** Battle-roster mode: when set, team-preview results hide player rows and confirm saves the roster. */
   onConfirmRoster?: (ids: number[]) => void;
+  /** The user's own team's species ids — battle scans mask PLAYER tiles to their form families. */
+  myTeamIds?: number[] | null;
 }
 
 interface RosterEntry {
@@ -39,20 +41,22 @@ interface RosterEntry {
   hpPercent?: number | null;
 }
 
-const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob, battleRoster, onConfirmRoster }) => {
+const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob, battleRoster, onConfirmRoster, myTeamIds }) => {
   const fullLegalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
   const maskIds = useMemo(
     () => (battleRoster && battleRoster.length > 0 ? formFamilyIds(battleRoster, pokemonList) : null),
     [battleRoster, pokemonList],
   );
-  // Team-preview scans are never roster-masked (they CREATE the roster);
-  // player-side tiles keep the full format mask (your own mons are not on
-  // the opponent's roster).
+  const myMaskIds = useMemo(
+    () => (myTeamIds && myTeamIds.length > 0 ? formFamilyIds(myTeamIds, pokemonList) : null),
+    [myTeamIds, pokemonList],
+  );
+  // Central mask policy (tested in battleRoster.test.ts): battle-mode
+  // opponent tiles -> roster family, battle-mode player tiles -> my-team
+  // family, everything else (team preview, legacy) -> the full format set.
   const legalIds = useMemo<LegalIdsBySide>(
-    () => (maskIds
-      ? (side, scanMode) => (scanMode === 'battle' && side !== 'player' ? maskIds : fullLegalIds)
-      : fullLegalIds),
-    [maskIds, fullLegalIds],
+    () => buildLegalIdsResolver(fullLegalIds, maskIds, myMaskIds),
+    [fullLegalIds, maskIds, myMaskIds],
   );
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const { status, slots, mode, error, scan, reset } = useTeamScan(legalIds);

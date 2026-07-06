@@ -29,7 +29,7 @@ const listRow = (activeSel: boolean): React.CSSProperties => ({
 });
 
 export function ArenaCalculator({
-  state, dispatch, pokemonList, moveList, p1Results, p2Results, actions, onApplySpread, onResetBuild, onOpenScan, defenderExtra,
+  state, dispatch, pokemonList, moveList, p1Results, p2Results, actions, onApplySpread, onResetBuild, onOpenScan, defenderExtra, attackerExtra,
 }: {
   state: CalcState;
   dispatch: React.Dispatch<CalcAction>;
@@ -45,6 +45,8 @@ export function ArenaCalculator({
   onOpenScan: () => void;
   /** Optional slot rendered under the Defender card's header (battle-roster chips). */
   defenderExtra?: React.ReactNode;
+  /** Optional slot rendered under the Attacker card's header (my-team chips). */
+  attackerExtra?: React.ReactNode;
 }) {
   const [dir, setDir] = useState<Side>('p1');
   const [picker, setPicker] = useState<{ side: Side; field: PickerField } | null>(null);
@@ -71,7 +73,7 @@ export function ArenaCalculator({
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 'var(--sp-4) var(--gutter) var(--sp-7)' }}>
-        <ArenaMonCard side="p1" role="Attacker" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p1')} onOpenAdvanced={() => setAdvancedSide('p1')} />
+        <ArenaMonCard side="p1" role="Attacker" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p1')} onOpenAdvanced={() => setAdvancedSide('p1')} extra={attackerExtra} />
         <ArenaMonCard side="p2" role="Defender" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p2')} onOpenAdvanced={() => setAdvancedSide('p2')} extra={defenderExtra} />
 
         <button
