@@ -1,0 +1,29 @@
+{
+  "en-rental": {
+    "movesImage": "en-rental-moves.png",
+    "statsImage": "en-rental-stats.png",
+    "lang": "en",
+    "_note": "Grimmsnarl (Parting Shot), Swampert (Wave Crash), Pelipper (Wide Guard) are event/transfer moves not in pokemon_moves DB",
+    "team": [
+      { "species": "Grimmsnarl", "ability": "Prankster", "item": "Light Clay",
+        "moves": ["Foul Play", "Parting Shot", "Reflect", "Light Screen"],
+        "stats": [202, 126, 105, 115, 119, 80], "sp": [32, 0, 20, 0, 14, 0], "nature": "Calm" },
+      { "species": "Swampert", "ability": "Damp", "item": "Swampertite",
+        "moves": ["Wave Crash", "Earthquake", "Ice Punch", "Protect"],
+        "stats": [193, 176, 110, 94, 110, 98], "sp": [18, 30, 0, 0, 0, 18], "nature": "Adamant" },
+      { "species": "Pelipper", "ability": "Drizzle", "item": "Sitrus Berry",
+        "moves": ["Hurricane", "Weather Ball", "Tailwind", "Wide Guard"],
+        "stats": [167, 63, 121, 132, 107, 96], "sp": [32, 0, 1, 5, 17, 11], "nature": "Modest" },
+      { "species": "Archaludon", "ability": "Stamina", "item": "Leftovers",
+        "moves": ["Electro Shot", "Dragon Pulse", "Flash Cannon", "Protect"],
+        "stats": [197, 112, 150, 160, 114, 109], "sp": [32, 0, 0, 1, 29, 4], "nature": "Modest" },
+      { "species": "Sinistcha", "ability": "Hospitality", "item": "Coba Berry",
+        "moves": ["Matcha Gotcha", "Rage Powder", "Trick Room", "Protect"],
+        "stats": [178, 80, 143, 141, 130, 81], "sp": [32, 0, 4, 0, 30, 0], "nature": "Relaxed" },
+      { "species": "Metagross", "ability": "Clear Body", "item": "Metagrossite",
+        "moves": ["Iron Head", "Psychic Fangs", "Body Press", "Protect"],
+        "stats": [169, 182, 150, 103, 110, 126], "sp": [14, 27, 0, 0, 0, 25], "nature": "Jolly" }
+    ]
+  },
+  "_todo": "zh-team17 pending screenshots"
+}
