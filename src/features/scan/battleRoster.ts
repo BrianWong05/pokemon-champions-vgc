@@ -2,6 +2,7 @@
 // from a team-preview scan, persisted until cleared or replaced. Species
 // only — no HP memory (spec decision).
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import type { LegalIdsBySide } from './scanFrame';
 
 const KEY = 'scan.battleRoster';
 
@@ -75,4 +76,22 @@ export function formFamilyIds(rosterIds: number[], pokemonList: PokemonBaseStats
     }
   }
   return out;
+}
+
+// Central mask policy for scans: battle-mode opponent tiles narrow to the
+// confirmed roster's family, battle-mode player tiles to the user's own
+// team's family; team-preview and legacy paths always use the full format
+// set. With no masks at all, the ORIGINAL Set is returned unchanged so
+// scanFrame's identity-keyed refs cache behaves exactly as before.
+export function buildLegalIdsResolver(
+  full: Set<number>,
+  oppFamily: Set<number> | null,
+  myFamily: Set<number> | null,
+): LegalIdsBySide {
+  if (!oppFamily && !myFamily) return full;
+  return (side, mode) => {
+    if (mode !== 'battle') return full;
+    if (side === 'player') return myFamily ?? full;
+    return oppFamily ?? full;
+  };
 }

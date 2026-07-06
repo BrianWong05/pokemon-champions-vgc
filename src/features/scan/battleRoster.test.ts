@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { readBattleRoster, saveBattleRoster, clearBattleRoster, formFamilyIds } from './battleRoster';
+import { readBattleRoster, saveBattleRoster, clearBattleRoster, formFamilyIds, buildLegalIdsResolver } from './battleRoster';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 const mon = (id: number, identifier: string): PokemonBaseStats =>
@@ -72,5 +72,39 @@ describe('formFamilyIds', () => {
 
   it('a base identifier with a default-form suffix still finds its form (meowstic-male)', () => {
     expect([...formFamilyIds([678], LIST)].sort((a, b) => a - b)).toEqual([678, 10314]);
+  });
+});
+
+describe('buildLegalIdsResolver', () => {
+  const full = new Set([1, 2, 3]);
+  const opp = new Set([6, 10034]);
+  const mine = new Set([479, 10008]);
+
+  it('both masks absent -> returns the SAME plain Set (identity parity)', () => {
+    expect(buildLegalIdsResolver(full, null, null)).toBe(full);
+  });
+
+  it('battle mode: player tiles get my-team family, opponent tiles get roster family', () => {
+    const r = buildLegalIdsResolver(full, opp, mine);
+    expect(typeof r).toBe('function');
+    const fn = r as (side: string | undefined, mode: string | null) => Set<number>;
+    expect(fn('player', 'battle')).toBe(mine);
+    expect(fn('opponent', 'battle')).toBe(opp);
+  });
+
+  it('team-preview and legacy paths always get the full set', () => {
+    const fn = buildLegalIdsResolver(full, opp, mine) as (s: string | undefined, m: string | null) => Set<number>;
+    expect(fn('opponent', 'team')).toBe(full);
+    expect(fn('player', 'team')).toBe(full);
+    expect(fn(undefined, null)).toBe(full);
+  });
+
+  it('one-sided masks fall back to full on the unmasked side', () => {
+    const onlyOpp = buildLegalIdsResolver(full, opp, null) as (s: string | undefined, m: string | null) => Set<number>;
+    expect(onlyOpp('player', 'battle')).toBe(full);
+    expect(onlyOpp('opponent', 'battle')).toBe(opp);
+    const onlyMine = buildLegalIdsResolver(full, null, mine) as (s: string | undefined, m: string | null) => Set<number>;
+    expect(onlyMine('player', 'battle')).toBe(mine);
+    expect(onlyMine('opponent', 'battle')).toBe(full);
   });
 });
