@@ -6,6 +6,7 @@ import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
 import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
+import PlayerScanModal from '@/features/scan/PlayerScanModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { getDb } from '@/db';
@@ -33,6 +34,7 @@ const TeamsPage: React.FC = () => {
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isPlayerScanOpen, setIsPlayerScanOpen] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -192,6 +194,14 @@ const TeamsPage: React.FC = () => {
     navigate(`/teams/${teamId}`);
   };
 
+  const handleSavePlayerTeam = async (members: PokemonConfig[]) => {
+    if (!members.length) return;
+    const first = pokemonList.find(p => p.id === members[0].selectedId);
+    const teamId = await createTeam(`${first?.nameEn ?? 'Scanned'}'s Team`, members);
+    setIsPlayerScanOpen(false);
+    navigate(`/teams/${teamId}`);
+  };
+
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamName.trim()) return;
@@ -221,6 +231,7 @@ const TeamsPage: React.FC = () => {
           onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
           onImport={() => setIsImportModalOpen(true)}
           onScan={() => setIsScanModalOpen(true)}
+          onScanPlayer={() => setIsPlayerScanOpen(true)}
           onOpen={(id) => navigate(`/teams/${id}`)}
           onExport={(team) => setExportTeam(team)}
           onDelete={handleDeleteTeam}
@@ -246,6 +257,13 @@ const TeamsPage: React.FC = () => {
           onClose={() => setIsScanModalOpen(false)}
           onImport={handleImportTeam}
           pokemonList={pokemonList}
+        />
+        <PlayerScanModal
+          isOpen={isPlayerScanOpen}
+          onClose={() => setIsPlayerScanOpen(false)}
+          pokemonList={pokemonList}
+          moveList={moveList}
+          onSave={handleSavePlayerTeam}
         />
         <ToastNotification message={toast} />
       </>
@@ -276,6 +294,12 @@ const TeamsPage: React.FC = () => {
             className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 hover:bg-raise"
           >
             Scan team
+          </button>
+          <button
+            onClick={() => setIsPlayerScanOpen(true)}
+            className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 hover:bg-raise"
+          >
+            Scan my team
           </button>
           <button
             onClick={() => setIsCreating(true)}
@@ -417,6 +441,13 @@ const TeamsPage: React.FC = () => {
         onClose={() => setIsScanModalOpen(false)}
         onImport={handleImportTeam}
         pokemonList={pokemonList}
+      />
+      <PlayerScanModal
+        isOpen={isPlayerScanOpen}
+        onClose={() => setIsPlayerScanOpen(false)}
+        pokemonList={pokemonList}
+        moveList={moveList}
+        onSave={handleSavePlayerTeam}
       />
       <ToastNotification message={toast} />
     </div>
