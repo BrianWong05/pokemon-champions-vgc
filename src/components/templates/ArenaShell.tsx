@@ -64,13 +64,13 @@ const ArenaShell: React.FC = () => {
             right: 'var(--gutter)',
             zIndex: 40,
             minWidth: 180,
-            padding: 4,
             background: 'var(--surface-card)',
             border: '1px solid var(--line-2)',
             borderRadius: 'var(--r-md)',
             boxShadow: 'var(--shadow-pop)',
+            overflow: 'hidden',
           }}>
-            {formats.map((f) => (
+            {formats.map((f, i) => (
               <button
                 key={f}
                 type="button"
@@ -84,10 +84,10 @@ const ArenaShell: React.FC = () => {
                   gap: 8,
                   width: '100%',
                   minHeight: 'var(--tap-min)',
-                  padding: '0 12px',
+                  padding: '0 14px',
                   background: f === format ? 'var(--accent-soft)' : 'transparent',
                   border: 'none',
-                  borderRadius: 'var(--r-sm)',
+                  borderTop: i > 0 ? '1px solid var(--line-1)' : 'none',
                   color: f === format ? 'var(--accent)' : 'var(--ink-1)',
                   fontFamily: 'var(--font-ui)',
                   fontSize: 'var(--fs-body)',
