@@ -135,10 +135,12 @@ export const ArenaTeamDetail: React.FC<ArenaTeamDetailProps> = ({
       )}
 
       <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Add member" height="80vh">
-        <ArenaPokemonPicker
-          pokemonList={pokemonList}
-          onSelect={(p) => { onAdd(p); setPickerOpen(false); }}
-        />
+        {pickerOpen && (
+          <ArenaPokemonPicker
+            pokemonList={pokemonList}
+            onSelect={(p) => { onAdd(p); setPickerOpen(false); }}
+          />
+        )}
       </Sheet>
 
       <Sheet open={renameOpen} onClose={() => setRenameOpen(false)} title="Rename team">
