@@ -194,7 +194,8 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               const selectedName = entry.id != null ? byId.get(entry.id)?.nameEn : undefined;
               const isPicking = pickerOpenFor === i;
               return (
-                <div key={i} className="flex items-start gap-3 p-2 rounded border border-line-2">
+                <div key={i} className="p-2 rounded border border-line-2">
+                  <div className="flex items-start gap-3">
                   <span className="w-5 pt-2 text-sm text-ink-3">{i + 1}</span>
                   {(entry.side || entry.hpPercent != null) && (
                     <div className="flex flex-col items-center gap-0.5 pt-2">
@@ -260,15 +261,6 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                           ? 'Choose another Pokémon'
                           : 'Choose Pokémon'}
                     </button>
-                    {isPicking && (
-                      <div className="mt-2">
-                        <PokemonImagePicker
-                          pokemonList={pokemonList}
-                          selectedId={entry.id}
-                          onSelect={(id) => { setEntryId(i, id); setPickerOpenFor(null); }}
-                        />
-                      </div>
-                    )}
                   </div>
                   {onLoadPokemon && entry.side !== 'player' && (
                     <button
@@ -298,6 +290,16 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   >
                     ✕
                   </button>
+                  </div>
+                  {isPicking && (
+                    <div className="mt-2">
+                      <PokemonImagePicker
+                        pokemonList={pokemonList}
+                        selectedId={entry.id}
+                        onSelect={(id) => { setEntryId(i, id); setPickerOpenFor(null); }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
