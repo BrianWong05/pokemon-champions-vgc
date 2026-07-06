@@ -37,33 +37,33 @@ const StatRow: React.FC<StatRowProps> = ({
   const total = isHp ? calculateHP(base, sp) : calculateStat(base, sp, multiplier, stage, abilityResult.modifier);
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-center py-1.5 border-b border-gray-50 last:border-0">
+    <div className="grid grid-cols-12 gap-2 items-center py-1.5 border-b border-line last:border-0">
       {/* 1. Stat Label */}
-      <div className="col-span-2 text-xs font-black text-gray-400 uppercase tracking-tighter">{label}</div>
-      
+      <div className="col-span-2 text-xs font-black text-ink-4 uppercase tracking-tighter">{label}</div>
+
       {/* 2. Base */}
-      <div className="col-span-1 text-center text-sm font-bold text-gray-500">
+      <div className="col-span-1 text-center text-sm font-bold text-ink-3">
         {base}
       </div>
 
       {/* 3. SP Slider */}
       <div className="col-span-3 px-1">
-        <input 
-          type="range" 
-          min="0" 
+        <input
+          type="range"
+          min="0"
           max={isEvMode ? 252 : 32}
           step={isEvMode ? 4 : 1}
-          value={isEvMode ? convertSpToEv(sp) : sp} 
+          value={isEvMode ? convertSpToEv(sp) : sp}
           onChange={(e) => onSpChange(isEvMode ? convertEvToSp(parseInt(e.target.value, 10)) : parseInt(e.target.value, 10))}
-          className="w-full h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          className="w-full h-1 bg-inset rounded-lg appearance-none cursor-pointer accent-accent"
         />
       </div>
 
       {/* 4. SP Numeric Input */}
       <div className="col-span-1 flex justify-center">
-        <input 
-          type="number" 
-          min="0" 
+        <input
+          type="number"
+          min="0"
           max={isEvMode ? 252 : 32}
           step={isEvMode ? 4 : 1}
           value={sp === 0 ? '' : (isEvMode ? convertSpToEv(sp) : sp)}
@@ -77,7 +77,7 @@ const StatRow: React.FC<StatRowProps> = ({
             const val = Math.min(isEvMode ? 252 : 32, Math.max(0, rawVal));
             onSpChange(isEvMode ? convertEvToSp(val) : val);
           }}
-          className="w-10 bg-white border border-gray-200 text-center text-[11px] font-black text-blue-600 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all appearance-none"
+          className="w-10 bg-card border border-line-2 text-center text-[11px] font-black text-accent rounded-lg py-1 outline-none focus:border-accent focus:ring-2 focus:ring-accent-soft transition-all appearance-none"
         />
       </div>
 
@@ -87,13 +87,13 @@ const StatRow: React.FC<StatRowProps> = ({
           <div className="flex gap-1">
             <button
               onClick={() => onToggleNature(statKey, '+')}
-              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isBoosted ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-50 text-gray-300 hover:bg-gray-100'}`}
+              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isBoosted ? 'bg-danger-soft text-danger border border-danger-line' : 'bg-inset text-ink-4 hover:bg-raise'}`}
             >
               +
             </button>
             <button
               onClick={() => onToggleNature(statKey, '-')}
-              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isHindered ? 'bg-blue-500 text-white shadow-sm' : 'bg-gray-50 text-gray-300 hover:bg-gray-100'}`}
+              className={`w-5 h-5 flex items-center justify-center rounded-md text-[10px] font-black transition-all ${isHindered ? 'bg-accent-soft text-accent border border-accent-soft-line' : 'bg-inset text-ink-4 hover:bg-raise'}`}
             >
               -
             </button>
@@ -104,19 +104,19 @@ const StatRow: React.FC<StatRowProps> = ({
       {/* 6. Stage Controls */}
       <div className="col-span-2 flex justify-center">
         {!isHp && onStageChange ? (
-          <div className="flex items-center bg-gray-50 rounded-lg px-1 py-0.5 border border-gray-100">
-            <button 
+          <div className="flex items-center bg-inset rounded-lg px-1 py-0.5 border border-line">
+            <button
               onClick={() => onStageChange(statKey, stage - 1)}
-              className="text-[10px] font-black text-gray-300 hover:text-blue-500 px-1"
+              className="text-[10px] font-black text-ink-4 hover:text-accent px-1"
             >
               -
             </button>
-            <span className={`text-[10px] font-black min-w-[14px] text-center ${stage > 0 ? 'text-green-500' : stage < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+            <span className={`text-[10px] font-black min-w-[14px] text-center ${stage > 0 ? 'text-safe' : stage < 0 ? 'text-danger' : 'text-ink-4'}`}>
               {stage !== 0 ? (stage > 0 ? `+${stage}` : stage) : ''}
             </span>
-            <button 
+            <button
               onClick={() => onStageChange(statKey, stage + 1)}
-              className="text-[10px] font-black text-gray-300 hover:text-green-500 px-1"
+              className="text-[10px] font-black text-ink-4 hover:text-safe px-1"
             >
               +
             </button>
@@ -125,7 +125,7 @@ const StatRow: React.FC<StatRowProps> = ({
       </div>
 
       {/* 7. Total */}
-      <div className={`col-span-1 text-right text-base font-black ${isBoosted ? 'text-red-600' : isHindered ? 'text-blue-600' : 'text-gray-900'}`}>
+      <div className={`col-span-1 text-right text-base font-black ${isBoosted ? 'text-danger' : isHindered ? 'text-accent' : 'text-ink-1'}`}>
         {total}
       </div>
     </div>
@@ -192,17 +192,17 @@ const StatGrid: React.FC<StatGridProps> = ({
   return (
     <div className={`space-y-1 ${className}`}>
       {/* Header Row */}
-      <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-2 items-center">
+      <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-ink-4 uppercase tracking-widest pb-2 border-b border-line mb-2 items-center">
         <div className="col-span-2">Stat</div>
         <div className="col-span-1 text-center">Base</div>
         <div className="col-span-3 flex justify-center items-center">
-          <button 
+          <button
             onClick={() => setIsEvMode(!isEvMode)}
-            className="flex items-center gap-1 bg-gray-50 hover:bg-gray-100 px-2 py-0.5 rounded transition-colors border border-gray-200"
+            className="flex items-center gap-1 bg-inset hover:bg-raise px-2 py-0.5 rounded transition-colors border border-line-2"
           >
-            <span className={isEvMode ? 'text-gray-400' : 'text-blue-600 font-black'}>SP</span>
-            <span className="text-gray-300">/</span>
-            <span className={isEvMode ? 'text-blue-600 font-black' : 'text-gray-400'}>EV</span>
+            <span className={isEvMode ? 'text-ink-4' : 'text-accent font-black'}>SP</span>
+            <span className="text-ink-4">/</span>
+            <span className={isEvMode ? 'text-accent font-black' : 'text-ink-4'}>EV</span>
           </button>
         </div>
         <div className="col-span-1 text-center"></div>
@@ -221,11 +221,11 @@ const StatGrid: React.FC<StatGridProps> = ({
       </div>
 
       {/* Summary Footer */}
-      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2">
+      <div className="flex justify-between items-center pt-3 border-t border-line mt-2">
         <div className="flex items-center gap-3">
-          <span 
+          <span
             onClick={() => setIsLimitEnforced(!isLimitEnforced)}
-            className={`text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors ${isLimitEnforced ? 'text-gray-400 hover:text-red-500' : 'text-gray-300 hover:text-blue-500'}`}
+            className={`text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors ${isLimitEnforced ? 'text-ink-4 hover:text-danger' : 'text-ink-4 hover:text-accent'}`}
             title={isLimitEnforced ? "Click to disable SP/EV limit" : "Click to enable SP/EV limit (Max 66/508)"}
           >
             {isEvMode ? `Total EV Used ${isLimitEnforced ? '(Max 508)' : ''}` : `Total SP Used ${isLimitEnforced ? '(Max 66)' : ''}`}
@@ -233,18 +233,18 @@ const StatGrid: React.FC<StatGridProps> = ({
           {onResetStats && (
             <button
               onClick={onResetStats}
-              className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors"
+              className="text-[10px] font-black text-danger hover:text-danger uppercase tracking-widest bg-danger-soft hover:bg-danger-soft px-2 py-1 rounded transition-colors"
             >
               Reset Stats
             </button>
           )}
         </div>
-        <span 
+        <span
           onClick={() => setIsLimitEnforced(!isLimitEnforced)}
-          className={`text-base font-black cursor-pointer transition-colors ${isOverLimit ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700'}`}
+          className={`text-base font-black cursor-pointer transition-colors ${isOverLimit ? 'text-danger hover:text-danger' : 'text-accent hover:text-accent'}`}
           title={isLimitEnforced ? "Click to disable SP/EV limit" : "Click to enable SP/EV limit (Max 66/508)"}
         >
-          {isEvMode ? totalEv : totalSp} {isLimitEnforced && <span className="text-gray-300 font-bold">/ {isEvMode ? 508 : 66}</span>}
+          {isEvMode ? totalEv : totalSp} {isLimitEnforced && <span className="text-ink-4 font-bold">/ {isEvMode ? 508 : 66}</span>}
         </span>
       </div>
     </div>
