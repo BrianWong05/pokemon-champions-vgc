@@ -14,7 +14,7 @@ import {
   detectPlayerSpriteBoxes,
 } from './segmentation';
 import { detectBattleIcons, detectBattlePanels } from './battleDetection';
-import { inferGameRect } from './gameRect';
+import { inferGameRectCandidates } from './gameRect';
 import { readHpFromPanel } from './hpText';
 import { isBattlePlate } from './plateVerify';
 import type { RgbaImage, ScanSide, TileBox } from './types';
@@ -102,20 +102,23 @@ export function detectScanTargets(img: RgbaImage, allowInfer = true): ScanDetect
   const fast = detect(img);
   if (isConfident(fast) || !allowInfer) return { ...fast, gameRect: null };
 
-  const rect = inferGameRect(img);
-  if (!rect) return { ...fast, gameRect: null };
-
-  const inner = detect(cropImage(img, rect));
-  // A confident inner result (verified plate pair / full card column) beats the
-  // unconfident fast result even with fewer raw targets — the fast targets are
-  // junk from mis-scaled priors. Otherwise fall back to whichever found more.
-  if (!isConfident(inner) && inner.targets.length <= fast.targets.length) return { ...fast, gameRect: null };
-  return {
-    mode: inner.mode,
-    gameRect: rect,
-    targets: inner.targets.map((t) => ({
-      ...t,
-      box: { ...t.box, x: t.box.x + rect.x, y: t.box.y + rect.y },
-    })),
-  };
+  // Try candidate game rects strongest-anchor-first; the first one whose
+  // re-detection is CONFIDENT wins. Single-plate hypotheses (and junk blobs
+  // from plate-colored Pokemon bodies) are validated by this re-detection —
+  // a wrong rect yields no verified plates / no card column and is skipped.
+  let fallback: ScanDetection | null = null;
+  for (const rect of inferGameRectCandidates(img)) {
+    const inner = detect(cropImage(img, rect));
+    const shifted: ScanDetection = {
+      mode: inner.mode,
+      gameRect: rect,
+      targets: inner.targets.map((t) => ({
+        ...t,
+        box: { ...t.box, x: t.box.x + rect.x, y: t.box.y + rect.y },
+      })),
+    };
+    if (isConfident(inner)) return shifted;
+    if (!fallback && inner.targets.length > fast.targets.length) fallback = shifted;
+  }
+  return fallback ?? { ...fast, gameRect: null };
 }

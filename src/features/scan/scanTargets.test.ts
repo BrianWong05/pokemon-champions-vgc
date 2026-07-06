@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { detectScanTargets } from './scanTargets';
-import { inferGameRect } from './gameRect';
+import { inferGameRect, PLATE_SLOTS } from './gameRect';
 import type { RgbaImage } from './types';
 
 function blank(w: number, h: number): RgbaImage {
@@ -161,5 +161,72 @@ describe('game-rect inference (margins)', () => {
     expect(mode).toBe('team');
     expect(targets.length).toBe(0);
     expect(gameRect).toBeNull();
+  });
+});
+
+describe('single-plate game-rect inference', () => {
+  // Paint one opponent plate + one player plate INSIDE a game sub-rectangle,
+  // at the exported slot fractions so constant refinements keep tests true.
+  // The game is deliberately SMALL (640 wide in a 1600 frame): the plate is
+  // then ~6.4% of frame width, UNDER detectBattlePanels' 7% floor, so the
+  // fast path finds nothing and the rescue loop is genuinely exercised
+  // (with a larger game the fast path's rung 3 would already succeed and
+  // gameRect would legitimately stay null).
+  function paintLetterboxed(slot: { x0: number; x1: number; y0: number }) {
+    const img = blank(1600, 1200);
+    const game = { x: 480, y: 300, w: 640, h: 360 };
+    const px = game.x + Math.round(game.w * slot.x0);
+    const pw = Math.round(game.w * (slot.x1 - slot.x0));
+    const py = game.y + Math.round(game.h * slot.y0);
+    const ph = Math.round(game.h * 0.06);
+    paintBattlePlate(img, px, py, pw, ph, 'opponent');
+    paintBattlePlate(img, game.x + 40, game.y + Math.round(game.h * 0.88), pw, ph, 'player');
+    return { img, game };
+  }
+
+  it('recovers the rect from a single plate at the RIGHT slot', () => {
+    const { img, game } = paintLetterboxed(PLATE_SLOTS.right);
+    const { mode, gameRect } = detectScanTargets(img);
+    expect(mode).toBe('battle');
+    expect(gameRect).not.toBeNull();
+    expect(Math.abs(gameRect!.x - game.x)).toBeLessThan(game.w * 0.08);
+    expect(Math.abs(gameRect!.w - game.w)).toBeLessThan(game.w * 0.08);
+  });
+
+  it('recovers detection from a single plate at the LEFT slot (rect may be slot-shifted)', () => {
+    const { img, game } = paintLetterboxed(PLATE_SLOTS.left);
+    const { mode, gameRect, targets } = detectScanTargets(img);
+    // Slot ambiguity: an isolated plate also validates under the right-slot
+    // hypothesis (tried first), so the accepted rect can sit left of the true
+    // game rect by the slot offset. The design guarantees BEHAVIOR, not slot-
+    // exact rects: battle mode, and targets landing on the real plates in
+    // source coordinates (boxes are computed from real pixels in the crop and
+    // shifted back, so a shifted rect cannot displace them).
+    expect(mode).toBe('battle');
+    expect(gameRect).not.toBeNull();
+    const opp = targets.filter((t) => t.side === 'opponent');
+    expect(opp.length).toBe(1);
+    const px = game.x + Math.round(game.w * PLATE_SLOTS.left.x0);
+    const py = game.y + Math.round(game.h * PLATE_SLOTS.left.y0);
+    // The opponent icon box derives from the plate's badge area: it must sit
+    // on the plate's row band, near the plate's x-range, in SOURCE coords.
+    expect(opp[0].box.x).toBeGreaterThan(px - 150);
+    expect(opp[0].box.x).toBeLessThan(px + Math.round(game.w * 0.2));
+    expect(opp[0].box.y).toBeGreaterThan(game.y - 30);
+    expect(opp[0].box.y).toBeLessThan(py + Math.round(game.h * 0.25));
+    expect(targets.filter((t) => t.side === 'player').length).toBe(1);
+  });
+
+  it('a plate-shaped junk blob does not hijack the rect (validation wins)', () => {
+    const { img, game } = paintLetterboxed(PLATE_SLOTS.right);
+    // Shiny-model fragment: plate-aspect magenta blob, LARGER than the real
+    // plate so its hypotheses are tried FIRST. Its solved rects sit far below
+    // the game area (y anchor ~0.037 puts the crop at ~y 770), so re-detection
+    // inside them finds nothing and the loop falls through to the real plate.
+    fillRect(img, 700, 800, 220, 70, 235, 45, 130);
+    const { mode, gameRect } = detectScanTargets(img);
+    expect(mode).toBe('battle');
+    expect(gameRect).not.toBeNull();
+    expect(Math.abs(gameRect!.x - game.x)).toBeLessThan(game.w * 0.08);
   });
 });
