@@ -26,6 +26,8 @@ import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import { useBattleRoster } from '@/features/scan/useBattleRoster';
 import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
+import MyTeamChips from '@/features/scan/MyTeamChips';
+import { useMyTeam } from '@/features/scan/useMyTeam';
 import type { CapturedFrame } from '@/features/scan/captureSource';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
@@ -55,12 +57,17 @@ const DamageCalculatorPage: React.FC = () => {
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const { createTeam } = useTeams();
+  const { teams, createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { roster: battleRoster, confirmRoster, clearRoster } = useBattleRoster();
   const pokemonById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
+  const { team: myTeam, selectTeam, clearTeam } = useMyTeam(teams);
+  const myTeamIds = useMemo(
+    () => (myTeam ? myTeam.members.map((m) => m.configuration.selectedId).filter((n): n is number => n != null) : null),
+    [myTeam],
+  );
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -149,6 +156,18 @@ const DamageCalculatorPage: React.FC = () => {
       onClear={clearRoster}
     />
   ) : null;
+
+  const myTeamChips = (
+    <MyTeamChips
+      teams={teams}
+      team={myTeam}
+      byId={pokemonById}
+      activeId={state.p1.selectedId}
+      onSelectTeam={selectTeam}
+      onPick={(member) => void actions.handleLoadConfig('p1', member.configuration)}
+      onClear={clearTeam}
+    />
+  );
 
   const handleApplySpread = (side: 'p1' | 'p2', spread: Spread) =>
     dispatch({ type: 'APPLY_SPREAD', payload: { side, sp: spread.sp, nature: spread.nature } });
@@ -293,6 +312,7 @@ const DamageCalculatorPage: React.FC = () => {
           onResetBuild={handleResetBuild}
           onOpenScan={() => setIsScanModalOpen(true)}
           defenderExtra={rosterChips}
+          attackerExtra={myTeamChips}
         />
         <ScanTeamModal
           isOpen={isScanModalOpen}
@@ -304,6 +324,7 @@ const DamageCalculatorPage: React.FC = () => {
           externalBlob={capturedBlob}
           battleRoster={battleRoster}
           onConfirmRoster={confirmRoster}
+          myTeamIds={myTeamIds}
         />
         <ToastNotification message={toast} />
       </>
@@ -343,6 +364,7 @@ const DamageCalculatorPage: React.FC = () => {
           moveList={moveList}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
+          attackerExtra={myTeamChips}
         />
       }
       defenderPanel={
@@ -378,6 +400,7 @@ const DamageCalculatorPage: React.FC = () => {
       externalBlob={capturedBlob}
       battleRoster={battleRoster}
       onConfirmRoster={confirmRoster}
+      myTeamIds={myTeamIds}
     />
     <ToastNotification message={toast} />
     </>
