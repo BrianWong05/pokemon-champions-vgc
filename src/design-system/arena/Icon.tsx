@@ -3,7 +3,7 @@ import React from 'react';
 export type IconName =
   | 'chevron-right' | 'chevron-down' | 'chevron-up'
   | 'calculator' | 'users' | 'sliders-horizontal' | 'gauge'
-  | 'cloud-sun' | 'x' | 'zap';
+  | 'cloud-sun' | 'x' | 'zap' | 'search';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   'chevron-right': <path d="m9 18 6-6-6-6" />,
@@ -66,6 +66,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'zap': <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />,
+  'search': (<><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>),
 };
 
 /**
