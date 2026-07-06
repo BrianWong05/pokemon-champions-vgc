@@ -94,7 +94,7 @@ Candidates are rendered on demand and cached per (string, language) — no prebu
 **Entry:** Teams page gets a "Scan my team" action alongside the existing "Scan team" (opponent) entry. It opens a new `PlayerScanModal`.
 
 **Flow:**
-1. Modal shows two ingest slots ("Moves screen" / "Stats screen") fed by the existing `CaptureSource` seam (file picker, companion camera, capture). Order doesn't matter — each image is auto-classified and lands in the right slot; adding two moves-screens is reported as an error on the second.
+1. Modal shows two ingest slots ("Moves screen" / "Stats screen") fed by the existing `CaptureSource` seam (file picker, companion camera, capture). Order doesn't matter — each image is auto-classified and lands in the right slot; adding a second image of the same screen replaces the first (that's the natural retry gesture).
 2. Each image scans on ingest with per-image status; crop-and-retry is available as in the opponent modal.
 3. Review screen: 6 editable cards showing sprite + species, ability, item, moves, SP spread, nature. Uncertain fields (score margin below threshold, or stat-math inconsistency) are highlighted with candidate dropdowns — same correction-UI spirit as the opponent scan. SP and nature are editable numerically/by picker.
 4. "Save team" prompts for a name (same as Showdown import) and calls `createTeam()` with full `PokemonConfig` members. Done state links to the team.
