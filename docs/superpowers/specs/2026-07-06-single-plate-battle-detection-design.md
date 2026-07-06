@@ -72,7 +72,11 @@ built to prevent. No model retrain involved; this is pure detection logic.
   the opponent singleton (46% yellow bar) sits at the RIGHT slot — slots
   vary INDEPENDENTLY per side — and the player plate is glowing green over
   a full green bar (harder glow-erosion stress than the Raichu frame's,
-  since glow abuts same-colored fill).
+  since glow abuts same-colored fill); (8) a CJK 1v1 sandstorm frame:
+  player LEFT (44/195) + opponent LEFT (50%) — the L+L combination — under
+  an orange/tan arena tint (warm complement to frame 5's green), with a
+  fully CJK action menu and a shiny purple Basculegion model as frame-left
+  color noise.
 - **Singleton plates occur at BOTH slot positions of the doubles pair**
   (frames 1–3 and 5 show the right slot; frames 4 and 6 the left), so both
   rect hypotheses are mandatory — neither may be skipped as an
@@ -81,8 +85,9 @@ built to prevent. No model retrain involved; this is pure detection logic.
   slot-agnostic (region + verifier, no slot prior), so this costs no code —
   but fixtures must cover both player slots, and the deferred player-plate
   rect anchor would need both hypotheses too. The two sides' slots vary
-  independently (frame 7: player LEFT + opponent RIGHT simultaneously), so
-  no cross-side slot correlation may be assumed.
+  independently — demonstrated by example, not assumed: frame 7 is player
+  LEFT + opponent RIGHT, frame 8 is player LEFT + opponent LEFT — so no
+  cross-side slot correlation may be assumed.
 
 ## Components
 
