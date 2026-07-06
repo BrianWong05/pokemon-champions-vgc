@@ -150,11 +150,15 @@ function detachedBadgeNearPanel(blobs: TileBox[], panel: TileBox): TileBox | nul
     .sort((a, b) => b.w * b.h - a.w * a.h)[0] ?? null;
 }
 
-export function detectBattleIcons(img: RgbaImage, side: BattleSide): TileBox[] {
+export function detectBattleIcons(
+  img: RgbaImage,
+  side: BattleSide,
+  panels: TileBox[] = detectBattlePanels(img, side),
+): TileBox[] {
   const mask = panelMask(img, SIDES[side]);
   const minArea = Math.max(40, Math.floor(img.width * img.height * 0.0001));
   const blobs = connectedComponents(mask, img.width, img.height, minArea);
-  return detectBattlePanels(img, side).map((panel) => {
+  return panels.map((panel) => {
     const inBlob = badgeBoxFromPanel(mask, img.width, panel);
     if (inBlob && inBlob.x - panel.x < panel.w * 0.35) return iconBoxFromBadge(inBlob, img);
     const detached = detachedBadgeNearPanel(blobs, panel);

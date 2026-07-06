@@ -1,9 +1,11 @@
 // src/features/scan/scanTargets.ts
 // Decides what a screenshot is (team preview vs in-battle) and where the
 // classifiable sprites are. A screenshot is EITHER battle OR team select,
-// never both: battle iff BOTH opponent plates are found (the top card of a
-// team-preview opponent column is also magenta and would false-positive a
-// single-panel rule). When the fast path comes up empty or clearly short, the
+// never both: battle iff the opponent plate PAIR is found, or — for one-Pokemon-left and
+// singles frames — a panel on either side verifies as a real battle plate
+// (HP-bar strip; see plateVerify.ts). A >=4-card stack decides team FIRST,
+// so the magenta top card of a team-preview column can't masquerade as a
+// single plate. When the fast path comes up empty or clearly short, the
 // game rectangle is inferred from color anchors (browser chrome, video
 // frames, photo margins) and detection re-runs inside it.
 import {
@@ -12,8 +14,9 @@ import {
   detectPlayerSpriteBoxes,
 } from './segmentation';
 import { detectBattleIcons, detectBattlePanels } from './battleDetection';
-import { inferGameRect } from './gameRect';
+import { inferGameRectCandidates } from './gameRect';
 import { readHpFromPanel } from './hpText';
+import { isBattlePlate } from './plateVerify';
 import type { RgbaImage, ScanSide, TileBox } from './types';
 
 export type ScanMode = 'team' | 'battle';
@@ -32,9 +35,12 @@ export interface ScanDetection {
   gameRect: TileBox | null;
 }
 
-function battleTargets(img: RgbaImage, side: ScanSide): ScanTarget[] {
-  const panels = detectBattlePanels(img, side);
-  const icons = detectBattleIcons(img, side);
+function battleTargets(
+  img: RgbaImage,
+  side: ScanSide,
+  panels: TileBox[] = detectBattlePanels(img, side),
+): ScanTarget[] {
+  const icons = detectBattleIcons(img, side, panels);
   return panels.map((panel, i) => ({
     box: icons[i],
     side,
@@ -57,11 +63,52 @@ function isPlatePairRow(panels: TileBox[]): boolean {
   return b.x >= a.x + a.w && Math.abs(a.y - b.y) < Math.max(a.h, b.h) * 1.5;
 }
 
+// A genuine team-select opponent column stacks its cards at one x — but a
+// species-dependent sprite or two can sit off-column (04-17-17: xs
+// 681,681,681,746,748,906 → min-max span 225 > 0.5*meanW, yet it is a real
+// 6-card column). So don't gate on min-max span, which one outlier blows out;
+// require a CLUSTER: >=4 cards within 0.5*meanW of the MEDIAN x. Battle-frame
+// magenta noise (shiny models, facecam, arena tint) also reaches the >=4 count
+// but scatters horizontally (measured 1.9-6.9x meanW), landing only ~2 cards in
+// the cluster, so it still can't steal battle mode.
+function isCardColumn(cards: TileBox[]): boolean {
+  if (cards.length < 4) return false;
+  const xs = cards.map((c) => c.x).sort((a, b) => a - b);
+  const meanW = cards.reduce((s, c) => s + c.w, 0) / cards.length;
+  const medX = xs[Math.floor(xs.length / 2)];
+  const tol = meanW * 0.5;
+  return xs.filter((x) => Math.abs(x - medX) <= tol).length >= 4;
+}
+
 function detect(img: RgbaImage): { mode: ScanMode; targets: ScanTarget[] } {
-  if (isPlatePairRow(detectBattlePanels(img, 'opponent'))) {
-    return { mode: 'battle', targets: [...battleTargets(img, 'opponent'), ...battleTargets(img, 'player')] };
+  // Rung 1: the opponent plate pair — unchanged, zero regression risk.
+  const oppPanels = detectBattlePanels(img, 'opponent');
+  if (isPlatePairRow(oppPanels)) {
+    return { mode: 'battle', targets: [...battleTargets(img, 'opponent', oppPanels), ...battleTargets(img, 'player')] };
   }
-  return { mode: 'team', targets: teamTargets(img) };
+  // Rung 2: card-stack guard — a genuine team screen is decided by its
+  // strongest structure before single-plate evidence is consulted (the
+  // clipped magenta top card can otherwise masquerade as a plate). The >=4
+  // opponent cards must form an aligned COLUMN: battle-frame magenta noise
+  // also reaches the count but scatters horizontally, so it must not win here.
+  const team = teamTargets(img);
+  const oppCards = team.filter((t) => t.side === 'opponent').map((t) => t.box);
+  if (isCardColumn(oppCards)) {
+    return { mode: 'team', targets: team };
+  }
+  // Rung 3: any panel on EITHER side verified as a real battle plate (HP
+  // bar strip / readable HP) wins battle mode. Only verified panels become
+  // targets — an unverified magenta blob next to a verified plate stays out.
+  const verifiedOpp = oppPanels.filter((p) => isBattlePlate(img, p, 'percent'));
+  const verifiedPlayer = detectBattlePanels(img, 'player').filter((p) => isBattlePlate(img, p, 'fraction'));
+  if (verifiedOpp.length || verifiedPlayer.length) {
+    return {
+      mode: 'battle',
+      targets: [...battleTargets(img, 'opponent', verifiedOpp), ...battleTargets(img, 'player', verifiedPlayer)],
+    };
+  }
+  // Rung 4: today's fallback.
+  return { mode: 'team', targets: team };
 }
 
 // Full-frame team screenshots find >=4 opponent cards; battle frames find 2
@@ -75,20 +122,26 @@ export function detectScanTargets(img: RgbaImage, allowInfer = true): ScanDetect
   const fast = detect(img);
   if (isConfident(fast) || !allowInfer) return { ...fast, gameRect: null };
 
-  const rect = inferGameRect(img);
-  if (!rect) return { ...fast, gameRect: null };
-
-  const inner = detect(cropImage(img, rect));
-  // A confident inner result (verified plate pair / full card column) beats the
-  // unconfident fast result even with fewer raw targets — the fast targets are
-  // junk from mis-scaled priors. Otherwise fall back to whichever found more.
-  if (!isConfident(inner) && inner.targets.length <= fast.targets.length) return { ...fast, gameRect: null };
-  return {
-    mode: inner.mode,
-    gameRect: rect,
-    targets: inner.targets.map((t) => ({
-      ...t,
-      box: { ...t.box, x: t.box.x + rect.x, y: t.box.y + rect.y },
-    })),
-  };
+  // Try candidate game rects strongest-anchor-first; the first one whose
+  // re-detection is CONFIDENT wins. Single-plate hypotheses (and junk blobs
+  // from plate-colored Pokemon bodies) are validated by this re-detection —
+  // a wrong rect yields no verified plates / no card column and is skipped.
+  // ponytail: worst case ~8 crop+detect passes on the main thread (rect
+  // candidates are capped in inferGameRectCandidates); move to a worker if
+  // scan latency becomes visible.
+  let fallback: ScanDetection | null = null;
+  for (const rect of inferGameRectCandidates(img)) {
+    const inner = detect(cropImage(img, rect));
+    const shifted: ScanDetection = {
+      mode: inner.mode,
+      gameRect: rect,
+      targets: inner.targets.map((t) => ({
+        ...t,
+        box: { ...t.box, x: t.box.x + rect.x, y: t.box.y + rect.y },
+      })),
+    };
+    if (isConfident(inner)) return shifted;
+    if (!fallback && inner.targets.length > fast.targets.length) fallback = shifted;
+  }
+  return fallback ?? { ...fast, gameRect: null };
 }
