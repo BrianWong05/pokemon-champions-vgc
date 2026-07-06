@@ -113,7 +113,7 @@ const PokemonPanel: React.FC<PokemonPanelProps> = (props) => {
   );
 
   return (
-    <div className="bg-card p-4 rounded-3xl border border-line space-y-4 h-full">
+    <div className="bg-card p-4 rounded-xl border border-line space-y-4 h-full">
       <PokemonConfigForm
         config={{
           selectedId: props.selectedId,

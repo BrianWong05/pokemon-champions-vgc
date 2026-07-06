@@ -233,7 +233,7 @@ const StatGrid: React.FC<StatGridProps> = ({
           {onResetStats && (
             <button
               onClick={onResetStats}
-              className="text-[10px] font-black text-danger hover:text-danger uppercase tracking-widest bg-danger-soft hover:bg-danger-soft px-2 py-1 rounded transition-colors"
+              className="text-[10px] font-black text-danger hover:text-danger uppercase tracking-widest bg-danger-soft hover:bg-danger-soft-hover px-2 py-1 rounded transition-colors"
             >
               Reset Stats
             </button>

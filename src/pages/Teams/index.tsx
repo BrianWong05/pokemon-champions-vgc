@@ -267,7 +267,7 @@ const TeamsPage: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setIsImportModalOpen(true)}
-            className="text-accent bg-accent-soft hover:bg-accent-soft px-4 py-2 rounded-md transition-colors font-medium"
+            className="text-accent bg-accent-soft hover:bg-accent-soft-hover px-4 py-2 rounded-lg transition-colors font-medium"
           >
             Import team
           </button>
@@ -279,7 +279,7 @@ const TeamsPage: React.FC = () => {
           </button>
           <button
             onClick={() => setIsCreating(true)}
-            className="bg-accent text-accent-ink px-4 py-2 rounded-md hover:bg-accent-hover transition-colors"
+            className="bg-accent text-accent-ink px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors"
           >
             Create new team
           </button>
@@ -288,7 +288,7 @@ const TeamsPage: React.FC = () => {
 
       {isCreating && (
         <form onSubmit={handleCreateTeam} className="bg-card p-4 rounded-xl mb-6 border border-line">
-          <h2 className="text-lg font-semibold mb-3 text-ink-1">Create Team</h2>
+          <h2 className="text-lg font-semibold mb-3 text-ink-1">Create team</h2>
           <div className="flex gap-2">
             <input
               type="text"
@@ -301,14 +301,14 @@ const TeamsPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 text-ink-2 hover:bg-raise rounded-md transition-colors"
+              className="px-4 py-2 text-ink-2 hover:bg-raise rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!newTeamName.trim()}
-              className="bg-accent text-accent-ink px-4 py-2 rounded-md hover:bg-accent-hover transition-colors disabled:opacity-45"
+              className="bg-accent text-accent-ink px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-45"
             >
               Save
             </button>
@@ -384,7 +384,7 @@ const TeamsPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleDeleteTeam(team.id, team.name)}
-                  className="text-danger hover:text-danger font-medium text-sm transition-colors"
+                  className="text-danger hover:underline font-medium text-sm transition-colors"
                 >
                   Delete
                 </button>

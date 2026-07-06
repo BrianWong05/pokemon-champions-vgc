@@ -69,7 +69,7 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
         <Typography variant="label" className="text-ink-3 uppercase tracking-widest text-[10px] font-black">{label}</Typography>
       </div>
 
-      <div className="flex-1 p-4 bg-inset rounded-3xl border border-line space-y-4 flex flex-col">
+      <div className="flex-1 p-4 bg-inset rounded-xl border border-line space-y-4 flex flex-col">
         {/* HP Bar and Status */}
         <div className="space-y-4">
           <div className="space-y-3">
@@ -196,7 +196,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({
   const p2Impact = p1Results[p1ActiveIndex];
 
   return (
-    <div className="bg-card p-4 rounded-3xl text-ink-1 space-y-4 border border-line h-full">
+    <div className="bg-card p-4 rounded-xl text-ink-1 space-y-4 border border-line h-full">
       <div className="flex justify-between items-center border-b border-line pb-3">
         <Typography variant="h2" className="text-ink-1 flex items-center gap-3 font-black uppercase tracking-tighter">
           <span className="w-1.5 h-6 bg-accent rounded-full" />

@@ -86,7 +86,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8">
           {/* Stats Section */}
           <section>
-            <Typography variant="label" className="block mb-4 text-ink-3">Base Stats</Typography>
+            <Typography variant="label" className="block mb-4 text-ink-3">Base stats</Typography>
             <div className="space-y-4">
               {statConfig.map((stat) => (
                 <StatBar key={stat.label} label={stat.label} value={stat.value} colorClass={stat.color} />
@@ -97,7 +97,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
           {/* Forms Section */}
           {otherForms.length > 0 && (
             <section className="pb-6">
-              <Typography variant="label" className="block mb-4 text-ink-3">Other Forms</Typography>
+              <Typography variant="label" className="block mb-4 text-ink-3">Other forms</Typography>
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 {otherForms.map((f) => (
                   <FormItem 

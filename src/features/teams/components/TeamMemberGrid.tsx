@@ -29,7 +29,7 @@ export const TeamMemberGrid: React.FC<TeamMemberGridProps> = ({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
       {team.members.map((member, idx) => (
-        <div key={member.id} className="bg-card rounded-3xl border border-line overflow-hidden flex flex-col group transition-all hover:border-line-3 hover:-translate-y-1">
+        <div key={member.id} className="bg-card rounded-xl border border-line overflow-hidden flex flex-col group transition-all hover:border-line-3 hover:-translate-y-1">
           <div className="p-5 flex-1">
             <div className="flex justify-between items-start mb-4">
               <div className="w-16 h-16 bg-inset rounded-2xl flex items-center justify-center border border-line overflow-hidden shrink-0">
@@ -96,7 +96,7 @@ export const TeamMemberGrid: React.FC<TeamMemberGridProps> = ({
             </div>
             <button
               onClick={() => onRemovePokemon(member.order)}
-              className="text-danger hover:text-danger font-black text-xs uppercase tracking-widest transition-colors"
+              className="text-danger hover:underline font-black text-xs uppercase tracking-widest transition-colors"
             >
               Remove
             </button>
@@ -105,14 +105,14 @@ export const TeamMemberGrid: React.FC<TeamMemberGridProps> = ({
       ))}
 
       {team.members.length < 6 && (
-        <div className="bg-card rounded-3xl border-2 border-dashed border-line-2 p-6 flex flex-col items-center justify-center min-h-[300px] transition-colors hover:border-accent-soft-line group relative">
+        <div className="bg-card rounded-xl border-2 border-dashed border-line-2 p-6 flex flex-col items-center justify-center min-h-[300px] transition-colors hover:border-accent-soft-line group relative">
           <div className="flex flex-col items-center gap-4 w-full mb-4">
             <Typography variant="label" className="text-ink-4 uppercase tracking-widest text-[10px] font-black">
               Add New Member
             </Typography>
             <button
               onClick={onImportSingle}
-              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft-hover px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />

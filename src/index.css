@@ -20,6 +20,9 @@
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-accent-soft-line: var(--accent-soft-line);
+  --color-accent-soft-hover: color-mix(in srgb, var(--accent) 26%, transparent);
+  --color-danger-soft-hover: color-mix(in srgb, var(--danger) 26%, transparent);
+  --color-safe-soft-hover: color-mix(in srgb, var(--safe) 26%, transparent);
   --color-safe: var(--safe);
   --color-safe-soft: var(--safe-soft);
   --color-safe-line: var(--safe-line);
