@@ -55,10 +55,13 @@ built to prevent. No model retrain involved; this is pure detection logic.
 - **Rect inference stays opponent-magenta-anchored.** A player-plate anchor
   is deferred until a real fixture demands it.
 - Reference frames (user-provided, to be saved into `training/screenshots/`):
-  a Raichu 1-opp/2-player YouTube frame (facecam, overlay text, 2% HP,
-  glowing player plate) and a Pelipper 1v1 CJK-UI frame (65% / 152/152,
-  non-glowing player plate as glow control). Singles singleton plates sit at
-  the doubles RIGHT-slot position in both frames.
+  (1) a Raichu 1-opp/2-player YouTube frame (facecam, overlay text, 2% HP,
+  glowing player plate); (2) a Pelipper 1v1 CJK-UI frame (65% / 152/152,
+  non-glowing player plate as glow control); (3) a Charizard/Basculegion
+  1v1 frame whose shiny-PINK Basculegion model fills the frame center —
+  plate-mask-adjacent magenta noise — with a 100% full-fill opponent bar.
+  Singles singleton plates sit at the doubles RIGHT-slot position in all
+  three frames.
 
 ## Components
 
@@ -84,10 +87,12 @@ so rung 3's verified subset flows through instead of being re-detected.
 
 A real battle plate contains an **HP-bar track**: a clean horizontally-
 elongated strip spanning most of the plate width at a consistent height in
-the plate's lower band. Team cards never have one. Keyed on TRACK geometry,
-not fill color, so near-empty bars (2% HP) still pass. Implementation
-reuses the band-coherent bar-locating primitives in `hpText.ts` — no new
-pixel heuristic family. Second acceptance path: `readHpFromPanel` returning
+the plate's lower band. Team cards never have one. Keyed on strip geometry,
+not on any particular color, so BOTH extremes pass: a near-empty bar
+(2% HP — nearly all dark track) and a completely full bar (100% — all
+green fill, no track visible). Implementation reuses the band-coherent
+bar-locating primitives in `hpText.ts` (including its full-bar handling) —
+no new pixel heuristic family. Second acceptance path: `readHpFromPanel` returning
 non-null (precision-perfect under the wrong-0 invariant; adds recall on
 degraded bars). Known adversarial case pinned by a negative fixture: a
 clipped team card whose sprite contains a dark elongated region — rejected
@@ -103,7 +108,15 @@ singles fraction is likely unnecessary; confirm during implementation).
 Solve a candidate rect per hypothesis and validate by re-running detection
 inside it; accept only a rect yielding battle mode with a verified plate.
 All hypotheses fail → null → existing manual CropStep fallback. Cost: at
-most two extra detection passes, only on the already-slow rescue path.
+most two extra detection passes per candidate blob, only on the
+already-slow rescue path.
+
+Validation is load-bearing, not belt-and-suspenders: `magentaBlobs` sweeps
+the WHOLE image (no region filter), and shiny-pink Pokémon models (the
+Basculegion reference frame) shed plate-mask-adjacent fragments that can
+pass the plate aspect filters and become junk anchor candidates. Every
+candidate blob's hypotheses go through the same validation; junk anchors
+produce rects with no verified plate inside and are rejected.
 
 ### 4. Golden seed + runner (harness-shaped fixtures)
 
@@ -148,10 +161,12 @@ most two extra detection passes, only on the already-slow rescue path.
   bar track → team (pins the false-positive guard); card stack with clipped
   magenta top card → team; existing pair tests unchanged.
 - **Verifier:** bar-track positive at ≥2 source resolutions; near-empty
-  (2%) bar positive; dark-sprite-inside-card negative.
+  (2%) bar positive; full (100%) bar positive; dark-sprite-inside-card
+  negative; shiny-pink model fragment negative.
 - **Rect anchor:** letterboxed synthetic frame with a single plate at the
   right-slot fraction → rect recovered; wrong-slot hypothesis rejected by
-  validation; zero plates → null.
+  validation; zero plates → null; shiny-model junk blob alongside the real
+  plate → real plate's rect wins (Basculegion reference frame).
 - **Player glow:** the glowing player plate crop as a
   `detectBattlePanels('player')` fixture; if the mask measurably erodes,
   widen the predicate — decided by measurement, not guesswork (the
