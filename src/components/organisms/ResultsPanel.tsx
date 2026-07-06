@@ -148,10 +148,10 @@ const MoveResultColumn: React.FC<MoveColProps> = ({
                     <div className="flex items-center gap-2 flex-wrap">
                       <TypeBadge type={REVERSE_TYPE_IDS[result.moveType] || 'normal'} size="sm" className="scale-[0.9] origin-left -ml-1" />
                       {result.isStab && (
-                        <span className="text-[9px] font-black text-accent bg-accent-soft px-2 py-0.5 rounded border border-accent-line uppercase tracking-tighter">STAB</span>
+                        <span className="text-[9px] font-black text-accent bg-accent-soft px-2 py-0.5 rounded border border-accent-soft-line uppercase tracking-tighter">STAB</span>
                       )}
                       {result.triggeredAbilities?.map(ability => (
-                        <span key={ability} className="text-[9px] font-black text-accent bg-accent-soft px-2 py-0.5 rounded border border-accent-line uppercase tracking-tighter">
+                        <span key={ability} className="text-[9px] font-black text-accent bg-accent-soft px-2 py-0.5 rounded border border-accent-soft-line uppercase tracking-tighter">
                           {ability} Active!
                         </span>
                       ))}
