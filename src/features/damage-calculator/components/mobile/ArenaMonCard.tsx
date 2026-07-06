@@ -13,7 +13,7 @@ const SP_FIELDS: { label: string; key: SpKey }[] = [
  * defender HP bar, Move/Ability/Item/Nature rows, editable SP grid, and an
  * "Advanced" opener. Pickers/advanced sheets are owned by ArenaCalculator.
  */
-export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker, onOpenAdvanced }: {
+export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker, onOpenAdvanced, extra }: {
   side: 'p1' | 'p2';
   role: 'Attacker' | 'Defender';
   state: CalcState;
@@ -21,6 +21,8 @@ export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker
   nameOf: (id: number | null) => string;
   onOpenPicker: (field: 'species' | 'move' | 'ability' | 'item' | 'nature') => void;
   onOpenAdvanced: () => void;
+  /** Optional slot rendered directly under the card header (e.g. the battle-roster chips). */
+  extra?: React.ReactNode;
 }) {
   const s = state[side];
   const tone = role === 'Attacker' ? 'accent' : 'danger';
@@ -42,6 +44,8 @@ export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker
         icon={<Sprite dex={s.selectedId} name={nameOf(s.selectedId)} size={48} ring tone={tone} />}
         right={<div style={{ display: 'flex', gap: 4 }}>{types.map((t) => <TypeBadge key={t} type={t} size="sm" />)}</div>}
       />
+
+      {extra}
 
       {role === 'Defender' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>

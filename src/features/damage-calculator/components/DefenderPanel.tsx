@@ -13,14 +13,18 @@ interface Props {
   moveList: MoveData[];
   onApplySpread: (side: 'p1' | 'p2', spread: Spread) => void;
   onResetBuild: (side: 'p1' | 'p2') => void;
+  /** Optional slot rendered above the panel (battle-roster chips). */
+  defenderExtra?: React.ReactNode;
 }
 
-export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList, onApplySpread, onResetBuild }) => {
+export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, moveList, onApplySpread, onResetBuild, defenderExtra }) => {
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const side = 'p2';
 
   return (
-    <PokemonPanel 
+    <div>
+      {defenderExtra}
+      <PokemonPanel
       title="Pokémon 2"
       sideColor="bg-danger"
       side={side}
@@ -72,6 +76,7 @@ export const DefenderPanel: React.FC<Props> = ({ state, dispatch, pokemonList, m
       onUpdateMoveHits={(index, val) => dispatch({ type: 'SET_MOVE_HITS', payload: { side, index, val } })}
       faintedCount={state[side].faintedCount}
       onFaintedCountChange={(val) => dispatch({ type: 'SET_FAINTED_COUNT', payload: { side, val } })}
-    />
+      />
+    </div>
   );
 };

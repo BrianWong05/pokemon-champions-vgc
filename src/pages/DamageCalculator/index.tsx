@@ -25,7 +25,7 @@ import { ResultSummary } from '@/features/damage-calculator/components/ResultSum
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import { useBattleRoster } from '@/features/scan/useBattleRoster';
-import OpponentRosterStrip from '@/features/scan/OpponentRosterStrip';
+import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
 import type { CapturedFrame } from '@/features/scan/captureSource';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
@@ -139,6 +139,16 @@ const DamageCalculatorPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.p2.loadedFromScan, state.p2.nature, state.p2.item, state.p2.activeAbility,
      state.p2.spHp, state.p2.spAtk, state.p2.spDef, state.p2.spSpa, state.p2.spSpd, state.p2.spSpe]);
+
+  const rosterChips = battleRoster && battleRoster.length > 0 ? (
+    <OpponentRosterChips
+      roster={battleRoster}
+      byId={pokemonById}
+      activeId={state.p2.selectedId}
+      onPick={(id) => void handleLoadDefender(id)}
+      onClear={clearRoster}
+    />
+  ) : null;
 
   const handleApplySpread = (side: 'p1' | 'p2', spread: Spread) =>
     dispatch({ type: 'APPLY_SPREAD', payload: { side, sp: spread.sp, nature: spread.nature } });
@@ -282,6 +292,7 @@ const DamageCalculatorPage: React.FC = () => {
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
           onOpenScan={() => setIsScanModalOpen(true)}
+          defenderExtra={rosterChips}
         />
         <ScanTeamModal
           isOpen={isScanModalOpen}
@@ -294,15 +305,6 @@ const DamageCalculatorPage: React.FC = () => {
           battleRoster={battleRoster}
           onConfirmRoster={confirmRoster}
         />
-        {battleRoster && battleRoster.length > 0 && (
-          <OpponentRosterStrip
-            roster={battleRoster}
-            byId={pokemonById}
-            onSetDefender={(id) => void handleLoadDefender(id)}
-            onSetAttacker={(id) => void handleLoadAttacker(id)}
-            onClear={clearRoster}
-          />
-        )}
         <ToastNotification message={toast} />
       </>
     );
@@ -361,6 +363,7 @@ const DamageCalculatorPage: React.FC = () => {
             moveList={moveList}
             onApplySpread={handleApplySpread}
             onResetBuild={handleResetBuild}
+            defenderExtra={rosterChips}
           />
         </div>
       }
@@ -376,15 +379,6 @@ const DamageCalculatorPage: React.FC = () => {
       battleRoster={battleRoster}
       onConfirmRoster={confirmRoster}
     />
-    {battleRoster && battleRoster.length > 0 && (
-      <OpponentRosterStrip
-        roster={battleRoster}
-        byId={pokemonById}
-        onSetDefender={(id) => void handleLoadDefender(id)}
-        onSetAttacker={(id) => void handleLoadAttacker(id)}
-        onClear={clearRoster}
-      />
-    )}
     <ToastNotification message={toast} />
     </>
   );
