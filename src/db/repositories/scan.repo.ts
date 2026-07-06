@@ -77,6 +77,7 @@ export async function loadPlayerScanVocab(): Promise<PlayerScanVocab> {
       abilities: abilityRows as any, items: itemRows as any,
     });
   })();
+  cached.catch(() => { cached = null; });
   return cached;
 }
 
