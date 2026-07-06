@@ -63,16 +63,21 @@ function isPlatePairRow(panels: TileBox[]): boolean {
   return b.x >= a.x + a.w && Math.abs(a.y - b.y) < Math.max(a.h, b.h) * 1.5;
 }
 
-// A genuine team-select opponent column stacks its cards at one x — their
-// left-edge span is a small fraction of a card's width (measured 0.25-0.32 on
-// real team frames). Battle-frame magenta noise (shiny models, facecam, arena
-// tint) also reaches the >=4 count but scatters horizontally (>0.8), so gate
-// the card-stack guard on alignment before it can steal battle mode.
+// A genuine team-select opponent column stacks its cards at one x — but a
+// species-dependent sprite or two can sit off-column (04-17-17: xs
+// 681,681,681,746,748,906 → min-max span 225 > 0.5*meanW, yet it is a real
+// 6-card column). So don't gate on min-max span, which one outlier blows out;
+// require a CLUSTER: >=4 cards within 0.5*meanW of the MEDIAN x. Battle-frame
+// magenta noise (shiny models, facecam, arena tint) also reaches the >=4 count
+// but scatters horizontally (measured 1.9-6.9x meanW), landing only ~2 cards in
+// the cluster, so it still can't steal battle mode.
 function isCardColumn(cards: TileBox[]): boolean {
   if (cards.length < 4) return false;
-  const xs = cards.map((c) => c.x);
+  const xs = cards.map((c) => c.x).sort((a, b) => a - b);
   const meanW = cards.reduce((s, c) => s + c.w, 0) / cards.length;
-  return (Math.max(...xs) - Math.min(...xs)) <= meanW * 0.5;
+  const medX = xs[Math.floor(xs.length / 2)];
+  const tol = meanW * 0.5;
+  return xs.filter((x) => Math.abs(x - medX) <= tol).length >= 4;
 }
 
 function detect(img: RgbaImage): { mode: ScanMode; targets: ScanTarget[] } {
@@ -121,6 +126,9 @@ export function detectScanTargets(img: RgbaImage, allowInfer = true): ScanDetect
   // re-detection is CONFIDENT wins. Single-plate hypotheses (and junk blobs
   // from plate-colored Pokemon bodies) are validated by this re-detection —
   // a wrong rect yields no verified plates / no card column and is skipped.
+  // ponytail: worst case ~8 crop+detect passes on the main thread (rect
+  // candidates are capped in inferGameRectCandidates); move to a worker if
+  // scan latency becomes visible.
   let fallback: ScanDetection | null = null;
   for (const rect of inferGameRectCandidates(img)) {
     const inner = detect(cropImage(img, rect));

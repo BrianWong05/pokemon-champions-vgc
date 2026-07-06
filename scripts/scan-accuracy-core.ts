@@ -16,7 +16,7 @@ export interface ScanGoldenFile { entries: ScanGoldenEntry[] }
 
 export interface ScanSweepRow {
   file: string;
-  expectedMode: string; mode: string; modeOk: boolean;
+  expectedMode: 'battle' | 'team'; mode: 'battle' | 'team'; modeOk: boolean;
   expectedOpp: number; opp: number;
   expectedPlayer: number; player: number;
   platesOk: boolean;

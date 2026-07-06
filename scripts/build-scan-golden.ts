@@ -16,9 +16,20 @@ const PAIR_FRAMES = [
   'Xnip2026-07-01_05-34-16.png',
   'Xnip2026-07-01_18-08-40.png',
 ];
-// 00-32-20 is a genuine team screen but a mid-selection state (0 player cards
-// detected); substituted its clean sibling 00-32-38 (full 6/6) per Step-1 rule.
-const TEAM_FRAMES = ['Xnip2026-04-23_00-27-35.png', 'Xnip2026-04-23_00-32-38.png'];
+// 00-32-38 is a clean full 6/6 team screen. The rest are 2026-07-07 regression
+// guards for the crimson-clipped-card + sprite-spread-outlier bug (see spec):
+// 04-17-17 (cropped stream capture, facecam, off-column sprite → old code
+// misrouted to battle with 1 junk target), 00-32-20 (mid-selection, 0 player
+// cards), 00-28-40 (portrait sibling). All 6 pngs here are gitignored under
+// training/screenshots/ and force-added (git add -f) — local-only like the
+// pair frames; total added size ~3.7MB, well under budget.
+const TEAM_FRAMES = [
+  'Xnip2026-04-23_00-27-35.png',
+  'Xnip2026-04-23_00-32-38.png',
+  'Xnip2026-04-23_04-17-17.png',
+  'Xnip2026-04-23_00-32-20.png',
+  'Xnip2026-04-23_00-28-40.png',
+];
 
 // Frames excluded from the zero-wrong-modes floor (still reported by the CLI).
 // Keyed by golden key (jpg sources use the `_jpg.png` form). Keep the reason

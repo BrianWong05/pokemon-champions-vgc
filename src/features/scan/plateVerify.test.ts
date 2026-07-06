@@ -68,6 +68,17 @@ describe('hasHpBarStrip', () => {
     fillRect(img, 880, 80, 240, 20, 30, 30, 34);     // dark arena floor below
     expect(hasHpBarStrip(img, { x: 900, y: 40, w: 200, h: 30 })).toBe(false);
   });
+
+  it('rejects a uniform crimson team card (body hue ~350 passes the fill gate)', () => {
+    // Regression Xnip2026-04-23_04-17-17: a clipped team card's CRIMSON body
+    // (rgb~(192,42,62), h~352) classifies as 'fill', so every window row is a
+    // long aligned run from the very top — an unbounded slab, not a bounded HP
+    // bar. A dark sprite blob sits inside it (like the real card's Pokemon).
+    const img = blank(1230, 700);
+    fillRect(img, 700, 150, 224, 320, 192, 42, 62);  // uniform crimson card body (h~352, 'fill')
+    fillRect(img, 760, 250, 90, 120, 20, 18, 22);    // dark sprite-like blob
+    expect(hasHpBarStrip(img, { x: 704, y: 154, w: 221, h: 100 })).toBe(false);
+  });
 });
 
 describe('isBattlePlate', () => {

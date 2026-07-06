@@ -50,11 +50,20 @@ export function hasHpBarStrip(img: RgbaImage, panel: TileBox): boolean {
   // The strip is a BAND: >=3 adjacent rows with long runs, aligned in length
   // and start column. Organic sprite/effect shapes fail alignment or span.
   const minRun = (x1 - x0) * 0.5;
+  const isLong = (r: { run: number; start: number }) => r.run >= minRun && r.start >= 0;
   const aligned = (a: { run: number; start: number }, b: { run: number; start: number }) =>
     b.run >= a.run * 0.75 && Math.abs(b.start - a.start) < Math.max(4, panel.w * 0.05);
+  // BOUNDEDNESS: a real HP bar is a narrow band with plate body ('other', not a
+  // long run) ABOVE it inside the window. A uniform plate-colored card (crimson
+  // card body, h~350 passes the fill gate) makes EVERY row a long aligned run
+  // right from the window top — no non-run boundary above — so accept a band
+  // only once a non-long row has been seen above it. One-sided is enough: the
+  // window bottom may cut a real strip, but its top is always bounded by body.
+  let sawNonLong = false;
   for (let k = 1; k < rows.length - 1; k++) {
     const r = rows[k];
-    if (r.run < minRun || r.start < 0) continue;
+    if (!isLong(r)) { sawNonLong = true; continue; }
+    if (!sawNonLong) continue; // band touches window top → uniform body, not a bar
     const neighbors = [rows[k - 1], rows[k + 1]];
     if (neighbors.every((n) => n.start >= 0 && aligned(r, n))) return true;
   }

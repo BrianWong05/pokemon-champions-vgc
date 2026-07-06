@@ -1,6 +1,7 @@
 // scripts/measure-plate-slots.ts
 // Prints each opponent plate's frame-fraction bounds on the native full-frame
 // 2v2 golden screenshots — the source for gameRect's PLATE_SLOTS constants.
+// Needs the local (gitignored) golden pngs present under training/screenshots/.
 // Run: npx tsx scripts/measure-plate-slots.ts
 import { detectBattlePanels } from '../src/features/scan/battleDetection';
 import { loadPng, resolveGoldenPng } from './hp-accuracy-core';
