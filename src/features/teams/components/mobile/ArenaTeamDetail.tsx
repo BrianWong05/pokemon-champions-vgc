@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Card, Badge, Button, Icon, Sprite, ItemIcon, TypeBadge, Sheet, type IconName } from '@/design-system/arena';
 import type { TeamWithMembers } from '@/db/repositories/team.repo';
+import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
+import { ArenaPokemonPicker } from '@/features/damage-calculator/components/mobile/ArenaPokemonPicker';
 
 export interface ArenaTeamDetailProps {
   team: TeamWithMembers;
-  pokemonList: { id: number; nameEn: string | null }[];
+  pokemonList: PokemonBaseStats[];
   onRename: (newName: string) => Promise<void>;
   onExportTeam: () => void;
   onImportTeam: () => void;
-  onAdd: () => void;
+  onAdd: (p: PokemonBaseStats) => void; // handleAddPokemonClick — resets edit state, builds config, opens editor
   onImportSingle: () => void;
   onEdit: (index: number) => void;
   onExportMember: (index: number) => void;
@@ -87,6 +89,7 @@ export const ArenaTeamDetail: React.FC<ArenaTeamDetailProps> = ({
   team, pokemonList, onRename, onExportTeam, onImportTeam, onAdd, onImportSingle, onEdit, onExportMember, onRemove,
 }) => {
   const [renameOpen, setRenameOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [name, setName] = useState(team.name);
   const openRename = () => { setName(team.name); setRenameOpen(true); };
   const submit = () => { if (name.trim()) { onRename(name.trim()); setRenameOpen(false); } };
@@ -126,10 +129,17 @@ export const ArenaTeamDetail: React.FC<ArenaTeamDetailProps> = ({
 
       {!full && (
         <>
-          <Button variant="secondary" block icon={<Icon name="plus" size={18} />} onClick={onAdd}>Add member</Button>
+          <Button variant="secondary" block icon={<Icon name="plus" size={18} />} onClick={() => setPickerOpen(true)}>Add member</Button>
           <Button variant="ghost" block onClick={onImportSingle}>Import from Showdown</Button>
         </>
       )}
+
+      <Sheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Add member" height="80vh">
+        <ArenaPokemonPicker
+          pokemonList={pokemonList}
+          onSelect={(p) => { onAdd(p); setPickerOpen(false); }}
+        />
+      </Sheet>
 
       <Sheet open={renameOpen} onClose={() => setRenameOpen(false)} title="Rename team">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -103,7 +103,7 @@ const TeamDetailPage: React.FC = () => {
           onRename={handleRenameTeam}
           onExportTeam={() => modals.openModal('export')}
           onImportTeam={() => modals.openModal('importTeam')}
-          onAdd={() => modals.openModal('editor')}
+          onAdd={handleAddPokemonClick}
           onImportSingle={() => modals.openModal('importSingle')}
           onEdit={handleEditPokemonClick}
           onExportMember={handleExportIndividual}
