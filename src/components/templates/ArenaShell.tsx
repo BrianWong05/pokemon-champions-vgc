@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AppBar, RegPill, TabBar, ARENA_TABS, Sheet, Chip, ChipGroup, ThemeToggle } from '@/design-system/arena';
+import { AppBar, RegPill, TabBar, ARENA_TABS, ThemeToggle } from '@/design-system/arena';
 import { useFormat } from '@/features/formats/FormatContext';
 
 const ROUTE_BY_TAB: Record<string, string> = {
@@ -18,7 +18,8 @@ const TITLE_BY_TAB: Record<string, string> = {
 
 /**
  * ArenaShell — the dark mobile frame: sticky AppBar + scrolling content + sticky
- * bottom TabBar, framing a single <Outlet/>. The RegPill opens a format-picker Sheet.
+ * bottom TabBar, framing a single <Outlet/>. The RegPill opens an anchored
+ * format-picker menu under the app bar.
  * Height-bounded (100dvh) so <main> is the scroll container and the calculator's
  * result HUD can pin to its top.
  */
@@ -54,13 +55,56 @@ const ArenaShell: React.FC = () => {
         <Outlet />
       </main>
       <TabBar active={active} tabs={ARENA_TABS} onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')} />
-      <Sheet open={regOpen} onClose={() => setRegOpen(false)} title="Regulation">
-        <ChipGroup wrap>
-          {formats.map((f) => (
-            <Chip key={f} active={f === format} onClick={() => { setFormat(f); setRegOpen(false); }}>{f}</Chip>
-          ))}
-        </ChipGroup>
-      </Sheet>
+      {regOpen && (
+        <>
+          <div onClick={() => setRegOpen(false)} style={{ position: 'absolute', inset: 0, zIndex: 35 }} />
+          <div role="menu" aria-label="Regulation" style={{
+            position: 'absolute',
+            /* 2px below the 34px RegPill centered in the app bar */
+            top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)',
+            right: 'var(--gutter)',
+            zIndex: 40,
+            minWidth: 180,
+            background: 'var(--surface-card)',
+            border: '1px solid var(--line-2)',
+            borderRadius: 'var(--r-md)',
+            boxShadow: 'var(--shadow-pop)',
+            overflow: 'hidden',
+          }}>
+            {formats.map((f, i) => (
+              <button
+                key={f}
+                type="button"
+                role="menuitemradio"
+                aria-checked={f === format}
+                onClick={() => { setFormat(f); setRegOpen(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  width: '100%',
+                  minHeight: 36,
+                  padding: '0 14px',
+                  background: f === format ? 'var(--accent-soft)' : 'transparent',
+                  border: 'none',
+                  borderTop: i > 0 ? '1px solid var(--line-1)' : 'none',
+                  color: f === format ? 'var(--accent)' : 'var(--ink-1)',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: 'var(--fs-body)',
+                  fontWeight: f === format ? 'var(--fw-bold)' : 'var(--fw-medium)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                {f}
+                {f === format && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flex: '0 0 auto' }} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
