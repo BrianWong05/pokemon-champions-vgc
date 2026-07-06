@@ -64,10 +64,18 @@ built to prevent. No model retrain involved; this is pure detection logic.
   menu; CJK opponent nickname, 39% yellow bar) whose singleton opponent
   plate sits at the LEFT slot position; (5) a Sylveon("Elara")-vs-Charizard
   1v1 frame under Harsh Sunlight — the whole arena tinted green (mask
-  color-shift stress) — 23% yellow bar, also LEFT slot.
+  color-shift stress) — 23% yellow bar, RIGHT slot; (6) a Whimsicott-vs-
+  Rotom+Garchomp frame: LEFT-slot opponent singleton (48% yellow bar)
+  against a FULL player pair (54/127 and 167/185) — also the reference for
+  player-pair slot geometry.
 - **Singleton plates occur at BOTH slot positions of the doubles pair**
-  (frames 1–3 show the right slot; frames 4–5 the left), so both rect
-  hypotheses are mandatory — neither may be skipped as an optimization.
+  (frames 1–3 and 5 show the right slot; frames 4 and 6 the left), so both
+  rect hypotheses are mandatory — neither may be skipped as an
+  optimization. The same holds on the PLAYER side: a lone player plate can
+  occupy either slot of the player pair. Mode vote and `battleTargets` are
+  slot-agnostic (region + verifier, no slot prior), so this costs no code —
+  but fixtures must cover both player slots, and the deferred player-plate
+  rect anchor would need both hypotheses too.
 
 ## Components
 
@@ -110,8 +118,8 @@ When `findPlatePair` fails but one plate-aspect magenta blob exists:
 generate slot hypotheses ("blob is the LEFT plate" / "RIGHT plate" of the
 pair prior; slot fractions measured from existing 2-plate golden frames).
 Real frames show singletons at BOTH slot positions (reference frames 1–3
-right, 4–5 left), so both hypotheses always run; validation picks the
-survivor.
+and 5 right; 4 and 6 left), so both hypotheses always run; validation
+picks the survivor.
 Solve a candidate rect per hypothesis and validate by re-running detection
 inside it; accept only a rect yielding battle mode with a verified plate.
 All hypotheses fail → null → existing manual CropStep fallback. Cost: at
@@ -166,7 +174,9 @@ produce rects with no verified plate inside and are rejected.
 - **Unit (synthetic canvases):** mode vote — 1-opp+2-player → battle;
   1v1 → battle; 1-opp+0-player → battle; magenta card-like blob WITHOUT a
   bar track → team (pins the false-positive guard); card stack with clipped
-  magenta top card → team; existing pair tests unchanged.
+  magenta top card → team; existing pair tests unchanged. Singleton-plate
+  cases run at BOTH slot positions on BOTH sides (opponent left/right,
+  player left/right) — detection must be slot-agnostic.
 - **Verifier:** bar-track positive at ≥2 source resolutions; near-empty
   (2%) bar positive; full (100%) bar positive; dark-sprite-inside-card
   negative; shiny-pink model fragment negative.
