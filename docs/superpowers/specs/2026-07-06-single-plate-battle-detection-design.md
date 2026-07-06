@@ -67,7 +67,12 @@ built to prevent. No model retrain involved; this is pure detection logic.
   color-shift stress) — 23% yellow bar, RIGHT slot; (6) a Whimsicott-vs-
   Rotom+Garchomp frame: LEFT-slot opponent singleton (48% yellow bar)
   against a FULL player pair (54/127 and 167/185) — also the reference for
-  player-pair slot geometry.
+  player-pair slot geometry; (7) a Charizard-mirror 1v1 frame with facecam:
+  player singleton ("Elara", 177/177) at the player pair's LEFT slot while
+  the opponent singleton (46% yellow bar) sits at the RIGHT slot — slots
+  vary INDEPENDENTLY per side — and the player plate is glowing green over
+  a full green bar (harder glow-erosion stress than the Raichu frame's,
+  since glow abuts same-colored fill).
 - **Singleton plates occur at BOTH slot positions of the doubles pair**
   (frames 1–3 and 5 show the right slot; frames 4 and 6 the left), so both
   rect hypotheses are mandatory — neither may be skipped as an
@@ -75,7 +80,9 @@ built to prevent. No model retrain involved; this is pure detection logic.
   occupy either slot of the player pair. Mode vote and `battleTargets` are
   slot-agnostic (region + verifier, no slot prior), so this costs no code —
   but fixtures must cover both player slots, and the deferred player-plate
-  rect anchor would need both hypotheses too.
+  rect anchor would need both hypotheses too. The two sides' slots vary
+  independently (frame 7: player LEFT + opponent RIGHT simultaneously), so
+  no cross-side slot correlation may be assumed.
 
 ## Components
 
