@@ -111,7 +111,7 @@ const CropStep: React.FC<CropStepProps> = ({ blob, onCropped, onCancel }) => {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-600">Drag to frame the opponent's column, then confirm.</p>
+      <p className="text-sm text-ink-2">Drag to frame the opponent's column, then confirm.</p>
       <div
         className="relative select-none touch-none"
         onPointerMove={onPointerMove}
@@ -129,7 +129,7 @@ const CropStep: React.FC<CropStepProps> = ({ blob, onCropped, onCancel }) => {
         )}
         {box && (
           <div
-            className="absolute border-2 border-blue-500 bg-blue-500/10 cursor-move touch-none"
+            className="absolute border-2 border-accent bg-accent-soft cursor-move touch-none"
             style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
             onPointerDown={onMovePointerDown}
           >
@@ -153,8 +153,8 @@ const CropStep: React.FC<CropStepProps> = ({ blob, onCropped, onCancel }) => {
         )}
       </div>
       <div className="flex justify-end gap-2">
-        <button className="px-4 py-2 rounded border" onClick={onCancel}>Cancel</button>
-        <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={useCrop} disabled={!box}>
+        <button className="px-4 py-2 rounded border border-line-2 text-ink-2 hover:bg-raise" onClick={onCancel}>Cancel</button>
+        <button className="px-4 py-2 rounded bg-accent text-accent-ink hover:bg-accent-hover transition-colors" onClick={useCrop} disabled={!box}>
           Use crop
         </button>
       </div>

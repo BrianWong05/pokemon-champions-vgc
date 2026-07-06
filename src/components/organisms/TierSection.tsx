@@ -22,7 +22,7 @@ interface TierSectionProps {
 
 const TierSection: React.FC<TierSectionProps> = ({ baseSpeed, pokemon, onSelectPokemon }) => {
   return (
-    <div className="border rounded-lg overflow-hidden shadow-sm bg-gray-50/50">
+    <div className="bg-card border border-line rounded-xl overflow-hidden">
       <TierHeader baseSpeed={baseSpeed} />
       
       <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

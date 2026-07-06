@@ -24,7 +24,7 @@ const StatControlGroup: React.FC<StatControlGroupProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`p-4 bg-gray-50 rounded-xl space-y-4 ${className}`}>
+    <div className={`p-4 bg-inset rounded-xl space-y-4 ${className}`}>
       <div className="flex gap-4 items-end">
         <NumberInput 
           label={`${label} Base`} 
@@ -34,11 +34,11 @@ const StatControlGroup: React.FC<StatControlGroupProps> = ({
         />
         {onNatureChange && natureValue !== undefined && (
           <div className="flex flex-col space-y-1">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Nature</label>
+            <label className="text-xs font-bold text-ink-3 uppercase tracking-wider">Nature</label>
             <select
               value={natureValue}
               onChange={(e) => onNatureChange(parseFloat(e.target.value))}
-              className="px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 bg-inset border border-line-2 rounded-md text-sm font-medium focus:ring-accent focus:border-accent"
             >
               <option value={0.9}>- (0.9x)</option>
               <option value={1.0}>Neutral (1.0x)</option>

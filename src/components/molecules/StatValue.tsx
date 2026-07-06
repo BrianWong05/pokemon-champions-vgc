@@ -14,14 +14,14 @@ const StatValue: React.FC<StatValueProps> = ({
   className = '' 
 }) => {
   const colorClasses = {
-    red: 'text-red-600',
-    orange: 'text-orange-600',
-    gray: 'text-gray-700',
-    blue: 'text-blue-600',
+    red: 'text-danger',
+    orange: 'text-field',
+    gray: 'text-ink-2',
+    blue: 'text-accent',
   };
 
   return (
-    <span className={`${colorClasses[colorVariant]} ${isBold ? 'font-bold' : 'font-medium'} ${className}`}>
+    <span className={`font-display ${colorClasses[colorVariant]} ${isBold ? 'font-bold' : 'font-medium'} ${className}`}>
       {value}
     </span>
   );

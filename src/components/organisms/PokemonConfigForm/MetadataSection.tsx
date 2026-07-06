@@ -37,19 +37,19 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
   onToggleAegislashForm
 }) => {
   return (
-    <div className="pt-4 border-t border-gray-50 flex flex-col gap-4">
+    <div className="pt-4 border-t border-line flex flex-col gap-4">
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+          <label className="text-[10px] font-black text-ink-3 uppercase tracking-widest block">
             Ability & Nature
           </label>
           {selectedId === AEGISLASH_ID && onToggleAegislashForm && (
             <button
               onClick={onToggleAegislashForm}
               className={`text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full border transition-all ${
-                form === 'Blade' 
-                  ? 'bg-red-500 border-red-600 text-white shadow-[0_0_8px_rgba(239,68,68,0.4)]' 
-                  : 'bg-blue-600 border-blue-700 text-white shadow-[0_0_8px_rgba(37,99,235,0.4)]'
+                form === 'Blade'
+                  ? 'bg-danger-soft text-danger border-danger-line'
+                  : 'bg-accent-soft text-accent border-accent-soft-line'
               }`}
             >
               Stance: {form || 'Shield'}
@@ -58,17 +58,17 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
         </div>
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
-            <select 
-              value={activeAbility || ''} 
+            <select
+              value={activeAbility || ''}
               onChange={(e) => onAbilityChange(e.target.value)}
-              className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="flex-1 h-9 bg-inset border border-line rounded-xl px-3 text-xs font-bold text-ink-2 outline-none focus:ring-2 focus:ring-accent/20"
             >
               {abilities.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <select 
-              value={nature} 
+            <select
+              value={nature}
               onChange={(e) => onNatureChange(e.target.value)}
-              className="flex-1 h-9 bg-gray-50 border border-gray-100 rounded-xl px-3 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="flex-1 h-9 bg-inset border border-line rounded-xl px-3 text-xs font-bold text-ink-2 outline-none focus:ring-2 focus:ring-accent/20"
             >
               {NATURES.map(n => <option key={n} value={n}>{n}</option>)}
             </select>
@@ -79,27 +79,27 @@ export const MetadataSection: React.FC<MetadataSectionProps> = ({
       {!hideTypeOverride && (
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Manual Type Override</label>
-            <input 
-              type="checkbox" 
-              checked={isTypeOverridden} 
+            <label className="text-[10px] font-black text-ink-3 uppercase tracking-widest">Manual type override</label>
+            <input
+              type="checkbox"
+              checked={isTypeOverridden}
               onChange={onToggleTypeOverride}
-              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="w-3.5 h-3.5 rounded border-line-2 text-accent focus:ring-accent"
             />
           </div>
           {isTypeOverridden && (
             <div className="flex gap-2">
-              <select 
-                value={type1 || ''} 
+              <select
+                value={type1 || ''}
                 onChange={(e) => onTypeChange(1, e.target.value)}
-                className="flex-1 h-9 bg-amber-50/50 border border-amber-100 rounded-xl px-3 text-xs font-bold text-amber-700 outline-none"
+                className="flex-1 h-9 bg-field-soft border border-field-line rounded-xl px-3 text-xs font-bold text-field outline-none"
               >
                 {Object.keys(TYPE_IDS).map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
               </select>
-              <select 
-                value={type2 || 'none'} 
+              <select
+                value={type2 || 'none'}
                 onChange={(e) => onTypeChange(2, e.target.value === 'none' ? null : e.target.value)}
-                className="flex-1 h-9 bg-amber-50/50 border border-amber-100 rounded-xl px-3 text-xs font-bold text-amber-700 outline-none"
+                className="flex-1 h-9 bg-field-soft border border-field-line rounded-xl px-3 text-xs font-bold text-field outline-none"
               >
                 <option value="none">NONE</option>
                 {Object.keys(TYPE_IDS).map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}

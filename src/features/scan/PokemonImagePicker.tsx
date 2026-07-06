@@ -27,9 +27,9 @@ const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({ pokemonList, se
   }, [pokemonList, query]);
 
   return (
-    <div className="border rounded p-2">
+    <div className="border border-line-2 rounded p-2">
       <input
-        className="w-full border rounded p-1 mb-2 text-sm"
+        className="w-full border border-line-2 rounded p-1 mb-2 text-sm"
         placeholder="Search by name…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -41,8 +41,8 @@ const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({ pokemonList, se
             type="button"
             onClick={() => onSelect(p.id)}
             title={p.nameEn}
-            className={`flex flex-col items-center rounded p-0.5 hover:bg-blue-50 ${
-              selectedId === p.id ? 'ring-2 ring-blue-500' : ''
+            className={`flex flex-col items-center rounded p-0.5 hover:bg-raise ${
+              selectedId === p.id ? 'ring-2 ring-accent' : ''
             }`}
           >
             <PokemonImage id={p.id} name={p.nameEn} className="w-9 h-9" />
@@ -50,7 +50,7 @@ const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({ pokemonList, se
         ))}
       </div>
       {filtered.length === MAX_RESULTS && (
-        <p className="text-xs text-gray-400 mt-1">Showing first {MAX_RESULTS} — refine your search.</p>
+        <p className="text-xs text-ink-4 mt-1">Showing first {MAX_RESULTS} — refine your search.</p>
       )}
     </div>
   );

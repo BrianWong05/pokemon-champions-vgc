@@ -3,7 +3,8 @@ import React from 'react';
 export type IconName =
   | 'chevron-right' | 'chevron-down' | 'chevron-up'
   | 'calculator' | 'users' | 'sliders-horizontal' | 'gauge'
-  | 'cloud-sun' | 'x' | 'zap' | 'search';
+  | 'cloud-sun' | 'x' | 'zap' | 'search'
+  | 'plus' | 'pencil' | 'share' | 'trash-2' | 'users-round' | 'clipboard-paste';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   'chevron-right': <path d="m9 18 6-6-6-6" />,
@@ -67,6 +68,45 @@ const PATHS: Record<IconName, React.ReactNode> = {
   ),
   'zap': <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" />,
   'search': (<><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>),
+  'plus': (<><path d="M5 12h14" /><path d="M12 5v14" /></>),
+  'pencil': (
+    <>
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+      <path d="m15 5 4 4" />
+    </>
+  ),
+  'share': (
+    <>
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+      <polyline points="16 6 12 2 8 6" />
+      <line x1="12" x2="12" y1="2" y2="15" />
+    </>
+  ),
+  'trash-2': (
+    <>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" x2="10" y1="11" y2="17" />
+      <line x1="14" x2="14" y1="11" y2="17" />
+    </>
+  ),
+  'users-round': (
+    <>
+      <path d="M18 21a8 8 0 0 0-16 0" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3" />
+    </>
+  ),
+  'clipboard-paste': (
+    <>
+      <path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z" />
+      <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+      <path d="M11 14h10" />
+      <path d="m17 10 4 4-4 4" />
+    </>
+  ),
 };
 
 /**

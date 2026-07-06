@@ -28,18 +28,18 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className={`relative bg-white rounded-3xl shadow-2xl ${maxWidth} w-full max-h-[90vh] overflow-hidden flex flex-col`}>
+      <div className={`relative bg-card border border-line shadow-[var(--shadow-pop)] rounded-2xl ${maxWidth} w-full max-h-[90vh] overflow-hidden flex flex-col`}>
         {title && (
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
-            <h3 className="text-xl font-bold text-gray-800">{title}</h3>
-            <button 
+          <div className="px-6 py-4 border-b border-line flex items-center justify-between shrink-0">
+            <h3 className="text-xl font-bold text-ink-1 font-display">{title}</h3>
+            <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-inset rounded-full transition-colors"
             >
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-6 h-6 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

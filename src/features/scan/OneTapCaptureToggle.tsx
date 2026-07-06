@@ -45,7 +45,7 @@ const OneTapCaptureToggle: React.FC<Props> = ({ onCaptured }) => {
   return (
     <button
       onClick={active ? disable : enable}
-      className="px-4 py-2 rounded bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors"
+      className="px-4 py-2 rounded bg-safe-soft text-safe border border-safe-line text-sm font-semibold hover:bg-safe-soft transition-colors"
     >
       {active ? 'Stop one-tap capture' : 'Enable one-tap capture'}
     </button>

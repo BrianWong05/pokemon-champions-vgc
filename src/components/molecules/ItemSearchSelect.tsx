@@ -74,16 +74,16 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
       {(label || selectedItem) && (
         <div className="flex justify-between items-end mb-1 min-h-[16px]">
           {label ? (
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-0.5">
+            <label className="text-[10px] font-black text-ink-4 uppercase tracking-widest px-0.5">
               {label}
             </label>
           ) : (
             <div /> // Spacer if no label
           )}
           {selectedItem && (
-            <button 
+            <button
               type="button"
-              className="text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-widest px-0.5" 
+              className="text-[10px] font-black text-danger hover:text-danger uppercase tracking-widest px-0.5"
               onClick={() => {
                 onSelect(null);
                 setSearchTerm('');
@@ -106,12 +106,12 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
             }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            className={`w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-medium text-sm ${selectedItem ? 'text-blue-700' : 'text-gray-900'}`}
+            className={`w-full px-3 py-2 bg-inset border border-line-2 rounded-md focus:ring-accent focus:border-accent font-medium text-sm ${selectedItem ? 'text-accent' : 'text-ink-1'}`}
           />
           {isOpen && filteredItems.length > 0 && (
-            <div 
+            <div
               ref={scrollContainerRef}
-              className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+              className="absolute z-10 w-full mt-1 bg-card border border-line rounded-md shadow-[var(--shadow-pop)] max-h-60 overflow-y-auto"
             >
               {filteredItems.map((name, index) => (
                 <button
@@ -123,7 +123,7 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
                     setIsOpen(false);
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-900'}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors border-b last:border-0 border-line ${index === activeIndex ? 'bg-accent-soft text-accent' : 'hover:bg-raise text-ink-1'}`}
                 >
                   <ItemImage name={name} className="w-6 h-6" />
                   <span className="text-sm font-semibold">{name}</span>

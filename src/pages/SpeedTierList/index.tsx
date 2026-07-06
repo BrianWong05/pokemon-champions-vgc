@@ -6,8 +6,10 @@ import SpeedTierTemplate from '@/components/templates/SpeedTierTemplate';
 import TierSection from '@/components/organisms/TierSection';
 import PokemonDetailModal, { FullPokemonDetail } from '@/components/organisms/PokemonDetailModal';
 import { useFormat } from '@/features/formats/FormatContext';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ArenaSpeedTiers } from './ArenaSpeedTiers';
 
-interface PokemonWithSpeeds {
+export interface PokemonWithSpeeds {
   id: number;
   name: string;
   nameZh: string | null;
@@ -25,6 +27,7 @@ const SpeedTierPage: React.FC = () => {
   const [detailedPokemon, setDetailedPokemon] = useState<FullPokemonDetail | null>(null);
   const [otherForms, setOtherForms] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   const handleSelectPokemon = (id: number) => {
     setSelectedPokemonId(id);
@@ -146,6 +149,20 @@ const SpeedTierPage: React.FC = () => {
         pokemon,
       }));
   }, [pokemonData]);
+
+  if (isMobile) {
+    return (
+      <ArenaSpeedTiers
+        groups={groupedPokemon.map(g => ({ baseSpeed: g.baseSpeed, pokemon: g.pokemon }))}
+        isLoading={isLoading}
+        onSelect={handleSelectPokemon}
+        detail={detailedPokemon}
+        otherForms={otherForms}
+        onCloseDetail={handleCloseModal}
+        onFormSelect={handleSelectPokemon}
+      />
+    );
+  }
 
   return (
     <SpeedTierTemplate

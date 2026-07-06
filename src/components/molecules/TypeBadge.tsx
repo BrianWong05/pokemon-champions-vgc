@@ -9,7 +9,7 @@ interface TypeBadgeProps {
 }
 
 const TypeBadge: React.FC<TypeBadgeProps> = ({ type, size = 'sm', className = '' }) => {
-  const color = TYPE_COLORS[type.toLowerCase()] || '#828282';
+  const color = TYPE_COLORS[type.toLowerCase()] || 'var(--type-normal)';
   const name = getTypeName(type);
 
   const sizeClasses = {
@@ -18,9 +18,13 @@ const TypeBadge: React.FC<TypeBadgeProps> = ({ type, size = 'sm', className = ''
   };
 
   return (
-    <div 
-      className={`inline-flex items-center rounded-full font-bold uppercase text-white ${sizeClasses[size]} ${className}`}
-      style={{ backgroundColor: color }}
+    <div
+      className={`inline-flex items-center rounded-full font-bold uppercase ${sizeClasses[size]} ${className}`}
+      style={{
+        background: `color-mix(in srgb, ${color} 16%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 42%, transparent)`,
+        color,
+      }}
     >
       <TypeIcon type={type} className={size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'} />
       <span>{name}</span>

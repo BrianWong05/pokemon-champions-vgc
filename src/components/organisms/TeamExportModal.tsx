@@ -27,19 +27,19 @@ const TeamExportModal: React.FC<TeamExportModalProps> = ({ isOpen, onClose, team
         <textarea
           readOnly
           value={showdownText}
-          className="w-full h-96 p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono"
+          className="w-full h-96 p-4 font-mono bg-inset border border-line-2 text-ink-1 rounded-lg text-xs"
         />
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+            className="px-4 py-2 text-ink-3 hover:bg-raise rounded-lg"
           >
             Close
           </button>
           <button
             onClick={handleCopy}
-            className={`px-4 py-2 rounded-lg text-white font-bold transition-colors ${
-              copied ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'
+            className={`px-4 py-2 rounded-lg font-bold transition-colors ${
+              copied ? 'bg-safe-soft text-safe' : 'bg-accent text-accent-ink hover:bg-accent-hover'
             }`}
           >
             {copied ? 'Copied!' : 'Copy to Clipboard'}

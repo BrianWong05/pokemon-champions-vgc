@@ -334,7 +334,7 @@ const DamageCalculatorPage: React.FC = () => {
             <OneTapCaptureToggle onCaptured={handleCaptured} />
             <button
               onClick={() => setIsScanModalOpen(true)}
-              className="px-4 py-2 rounded bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors"
+              className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 text-sm font-semibold hover:bg-raise transition-colors"
             >
               Scan opponent
             </button>
