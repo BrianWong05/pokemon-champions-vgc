@@ -51,6 +51,11 @@ Palette constraints:
     (same computed value in dark).
   - `color-scheme` moves from `src/index.css` into `tokens.css`
     (`dark` on `:root`, `light` in the light block).
+- The raw `--navy-*` ramp is not overridden — it doubles as "always dark"
+  constants (solid Badge text). Three components that used it for
+  theme-dependent surfaces re-point to semantic tokens instead: a new
+  `--surface-sticky` alias for `ArenaHud.tsx` and `ArenaSpeedTiers.tsx`,
+  and `--surface-inset` for the `ItemIcon.tsx` tile.
 
 ### 3. Theme state — `src/design-system/arena/theme.ts`
 
@@ -104,3 +109,4 @@ Sun/moon icon button following existing button/Icon patterns:
 | `src/design-system/arena/theme.test.ts` (new) | unit tests |
 | `src/components/templates/Layout.tsx` | desktop toggle |
 | `src/components/templates/ArenaShell.tsx` | mobile toggle |
+| `src/design-system/arena/ItemIcon.tsx`, `src/features/damage-calculator/components/mobile/ArenaHud.tsx`, `src/pages/SpeedTierList/ArenaSpeedTiers.tsx` | direct `--navy-*` uses re-pointed to semantic tokens |
