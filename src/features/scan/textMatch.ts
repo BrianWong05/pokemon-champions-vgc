@@ -137,7 +137,11 @@ export function textShapeAt(img: RgbaImage, box: TileBox): TextShape | null {
   return shapeFromMask(whiteMask(img, box, 0.72)); // CALIBRATE threshold
 }
 
-const FONT = '600 32px system-ui, sans-serif'; // both renderers use the same spec
+// Avenir Next 700 adopted 2026-07-07 after a 15-font sweep (see
+// task-7-report.md "Font sweep"): 35/36 full-vocab EN top-1 accuracy vs
+// 33/36 baseline (system-ui 600), no CJK regression. Explicit CJK
+// fallbacks since Avenir Next itself doesn't cover CJK glyphs.
+const FONT = '700 32px "Avenir Next", "PingFang TC", "Hiragino Sans", sans-serif'; // both renderers use the same spec
 
 export function makeTextRenderer(createCanvas: (w: number, h: number) => any): TextRenderer {
   const cache = new Map<string, BinMask>();
