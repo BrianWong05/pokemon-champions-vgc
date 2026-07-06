@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useFormat } from '@/features/formats/FormatContext';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import ArenaShell from '@/components/templates/ArenaShell';
 
 const Layout: React.FC = () => {
   const location = useLocation();
   const { format, setFormat, availableFormats } = useFormat();
+  const isMobile = useIsMobile();
   const formatOptions = availableFormats.length ? availableFormats : [format];
 
   const getLinkClass = (path: string, exact: boolean = true) => {
@@ -17,6 +20,8 @@ const Layout: React.FC = () => {
       ? `${baseClass} bg-blue-700 text-white font-semibold`
       : `${baseClass} text-blue-100 hover:bg-blue-600`;
   };
+
+  if (isMobile) return <ArenaShell />;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
