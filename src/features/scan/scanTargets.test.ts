@@ -58,6 +58,21 @@ describe('detectScanTargets', () => {
     fillRect(img, 900, 20, 200, 40, 210, 45, 120);
     expect(detectScanTargets(img).mode).toBe('team');
   });
+
+  it('scattered magenta blobs (arena/facecam noise) do not fake a team column', () => {
+    // A real battle frame: one verified opponent plate top-right, plus 5 small
+    // magenta blobs scattered across the arena (shiny models, facecam, tint).
+    // These reach the >=4 opponent-card count but are NOT column-aligned, so
+    // the card-stack guard must not fire and steal battle mode.
+    const img = blank(1250, 700);
+    paintBattlePlate(img, 960, 30, 160, 40, 'opponent', 0.5);
+    fillRect(img, 100, 120, 50, 50, 210, 45, 120);
+    fillRect(img, 400, 260, 50, 50, 210, 45, 120);
+    fillRect(img, 250, 380, 50, 50, 210, 45, 120);
+    fillRect(img, 600, 300, 50, 50, 210, 45, 120);
+    fillRect(img, 500, 500, 50, 50, 210, 45, 120);
+    expect(detectScanTargets(img).mode).toBe('battle');
+  });
 });
 
 // Battle plate WITH an HP bar strip (fill-anchored, dark remainder) so the

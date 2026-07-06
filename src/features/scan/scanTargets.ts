@@ -63,6 +63,18 @@ function isPlatePairRow(panels: TileBox[]): boolean {
   return b.x >= a.x + a.w && Math.abs(a.y - b.y) < Math.max(a.h, b.h) * 1.5;
 }
 
+// A genuine team-select opponent column stacks its cards at one x — their
+// left-edge span is a small fraction of a card's width (measured 0.25-0.32 on
+// real team frames). Battle-frame magenta noise (shiny models, facecam, arena
+// tint) also reaches the >=4 count but scatters horizontally (>0.8), so gate
+// the card-stack guard on alignment before it can steal battle mode.
+function isCardColumn(cards: TileBox[]): boolean {
+  if (cards.length < 4) return false;
+  const xs = cards.map((c) => c.x);
+  const meanW = cards.reduce((s, c) => s + c.w, 0) / cards.length;
+  return (Math.max(...xs) - Math.min(...xs)) <= meanW * 0.5;
+}
+
 function detect(img: RgbaImage): { mode: ScanMode; targets: ScanTarget[] } {
   // Rung 1: the opponent plate pair — unchanged, zero regression risk.
   const oppPanels = detectBattlePanels(img, 'opponent');
@@ -71,9 +83,12 @@ function detect(img: RgbaImage): { mode: ScanMode; targets: ScanTarget[] } {
   }
   // Rung 2: card-stack guard — a genuine team screen is decided by its
   // strongest structure before single-plate evidence is consulted (the
-  // clipped magenta top card can otherwise masquerade as a plate).
+  // clipped magenta top card can otherwise masquerade as a plate). The >=4
+  // opponent cards must form an aligned COLUMN: battle-frame magenta noise
+  // also reaches the count but scatters horizontally, so it must not win here.
   const team = teamTargets(img);
-  if (team.filter((t) => t.side === 'opponent').length >= 4) {
+  const oppCards = team.filter((t) => t.side === 'opponent').map((t) => t.box);
+  if (isCardColumn(oppCards)) {
     return { mode: 'team', targets: team };
   }
   // Rung 3: any panel on EITHER side verified as a real battle plate (HP
