@@ -77,7 +77,7 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      <label className="text-[10px] font-black text-blue-900/40 uppercase tracking-widest mb-1 block">
+      <label className="text-[10px] font-black text-ink-3 uppercase tracking-widest mb-1 block">
         {label}
       </label>
       <div className="relative">
@@ -91,12 +91,12 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className="w-full px-2 py-1.5 bg-white border border-blue-200 rounded font-bold text-sm text-blue-900 outline-none focus:border-blue-500 transition-colors"
+          className="w-full px-2 py-1.5 bg-inset border border-line-2 rounded font-bold text-sm text-ink-1 outline-none focus:border-accent transition-colors"
         />
         {isOpen && filteredMoves.length > 0 && (
-          <div 
+          <div
             ref={scrollContainerRef}
-            className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto"
+            className="absolute z-10 w-full mt-1 bg-card border border-line rounded-md shadow-[var(--shadow-pop)] max-h-60 overflow-y-auto"
           >
             {filteredMoves.map((m, index) => (
               <button
@@ -107,15 +107,15 @@ const MoveSearchSelect: React.FC<MoveSearchSelectProps> = ({
                   setIsOpen(false);
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
-                className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors border-b last:border-0 border-gray-100 ${index === activeIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors border-b last:border-0 border-line ${index === activeIndex ? 'bg-accent-soft' : 'hover:bg-raise'}`}
               >
                 <div className="flex flex-col">
-                  <span className={`text-sm font-bold ${index === activeIndex ? 'text-blue-700' : 'text-gray-900'}`}>{m.nameEn}</span>
-                  {m.nameZh && <span className={`text-[10px] font-medium ${index === activeIndex ? 'text-blue-500' : 'text-gray-500'}`}>{m.nameZh}</span>}
-                  <span className={`text-[10px] uppercase font-black ${index === activeIndex ? 'text-blue-400' : 'text-gray-400'}`}>{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
+                  <span className={`text-sm font-bold ${index === activeIndex ? 'text-accent' : 'text-ink-1'}`}>{m.nameEn}</span>
+                  {m.nameZh && <span className={`text-[10px] font-medium ${index === activeIndex ? 'text-accent' : 'text-ink-3'}`}>{m.nameZh}</span>}
+                  <span className={`text-[10px] uppercase font-black ${index === activeIndex ? 'text-accent' : 'text-ink-4'}`}>{m.damageClassId === 2 ? 'Physical' : 'Special'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                   <span className={`text-xs font-bold ${index === activeIndex ? 'text-blue-500' : 'text-gray-400'}`}>Pwr: {m.power || '--'}</span>
+                   <span className={`text-xs font-bold ${index === activeIndex ? 'text-accent' : 'text-ink-4'}`}>Pwr: {m.power || '--'}</span>
                 </div>
               </button>
             ))}

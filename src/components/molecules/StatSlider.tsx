@@ -27,7 +27,7 @@ const StatSlider: React.FC<StatSliderProps> = ({
       min={min}
       max={max}
       step={4}
-      className={`h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 ${className}`}
+      className={`h-2 bg-inset rounded-lg appearance-none cursor-pointer accent-blue-600 ${className}`}
     />
   );
 };
