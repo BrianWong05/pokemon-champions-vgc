@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resolveTheme, setTheme } from './theme';
+import { renderHook, act } from '@testing-library/react';
+import { resolveTheme, setTheme, useTheme } from './theme';
 
 function stubMatchMedia(prefersLight: boolean) {
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
@@ -40,5 +41,25 @@ describe('theme', () => {
     setTheme('light');
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(localStorage.getItem('theme')).toBe('light');
+  });
+
+  it('useTheme follows live OS changes when only a garbage value is stored', () => {
+    const mql = {
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue(mql));
+    localStorage.setItem('theme', 'blurple');
+
+    const { result } = renderHook(() => useTheme());
+    expect(result.current[0]).toBe('dark');
+
+    mql.matches = true; // OS flips to light
+    const onChange = mql.addEventListener.mock.calls[0][1];
+    act(() => onChange());
+
+    expect(result.current[0]).toBe('light');
+    expect(document.documentElement.dataset.theme).toBe('light');
   });
 });
