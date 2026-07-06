@@ -29,6 +29,9 @@ import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/featur
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
+import { useToast } from '@/hooks/useToast';
+import { ToastNotification } from '@/components/atoms/ToastNotification';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { ArenaCalculator } from '@/features/damage-calculator/components/mobile/ArenaCalculator';
 
@@ -52,6 +55,7 @@ const DamageCalculatorPage: React.FC = () => {
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
+  const { toast } = useToast();
   const isMobile = useIsMobile();
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
@@ -141,45 +145,74 @@ const DamageCalculatorPage: React.FC = () => {
   };
 
   const handleSaveOppTeam = async (sets: ParsedShowdownSet[]) => {
-    const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
     const newMembers: PokemonConfig[] = [];
     const db = await getDb();
+    const corrections: string[] = [];
+    const errors: string[] = [];
 
     for (const set of sets.slice(0, 6)) {
-      const showdownNorm = normalizeName(set.species);
-      let p = pokemonList.find(p => normalizeName(p.nameEn) === showdownNorm);
-
-      if (!p) {
-        const megaMatch = showdownNorm.match(/^([a-z]+)mega([xy])?$/);
-        if (megaMatch) {
-          const expectedDbMega = `mega${megaMatch[1]}${megaMatch[2] || ''}`;
-          p = pokemonList.find(p => normalizeName(p.nameEn) === expectedDbMega);
-        }
+      const speciesMatch = matchSpecies(set.species, pokemonList);
+      if (!speciesMatch) {
+        errors.push(`Pokémon: ${set.species}`);
+        continue;
+      }
+      const p = speciesMatch.match;
+      if (speciesMatch.isFuzzy) {
+        corrections.push(`Pokémon: ${speciesMatch.originalQuery} ➔ ${speciesMatch.resolvedName}`);
       }
 
-      if (!p && showdownNorm === 'indeedeef') {
-        p = pokemonList.find(p => normalizeName(p.nameEn) === 'indeedee');
-      }
-
-      if (!p) {
-        const prefix = set.species.toLowerCase().split('-')[0];
-        p = pokemonList.find(p => p.nameEn.toLowerCase() === prefix) ||
-            pokemonList.find(p => p.nameEn.toLowerCase().includes(prefix));
-      }
-
-      if (!p) continue;
-
-      let abilityNames: string[] = [];
+      let abilityResult: { nameEn: string | null; nameZh: string | null }[] = [];
       try {
-        const abilityResult = await db.select({ name: abilities.nameEn })
+        abilityResult = await db.select({ nameEn: abilities.nameEn, nameZh: abilities.nameZh })
           .from(pokemonAbilities)
           .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
           .where(eq(pokemonAbilities.pokemonId, p.id))
           .orderBy(pokemonAbilities.slot);
-        abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
       } catch (e) {}
 
-      const movesData = set.moves.map(mName => moveList.find(m => m.nameEn.toLowerCase() === mName.toLowerCase()) || null);
+      const abilityNames = abilityResult.map(a => a.nameEn).filter((name): name is string => !!name);
+      const candidateAbilities = abilityResult.flatMap(a => [a.nameEn, a.nameZh].filter((name): name is string => !!name));
+
+      const resolvedAbility = set.ability ? matchAbility(set.ability, candidateAbilities) : null;
+      if (set.ability && !resolvedAbility) {
+        errors.push(`Ability: ${set.ability}`);
+      }
+      let activeAbility = abilityResult[0]?.nameEn || null;
+      if (resolvedAbility) {
+        const dbRow = abilityResult.find(r => r.nameEn === resolvedAbility.match || r.nameZh === resolvedAbility.match);
+        if (dbRow?.nameEn) {
+          activeAbility = dbRow.nameEn;
+          if (resolvedAbility.isFuzzy || resolvedAbility.match === dbRow.nameZh) {
+            corrections.push(`Ability: ${resolvedAbility.originalQuery} ➔ ${dbRow.nameEn}`);
+          }
+        }
+      }
+
+      const resolvedItem = set.item ? matchItem(set.item) : null;
+      if (set.item && !resolvedItem) {
+        errors.push(`Item: ${set.item}`);
+      }
+      let item = set.item;
+      if (resolvedItem) {
+        item = resolvedItem.match;
+        if (resolvedItem.isFuzzy || resolvedItem.originalQuery !== resolvedItem.resolvedName) {
+          corrections.push(`Item: ${resolvedItem.originalQuery} ➔ ${resolvedItem.resolvedName}`);
+        }
+      }
+
+      const movesData: (MoveData | null)[] = [];
+      for (const mName of set.moves) {
+        const mm = matchMove(mName, moveList);
+        if (mm) {
+          if (mm.isFuzzy || mm.originalQuery !== mm.resolvedName) {
+            corrections.push(`Move: ${mm.originalQuery} ➔ ${mm.resolvedName}`);
+          }
+          movesData.push(mm.match);
+        } else {
+          errors.push(`Move: ${mName}`);
+          movesData.push(null);
+        }
+      }
       while (movesData.length < 4) movesData.push(null);
       const natureStats = getNatureStats(set.nature);
 
@@ -205,11 +238,15 @@ const DamageCalculatorPage: React.FC = () => {
         moves: movesData.slice(0, 4),
         activeMoveIndex: 0,
         abilities: abilityNames,
-        activeAbility: set.ability && abilityNames.includes(set.ability) ? set.ability : (abilityNames[0] || null),
-        item: set.item,
+        activeAbility,
+        item,
         hpPercent: 100,
         isTypeOverridden: false,
       });
+    }
+
+    if (errors.length > 0) {
+      alert(`The following terms could not be recognized:\n${errors.join('\n')}`);
     }
 
     if (newMembers.length === 0) {
@@ -219,6 +256,10 @@ const DamageCalculatorPage: React.FC = () => {
 
     const teamName = sets[0].species + "'s Team";
     await createTeam(teamName, newMembers);
+
+    if (corrections.length > 0) {
+      window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side: 'opponent-scan', corrections } }));
+    }
   };
 
   if (isMobile) {
@@ -247,6 +288,7 @@ const DamageCalculatorPage: React.FC = () => {
           onSaveTeam={handleSaveOppTeam}
           externalBlob={capturedBlob}
         />
+        <ToastNotification message={toast} />
       </>
     );
   }
@@ -317,6 +359,7 @@ const DamageCalculatorPage: React.FC = () => {
       onSaveTeam={handleSaveOppTeam}
       externalBlob={capturedBlob}
     />
+    <ToastNotification message={toast} />
     </>
   );
 };

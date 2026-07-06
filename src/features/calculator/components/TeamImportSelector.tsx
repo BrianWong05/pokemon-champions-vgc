@@ -3,13 +3,15 @@ import { useTeams, TeamWithMembers, TeamMember } from '@/features/teams/hooks/us
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 interface TeamImportSelectorProps {
+  pokemonList: PokemonBaseStats[];
   onSelect: (config: PokemonConfig) => void;
   onClose: () => void;
 }
 
-export const TeamImportSelector: React.FC<TeamImportSelectorProps> = ({ onSelect, onClose }) => {
+export const TeamImportSelector: React.FC<TeamImportSelectorProps> = ({ pokemonList, onSelect, onClose }) => {
   const { teams, loading } = useTeams();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
@@ -68,37 +70,42 @@ export const TeamImportSelector: React.FC<TeamImportSelectorProps> = ({ onSelect
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {selectedTeam?.members.map(member => (
-              <button
-                key={member.id}
-                onClick={() => {
-                  onSelect(member.configuration);
-                  onClose();
-                }}
-                className="flex flex-col items-center p-3 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors group"
-              >
-                <div className="w-12 h-12 relative mb-2">
-                  {member.configuration.selectedId && (
-                    <PokemonImage 
-                      id={member.configuration.selectedId} 
-                      name="pokemon" 
-                      className="w-full h-full object-contain group-hover:scale-110 transition-transform" 
-                    />
-                  )}
-                  {member.configuration.item && member.configuration.item !== 'None' && (
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full shadow-sm flex items-center justify-center p-0.5">
-                      <ItemImage name={member.configuration.item} className="w-full h-full object-contain" />
-                    </div>
-                  )}
-                </div>
-                <span className="text-[10px] font-bold text-gray-600 truncate w-full text-center">
-                  {member.configuration.nature}
-                </span>
-                <span className="text-[9px] text-gray-400 truncate w-full text-center">
-                  {member.configuration.activeAbility || 'No Ability'}
-                </span>
-              </button>
-            ))}
+            {selectedTeam?.members.map(member => {
+              const p = pokemonList.find(poke => poke.id === member.configuration.selectedId);
+              const displayName = p ? (p.nameZh ? `${p.nameZh} / ${p.nameEn}` : p.nameEn) : 'Unknown Pokémon';
+
+              return (
+                <button
+                  key={member.id}
+                  onClick={() => {
+                    onSelect(member.configuration);
+                    onClose();
+                  }}
+                  className="flex flex-col items-center p-3 bg-gray-50 hover:bg-indigo-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors group"
+                >
+                  <div className="w-12 h-12 relative mb-2">
+                    {member.configuration.selectedId && (
+                      <PokemonImage 
+                        id={member.configuration.selectedId} 
+                        name="pokemon" 
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform" 
+                      />
+                    )}
+                    {member.configuration.item && member.configuration.item !== 'None' && (
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full shadow-sm flex items-center justify-center p-0.5">
+                        <ItemImage name={member.configuration.item} className="w-full h-full object-contain" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-extrabold text-gray-800 line-clamp-1 w-full text-center mt-1">
+                    {displayName}
+                  </span>
+                  <span className="text-[9px] text-gray-400 truncate w-full text-center leading-none mt-0.5">
+                    {member.configuration.nature} • {member.configuration.activeAbility || 'No Ability'}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

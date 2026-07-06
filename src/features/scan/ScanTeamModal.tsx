@@ -7,7 +7,7 @@ import type { Candidate, ScanSide } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
 import { useTeamScan, type ScanEngine } from './useTeamScan';
 import { loadClassifier } from './classifier';
-import { filePickerSource } from './captureSource';
+import { filePickerSource, cameraSource } from './captureSource';
 import { toParsedSets } from './toParsedSets';
 import CropStep from './CropStep';
 
@@ -59,6 +59,14 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
 
   const startPick = async () => {
     const frame = await filePickerSource.capture();
+    if (frame) {
+      setPendingBlob(frame.blob);
+      await scan(frame.blob);
+    }
+  };
+
+  const startCamera = async () => {
+    const frame = await cameraSource.capture();
     if (frame) {
       setPendingBlob(frame.blob);
       await scan(frame.blob);
@@ -127,9 +135,17 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     <Modal isOpen={isOpen} onClose={handleClose} title={mode === 'battle' ? 'Scan battle' : 'Scan opponent team'}>
       <div className="space-y-4">
         {status === 'idle' && (
-          <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={startPick}>
-            Choose screenshot
-          </button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={startPick}>
+                Choose screenshot
+              </button>
+              <button className="px-4 py-2 rounded bg-blue-600 text-white" onClick={startCamera}>
+                Take photo
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">Tip: hold the phone parallel to the screen and avoid glare.</p>
+          </div>
         )}
 
         {status === 'scanning' && (
