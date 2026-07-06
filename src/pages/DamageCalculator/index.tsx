@@ -36,7 +36,7 @@ import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { ArenaCalculator } from '@/features/damage-calculator/components/mobile/ArenaCalculator';
 
 const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
@@ -60,7 +60,8 @@ const DamageCalculatorPage: React.FC = () => {
   const { teams, createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode !== 'desktop'; // interim: landscape gets the portrait calc until the landscape tree lands
   const { roster: battleRoster, confirmRoster, clearRoster } = useBattleRoster();
   const pokemonById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const { team: myTeam, selectTeam, clearTeam } = useMyTeam(teams);

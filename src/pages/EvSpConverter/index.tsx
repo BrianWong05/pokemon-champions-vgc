@@ -2,11 +2,13 @@ import React, { useState, useMemo } from 'react';
 import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
 import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 import Typography from '@/components/atoms/Typography';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
+import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaEvSp } from './ArenaEvSp';
 
 const EvSpConverterPage: React.FC = () => {
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode === 'arena';
   const [spread, setSpread] = useState<EvSpread>({
     hp: 0,
     atk: 0,
@@ -59,6 +61,8 @@ const EvSpConverterPage: React.FC = () => {
     
     return { totalEvs, totalSp };
   }, [spread]);
+
+  if (mode === 'arena-landscape') return <RotateToPortrait label="EV / SP" />;
 
   if (isMobile) {
     return (
