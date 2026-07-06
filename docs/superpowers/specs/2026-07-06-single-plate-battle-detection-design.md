@@ -141,7 +141,8 @@ generate slot hypotheses ("blob is the LEFT plate" / "RIGHT plate" of the
 pair prior; slot fractions measured from existing 2-plate golden frames).
 Real frames show singletons at BOTH slot positions (reference frames 1–3
 and 5 right; 4 and 6 left), so both hypotheses always run; validation
-picks the survivor.
+rejects junk candidates, and among mutually-valid slot hypotheses, order
+picks.
 Solve a candidate rect per hypothesis and validate by re-running detection
 inside it; accept only a rect yielding battle mode with a verified plate.
 All hypotheses fail → null → existing manual CropStep fallback. Cost: at
@@ -197,9 +198,33 @@ plates. Slot-exact rect reconstruction is NOT a guarantee of this design.
 
 ## Error handling — the fix is strictly additive
 
+The true invariant (per final-review): rung 1 is unchanged AND rung 2 must
+accept every frame the old unconditional team fallback served correctly.
+Rung 2's alignment gate is therefore a floor, not a filter — it may only
+add battle detections, never drop a real team column.
+
 - Rung 1 untouched ⇒ every currently-working frame behaves identically.
 - Rung 3 can only ADD battle detections to frames that today misroute to
   team-with-junk.
+
+**2026-07-07 regression (found + fixed under final review).** A genuine
+team-preview frame (`Xnip2026-04-23_04-17-17.png` — cropped stream capture,
+facecam, crimson opponent column) misrouted to battle with 1 junk target.
+Two independent causes, both now guarded:
+- Rung 2 measured the min–max x-span of sprite boxes; sprite x is
+  species-dependent, so one off-column sprite (681,681,681,746,748,906)
+  blew the span past the limit and a REAL 6-card column was declined.
+  Fixed by clustering on the MEDIAN x (≥4 boxes within 0.5·meanW), robust
+  to outliers; the 4 magenta-noise battle frames still fail it (~2 in
+  cluster). This restores the old-fallback invariant above.
+- The clipped top card then reached rung 3, where `hasHpBarStrip` returned
+  a false positive: the crimson card body (h≈352) passes the fill gate, so
+  every window row is a long aligned run — a uniform slab, not a bar. Fixed
+  by a one-sided boundedness rule: accept a band only once a non-long
+  ('other', plate-body) row has been seen ABOVE it in the window; a real
+  bar always has plate body above, a uniform card does not.
+All three team-guard frames (04-17-17, 00-32-20, 00-28-40) are now in the
+golden and read team; the sweep stays wrong-modes 0.
 - Verifier false-negative on a real plate → falls to team → unconfident →
   manual CropStep — exactly today's behavior, no worse.
 - Rect-hypothesis validation failure → null → CropStep, as now.
