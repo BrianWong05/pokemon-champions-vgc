@@ -32,6 +32,8 @@ import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ArenaCalculator } from '@/features/damage-calculator/components/mobile/ArenaCalculator';
 
 const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
   list.find((p) => p.id === side.selectedId)?.nameEn ?? null;
@@ -54,6 +56,7 @@ const DamageCalculatorPage: React.FC = () => {
   const { createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -258,6 +261,37 @@ const DamageCalculatorPage: React.FC = () => {
       window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side: 'opponent-scan', corrections } }));
     }
   };
+
+  if (isMobile) {
+    return (
+      <>
+        <ArenaCalculator
+          state={state}
+          dispatch={dispatch}
+          pokemonList={pokemonList}
+          moveList={moveList}
+          p1Results={p1Results}
+          p2Results={p2Results}
+          p1MaxHp={p1MaxHp}
+          p2MaxHp={p2MaxHp}
+          actions={actions}
+          onApplySpread={handleApplySpread}
+          onResetBuild={handleResetBuild}
+          onOpenScan={() => setIsScanModalOpen(true)}
+        />
+        <ScanTeamModal
+          isOpen={isScanModalOpen}
+          onClose={() => { setIsScanModalOpen(false); setCapturedBlob(null); }}
+          pokemonList={pokemonList}
+          onLoadPokemon={handleLoadDefender}
+          onLoadAttacker={handleLoadAttacker}
+          onSaveTeam={handleSaveOppTeam}
+          externalBlob={capturedBlob}
+        />
+        <ToastNotification message={toast} />
+      </>
+    );
+  }
 
   return (
     <>
