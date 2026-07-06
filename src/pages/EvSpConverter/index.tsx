@@ -2,8 +2,11 @@ import React, { useState, useMemo } from 'react';
 import EvSpForm, { EvSpread } from '@/components/organisms/EvSpForm';
 import { convertEvToSp } from '@/features/pokemon/utils/sp-ev-converter';
 import Typography from '@/components/atoms/Typography';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ArenaEvSp } from './ArenaEvSp';
 
 const EvSpConverterPage: React.FC = () => {
+  const isMobile = useIsMobile();
   const [spread, setSpread] = useState<EvSpread>({
     hp: 0,
     atk: 0,
@@ -56,6 +59,18 @@ const EvSpConverterPage: React.FC = () => {
     
     return { totalEvs, totalSp };
   }, [spread]);
+
+  if (isMobile) {
+    return (
+      <ArenaEvSp
+        spread={spread}
+        onSpreadChange={handleSpreadChange}
+        onReset={handleReset}
+        totalEvs={totals.totalEvs}
+        totalSp={totals.totalSp}
+      />
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
