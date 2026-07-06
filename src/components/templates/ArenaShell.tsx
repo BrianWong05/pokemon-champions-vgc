@@ -60,7 +60,8 @@ const ArenaShell: React.FC = () => {
           <div onClick={() => setRegOpen(false)} style={{ position: 'absolute', inset: 0, zIndex: 35 }} />
           <div role="menu" aria-label="Regulation" style={{
             position: 'absolute',
-            top: 'calc(var(--appbar-h) + 4px)',
+            /* 2px below the 34px RegPill centered in the app bar */
+            top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)',
             right: 'var(--gutter)',
             zIndex: 40,
             minWidth: 180,
@@ -83,7 +84,7 @@ const ArenaShell: React.FC = () => {
                   justifyContent: 'space-between',
                   gap: 8,
                   width: '100%',
-                  minHeight: 'var(--tap-min)',
+                  minHeight: 36,
                   padding: '0 14px',
                   background: f === format ? 'var(--accent-soft)' : 'transparent',
                   border: 'none',
