@@ -194,7 +194,8 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               const selectedName = entry.id != null ? byId.get(entry.id)?.nameEn : undefined;
               const isPicking = pickerOpenFor === i;
               return (
-                <div key={i} className="flex items-start gap-3 p-2 rounded border border-line-2">
+                <div key={i} className="p-2 rounded border border-line-2">
+                  <div className="flex items-start gap-3">
                   <span className="w-5 pt-2 text-sm text-ink-3">{i + 1}</span>
                   {(entry.side || entry.hpPercent != null) && (
                     <div className="flex flex-col items-center gap-0.5 pt-2">
@@ -226,38 +227,40 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                             key={c.id}
                             type="button"
                             onClick={() => setEntryId(i, c.id)}
-                            className={`flex flex-col items-center rounded p-1 ${
-                              entry.id === c.id ? 'ring-2 ring-accent' : 'hover:bg-raise'
-                            }`}
+                            className="flex flex-col items-center gap-1 rounded-lg p-1 hover:bg-raise"
                           >
-                            <PokemonImage id={c.id} name={byId.get(c.id)?.nameEn ?? 'pokemon'} className="w-10 h-10" />
-                            <span className="text-[10px] text-ink-3 max-w-[4rem] truncate">
-                              {byId.get(c.id)?.nameEn} {Math.round(c.score * 100)}%
+                            <span
+                              className={`rounded-lg border p-1 ${
+                                entry.id === c.id
+                                  ? 'border-transparent bg-accent-soft ring-2 ring-accent'
+                                  : 'border-line bg-inset'
+                              }`}
+                            >
+                              <PokemonImage id={c.id} name={byId.get(c.id)?.nameEn ?? 'pokemon'} className="w-14 h-14" />
                             </span>
+                            <span
+                              className={`text-xs max-w-[5.5rem] truncate ${
+                                entry.id === c.id ? 'text-accent' : 'text-ink-2'
+                              }`}
+                            >
+                              {byId.get(c.id)?.nameEn}
+                            </span>
+                            <span className="text-[10px] text-ink-4">{Math.round(c.score * 100)}%</span>
                           </button>
                         ))}
                       </div>
                     )}
                     <button
                       type="button"
-                      className="text-xs text-accent underline mt-1"
+                      className="mt-2 px-3 py-1.5 text-sm font-semibold rounded-lg bg-inset border border-line-2 text-ink-2 hover:bg-raise"
                       onClick={() => setPickerOpenFor(isPicking ? null : i)}
                     >
                       {isPicking
-                        ? 'Close image picker'
+                        ? 'Close picker'
                         : entry.candidates.length > 0
-                          ? 'Not these? Pick by image'
-                          : 'Choose by image'}
+                          ? 'Choose another Pokémon'
+                          : 'Choose Pokémon'}
                     </button>
-                    {isPicking && (
-                      <div className="mt-1">
-                        <PokemonImagePicker
-                          pokemonList={pokemonList}
-                          selectedId={entry.id}
-                          onSelect={(id) => { setEntryId(i, id); setPickerOpenFor(null); }}
-                        />
-                      </div>
-                    )}
                   </div>
                   {onLoadPokemon && entry.side !== 'player' && (
                     <button
@@ -287,6 +290,16 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   >
                     ✕
                   </button>
+                  </div>
+                  {isPicking && (
+                    <div className="mt-2">
+                      <PokemonImagePicker
+                        pokemonList={pokemonList}
+                        selectedId={entry.id}
+                        onSelect={(id) => { setEntryId(i, id); setPickerOpenFor(null); }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
