@@ -22,7 +22,7 @@ export function ItemIcon({ item, size = 22, framed = true, style = {} }: {
         placeItems: 'center',
         width: size + 8,
         height: size + 8,
-        background: 'var(--navy-900)',
+        background: 'var(--surface-inset)',
         border: '1px solid var(--line-1)',
         borderRadius: 'var(--r-pill)',
         overflow: 'hidden',

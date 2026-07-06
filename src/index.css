@@ -44,9 +44,6 @@
 }
 
 @layer base {
-  :root {
-    color-scheme: dark; /* native selects/checkboxes/scrollbars render dark */
-  }
   body {
     background-color: var(--bg-page);
     color: var(--text-body);

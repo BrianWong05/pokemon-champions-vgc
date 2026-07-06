@@ -7,6 +7,7 @@
 
 /* ---- colors ---- */
 :root {
+  color-scheme: dark; /* native selects/checkboxes/scrollbars */
   /* --- Raw surface ramp (near-black navy -> raised) --- */
   --navy-900: #0B0E14; /* page background */
   --navy-850: #10141C;
@@ -56,6 +57,7 @@
   --surface-hover: var(--navy-650);
   --border-card: var(--line-1);
   --border-input: var(--line-2);
+  --surface-sticky: var(--navy-850); /* opaque sticky chrome (HUD, in-page headers) */
 
   --text-strong: var(--ink-1);
   --text-body: var(--ink-2);
@@ -147,9 +149,64 @@
   --shadow-hud: 0 6px 20px rgba(0,0,0,0.38);     /* pinned result HUD */
 
   /* Focus ring */
-  --ring: 0 0 0 2px var(--navy-900), 0 0 0 4px var(--accent);
+  --ring: 0 0 0 2px var(--bg-page), 0 0 0 4px var(--accent);
 
   --dur-fast: 120ms;
   --dur: 180ms;
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* ====================================================================
+   Light theme — overrides color/effect tokens only. The raw --navy-*
+   ramp is intentionally NOT overridden: it doubles as "always dark"
+   constants (e.g. solid Badge text). Aliases that only re-point at
+   other vars (--border-card, --text-*) auto-follow and are omitted.
+   ==================================================================== */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* --- Hairline borders --- */
+  --line-1: #DFE5F0;
+  --line-2: #C9D3E6;
+  --line-3: #AAB8D4;
+
+  /* --- Ink (text) --- */
+  --ink-1: #1A2130;
+  --ink-2: #4D5A72;
+  --ink-3: #6C7890;
+  --ink-4: #98A2B5;
+
+  /* --- Accent: same electric-indigo family, darkened for white;
+         hover/press darken further (inverse of dark theme) --- */
+  --accent: #3D67E6;
+  --accent-hover: #2F55C7;
+  --accent-press: #2545A8;
+  --accent-soft: rgba(61,103,230,0.12);
+  --accent-soft-line: rgba(61,103,230,0.38);
+
+  /* --- Semantic: darkened to hold AA as text on white --- */
+  --safe: #1D9160;
+  --safe-soft: rgba(29,145,96,0.13);
+  --safe-line: rgba(29,145,96,0.40);
+
+  --danger: #D63A52;
+  --danger-soft: rgba(214,58,82,0.12);
+  --danger-line: rgba(214,58,82,0.40);
+
+  --field: #B27A10;
+  --field-soft: rgba(178,122,16,0.13);
+  --field-line: rgba(178,122,16,0.40);
+
+  /* --- Surfaces --- */
+  --bg-page: #F3F5FA;
+  --bg-appbar: rgba(243,245,250,0.86);
+  --surface-card: #FFFFFF;
+  --surface-inset: #EEF1F7;
+  --surface-hover: #E5EAF3;
+  --surface-sticky: #EAEEF6;
+
+  /* --- Elevation: light surfaces need softer, cooler shadows --- */
+  --shadow-pop: 0 8px 24px rgba(23,33,52,0.16);
+  --shadow-chrome: 0 -6px 20px rgba(23,33,52,0.10);
+  --shadow-hud: 0 6px 20px rgba(23,33,52,0.12);
 }
