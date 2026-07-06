@@ -36,4 +36,11 @@ describe('RegPill compact', () => {
     expect(screen.getByText('M-B')).toBeTruthy();
     expect(screen.queryByText('Reg M-B')).toBeNull();
   });
+
+  it('strips full "Regulation" prefix in compact mode', () => {
+    render(<RegPill value="Regulation M-B" compact />);
+    // Note: no afterEach cleanup, so use getAllByText to handle multiple renders
+    expect(screen.getAllByText('M-B').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/ulation/)).toBeNull();
+  });
 });

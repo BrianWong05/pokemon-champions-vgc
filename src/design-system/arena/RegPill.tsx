@@ -8,7 +8,7 @@ import { Icon } from './Icon';
 export function RegPill({ value = 'Reg H', onClick, compact = false, style = {} }: {
   value?: string; onClick?: () => void; compact?: boolean; style?: React.CSSProperties;
 }) {
-  const label = compact ? value.replace(/^Reg\s*/i, '') : value;
+  const label = compact ? value.replace(/^Reg(ulation)?\s*/i, '') : value;
   return (
     <button
       type="button"
