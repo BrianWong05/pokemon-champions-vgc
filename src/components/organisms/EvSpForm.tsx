@@ -42,8 +42,8 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
-      <div className="space-y-2 divide-y divide-gray-100">
+    <div className={`bg-card border border-line rounded-xl shadow-[var(--shadow-pop)] p-6 ${className}`}>
+      <div className="space-y-2 divide-y divide-line">
         {stats.map(({ key, label }) => (
           <StatConverterRow
             key={key}
@@ -54,7 +54,7 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
         ))}
       </div>
 
-      <div className="mt-8 pt-6 border-t border-gray-200 space-y-6">
+      <div className="mt-8 pt-6 border-t border-line space-y-6">
         <ProgressBar 
           label="Total EVs" 
           current={totalEvs} 
@@ -69,7 +69,7 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
         <div className="flex justify-center pt-4">
           <button
             onClick={onReset}
-            className="px-8 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-red-100 hover:text-red-700 transition-all shadow-sm"
+            className="px-8 py-2.5 bg-danger-soft text-danger border border-danger-line rounded-xl font-black uppercase tracking-widest text-xs hover:bg-danger-soft hover:text-danger transition-all"
           >
             Reset All
           </button>

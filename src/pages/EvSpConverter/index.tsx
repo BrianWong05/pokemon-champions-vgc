@@ -66,7 +66,7 @@ const EvSpConverterPage: React.FC = () => {
         <Typography variant="body" className="max-w-xl mx-auto block">
           Pokémon Champions uses a custom "SP" (Special Points) system instead of EVs. 
           Use this tool to translate your traditional VGC spreads. 
-          The formula is <code className="bg-gray-100 px-1 rounded font-mono font-bold text-blue-600">SP = floor((EV + 4) / 8)</code>.
+          The formula is <code className="bg-inset text-accent px-1 rounded font-mono font-bold">SP = floor((EV + 4) / 8)</code>.
         </Typography>
       </div>
 
@@ -78,11 +78,11 @@ const EvSpConverterPage: React.FC = () => {
         totalSp={totals.totalSp} 
       />
 
-      <div className="mt-12 p-6 bg-blue-50 rounded-xl border border-blue-100">
-        <Typography variant="h2" className="text-blue-900 mb-2">
+      <div className="mt-12 p-6 bg-card rounded-xl border border-line">
+        <Typography variant="h2" className="text-ink-1 mb-2">
           System Rules
         </Typography>
-        <ul className="list-disc list-inside space-y-2 text-blue-800 text-sm">
+        <ul className="list-disc list-inside space-y-2 text-ink-2 text-sm">
           <li>Max EVs per stat: <strong>252</strong> (yields 32 SP)</li>
           <li>Total EVs allowed: <strong>510</strong></li>
           <li>Total SP generated: <strong>66</strong> (based on 510 total EVs)</li>

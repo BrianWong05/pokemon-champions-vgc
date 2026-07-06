@@ -33,24 +33,24 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
   onFormSelect 
 }) => {
   const statConfig = [
-    { label: 'HP', value: pokemon.baseHp, color: 'bg-red-500' },
-    { label: 'Atk', value: pokemon.baseAttack, color: 'bg-orange-500' },
-    { label: 'Def', value: pokemon.baseDefense, color: 'bg-yellow-500' },
-    { label: 'SpA', value: pokemon.baseSpAtk, color: 'bg-blue-400' },
-    { label: 'SpD', value: pokemon.baseSpDef, color: 'bg-green-500' },
-    { label: 'Spe', value: pokemon.baseSpeed, color: 'bg-pink-500' },
+    { label: 'HP', value: pokemon.baseHp, color: 'bg-ink-3' },
+    { label: 'Atk', value: pokemon.baseAttack, color: 'bg-ink-3' },
+    { label: 'Def', value: pokemon.baseDefense, color: 'bg-ink-3' },
+    { label: 'SpA', value: pokemon.baseSpAtk, color: 'bg-ink-3' },
+    { label: 'SpD', value: pokemon.baseSpDef, color: 'bg-ink-3' },
+    { label: 'Spe', value: pokemon.baseSpeed, color: 'bg-accent' },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal Container */}
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-lg bg-card border border-line rounded-2xl shadow-[var(--shadow-pop)] overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="p-6 pb-4 flex justify-between items-start">
           <div className="flex items-center space-x-4">
@@ -61,7 +61,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
               </Typography>
               <div className="flex items-center space-x-2 mt-1">
                 {pokemon.nameZh && (
-                  <span className="text-gray-500 font-medium">
+                  <span className="text-ink-3 font-medium">
                     {pokemon.nameZh}
                   </span>
                 )}
@@ -74,7 +74,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
           </div>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+            className="p-2 hover:bg-raise rounded-full transition-colors text-ink-3 hover:text-ink-2"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -86,7 +86,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-8">
           {/* Stats Section */}
           <section>
-            <Typography variant="label" className="block mb-4 text-gray-400">Base Stats</Typography>
+            <Typography variant="label" className="block mb-4 text-ink-3">Base Stats</Typography>
             <div className="space-y-4">
               {statConfig.map((stat) => (
                 <StatBar key={stat.label} label={stat.label} value={stat.value} colorClass={stat.color} />
@@ -97,7 +97,7 @@ const PokemonDetailModal: React.FC<PokemonDetailModalProps> = ({
           {/* Forms Section */}
           {otherForms.length > 0 && (
             <section className="pb-6">
-              <Typography variant="label" className="block mb-4 text-gray-400">Other Forms</Typography>
+              <Typography variant="label" className="block mb-4 text-ink-3">Other Forms</Typography>
               <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                 {otherForms.map((f) => (
                   <FormItem 

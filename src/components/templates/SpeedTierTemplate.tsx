@@ -19,7 +19,7 @@ const SpeedTierTemplate: React.FC<SpeedTierTemplateProps> = ({
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <div className="text-xl font-medium text-gray-600 animate-pulse">
+        <div className="text-xl font-medium text-ink-2 animate-pulse">
           Loading speed tiers...
         </div>
       </div>
@@ -33,7 +33,7 @@ const SpeedTierTemplate: React.FC<SpeedTierTemplateProps> = ({
       </Typography>
       
       {isEmpty ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-ink-3">
           {emptyMessage}
         </div>
       ) : (
