@@ -25,5 +25,56 @@
         "stats": [169, 182, 150, 103, 110, 126], "sp": [14, 27, 0, 0, 0, 25], "nature": "Jolly" }
     ]
   },
-  "_todo": "zh-team17 pending screenshots"
+  "zh-team17": {
+    "movesImage": "zh-team17-moves.png",
+    "statsImage": "zh-team17-stats.png",
+    "lang": "zh-Hant",
+    "_note": "nicknamed panels (species never shown as text); Hisuian Zoroark disambiguated from Zoroark via stat math (HP 132 = 55+75+2, only Hisuian's base 55 fits). Scrafty's item '頭巾混混進化石' (Scraftite) has no row at all in the items table (unlike the EN gate's event-move gaps, this is a whole missing item, not a learnset join) -- documented, not asserted.",
+    "team": [
+      { "species": "Hisuian Zoroark", "ability": "Illusion", "item": "Choice Scarf",
+        "moves": ["Bitter Malice", "Icy Wind", "Grass Knot", "U-turn"],
+        "stats": [132, 108, 80, 177, 80, 178], "sp": [2, 0, 0, 32, 0, 32], "nature": "Timid" },
+      { "species": "Annihilape", "ability": "Defiant", "item": "Leftovers",
+        "moves": ["Protect", "Rage Fist", "Drain Punch", "Bulk Up"],
+        "stats": [217, 166, 102, 63, 124, 112], "sp": [32, 16, 2, 0, 14, 2], "nature": "Adamant" },
+      { "species": "Dragonite", "ability": "Multiscale", "item": "Dragoninite",
+        "moves": ["Draco Meteor", "Thunderbolt", "Tailwind", "Haze"],
+        "stats": [168, 138, 115, 152, 120, 145], "sp": [2, 0, 0, 32, 0, 32], "nature": "Timid" },
+      { "species": "Gholdengo", "ability": "Good as Gold", "item": "Life Orb",
+        "moves": ["Protect", "Shadow Ball", "Make It Rain", "Nasty Plot"],
+        "stats": [164, 72, 115, 203, 111, 136], "sp": [2, 0, 0, 32, 0, 32], "nature": "Modest" },
+      { "species": "Scrafty", "ability": "Moxie", "item": null,
+        "moves": ["Protect", "Close Combat", "Knock Off", "Fake Out"],
+        "stats": [164, 156, 135, 58, 135, 88], "sp": [24, 32, 0, 0, 0, 10], "nature": "Adamant" },
+      { "species": "Whimsicott", "ability": "Prankster", "item": "Focus Sash",
+        "moves": ["Moonblast", "Beat Up", "Tailwind", "Encore"],
+        "stats": [137, 78, 105, 129, 95, 184], "sp": [2, 0, 0, 32, 0, 32], "nature": "Timid" }
+    ]
+  },
+  "ja-rental-r676": {
+    "movesImage": "ja-rental-r676-moves.png",
+    "statsImage": "ja-rental-r676-stats.png",
+    "lang": "ja",
+    "_note": "species shown as text (not nicknamed). Delphox's mega item has name_ja=NULL in the items table (Delphoxite/マフォクシーナイト); candidatesForLang falls back to the English label for the ja pass, so it is a known low-confidence field for this pair, not asserted as an exact top-1 match.",
+    "team": [
+      { "species": "Grimmsnarl", "ability": "Prankster", "item": "Light Clay",
+        "moves": ["Spirit Break", "Reflect", "Taunt", "Light Screen"],
+        "stats": [202, 140, 128, 103, 97, 80], "sp": [32, 0, 32, 0, 2, 0], "nature": "Impish" },
+      { "species": "Garchomp", "ability": "Rough Skin", "item": "Sitrus Berry",
+        "moves": ["Dragon Tail", "Earthquake", "Stealth Rock", "Spikes"],
+        "stats": [215, 150, 154, 90, 114, 122], "sp": [32, 0, 25, 0, 9, 0], "nature": "Impish" },
+      { "species": "Gyarados", "ability": "Intimidate", "item": "Gyaradosite",
+        "moves": ["Waterfall", "Earthquake", "Power Whip", "Dragon Dance"],
+        "stats": [171, 177, 100, 72, 120, 146], "sp": [1, 32, 1, 0, 0, 32], "nature": "Jolly" },
+      { "species": "Scizor", "ability": "Technician", "item": "Life Orb",
+        "moves": ["Bullet Punch", "Close Combat", "Quick Attack", "Swords Dance"],
+        "stats": [149, 200, 120, 67, 100, 115], "sp": [4, 32, 0, 0, 0, 30], "nature": "Adamant" },
+      { "species": "Delphox", "ability": "Magician", "item": "Delphoxite",
+        "moves": ["Flamethrower", "Psyshock", "Dazzling Gleam", "Nasty Plot"],
+        "stats": [175, 80, 100, 138, 120, 168], "sp": [25, 0, 8, 4, 0, 29], "nature": "Timid" },
+      { "species": "Gengar", "ability": "Cursed Body", "item": "Focus Sash",
+        "moves": ["Shadow Ball", "Sludge Wave", "Icy Wind", "Destiny Bond"],
+        "stats": [137, 76, 80, 182, 95, 178], "sp": [2, 0, 0, 32, 0, 32], "nature": "Timid" }
+    ]
+  }
 }

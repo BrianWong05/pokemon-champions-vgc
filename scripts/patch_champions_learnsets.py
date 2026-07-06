@@ -6,6 +6,7 @@ PATCHES = [
     ("Grimmsnarl", "Parting Shot"),
     ("Swampert", "Wave Crash"),
     ("Pelipper", "Wide Guard"),
+    ("Scrafty", "Fake Out"),
 ]
 
 def main():
