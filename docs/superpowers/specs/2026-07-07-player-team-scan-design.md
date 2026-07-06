@@ -42,14 +42,19 @@ Every text field on these screens has a **closed, tiny candidate set**, so "read
 | Stat / SP values | digits 0–9 | Glyph templates, same technique as the HP reader (`hpText.ts`) |
 | Nature | 25, derived | Solved from stat math — see below |
 
-### Nature is derived, not read
+### Nature from two independent signals: arrows + stat math
 
-Champions stat formulas (already in `src/features/pokemon/utils/champions-stats.ts`) are invertible at Lv50/IV31:
+The stats screen marks nature directly on each non-HP stat row: a **red up arrow = ×1.1** (boosted), a **blue down arrow = ×0.9** (hindered), **no arrow = neutral** for that stat (neutral natures show no arrows at all). Arrow reading is a color/shape check next to the stat label — language-free and cheap.
+
+Independently, Champions stat formulas (already in `src/features/pokemon/utils/champions-stats.ts`) are invertible at Lv50/IV31:
 
 - `HP = base + 75 + spHp` → cross-check for the HP row.
 - `stat = floor((base + 20 + sp) × m)`, `m ∈ {0.9, 1.0, 1.1}` → with `base` known (classified species), `stat` and `sp` read from the screen, exactly one `m` fits per row.
 
-The boosted stat (1.1) and hindered stat (0.9) determine the nature exactly; no boosted/hindered pair means a neutral nature (default `Serious`, matching existing import behavior). **A row where no multiplier fits is a detected misread** and flags that slot's stats in the review UI. No arrow-tint detection is needed.
+The merge step reads **both**: arrows give the claimed multiplier per row; the math gives the observed one.
+
+- **Agree** → nature locked with high confidence. The boosted/hindered stat pair maps to the exact nature; no arrows anywhere means a neutral nature (default `Serious`, matching existing import behavior).
+- **Disagree, or no multiplier fits the digits** → a digit misread or wrong species classification is detected. If the arrow-implied multiplier plus one of the two digit reads yields a consistent row (e.g. SP + arrow reproduce a stat one digit off), the row is auto-repaired and marked low-confidence; otherwise the slot's stats are flagged in the review UI.
 
 ## Pipeline
 
@@ -61,11 +66,11 @@ The boosted stat (1.1) and hindered stat (0.9) determine the nature exactly; no 
   │     classify image as 'moves' | 'stats', carve sub-regions
   ├─ species: classifier/descriptor on header sprite (reuse)
   ├─ moves image: itemIcon match, textMatch for ability + 4 move rows
-  └─ stats image: statDigits for 6 × (stat, sp)
+  └─ stats image: statDigits for 6 × (stat, sp, arrow up/down/none)
   │
   merge (mergePlayerScan):
   ├─ pair panels across images by slot index, cross-check species sprites agree
-  ├─ solve nature per slot from stat math; validate HP row
+  ├─ nature per slot: arrows vs stat-math inversion, cross-validated; validate HP row
   ├─ language vote: per-language aggregate text-match score across all rows → argmax
   └─ produce 6 × PlayerSlotResult { candidates + confidence per field }
   │
@@ -112,7 +117,7 @@ All under `src/features/scan/`, mirroring existing style; each ships with unit t
 | Module | Responsibility |
 |---|---|
 | `playerPanels.ts` | Detect 6 panels, classify moves/stats screen, carve sub-regions |
-| `statDigits.ts` | Read (stat, sp) digit pairs per stat row (extends glyph-template approach) |
+| `statDigits.ts` | Read (stat, sp, nature arrow) per stat row: glyph-template digits + red-up/blue-down arrow detection |
 | `textMatch.ts` | Binarize crop, render candidates, shape-match, rank |
 | `itemIcon.ts` | Match item icon crop vs prebuilt item descriptors |
 | `mergePlayerScan.ts` | Pair panels, nature solver, language vote, confidence, build `PokemonConfig` |
@@ -124,7 +129,7 @@ Reused untouched: `classifier.ts`, `fingerprint.ts`, `match.ts`, `gameRect.ts`, 
 ## Testing
 
 - **Golden screenshots**: the four reference images (zh-Hant team check ×2, EN rental ×2) plus the user's own captures, checked into the test fixtures as with the HP-reader workflow. End-to-end assertions: full expected team (species, ability, item, moves, SP, nature) per image pair.
-- **Unit tests per module**: panel boxes/regions on goldens; digit reads; text match top-1 accuracy per language on cropped rows; nature solver (pure math — exhaustive over sp 0–32 × 25 natures); merge pairing and mismatch flagging.
+- **Unit tests per module**: panel boxes/regions on goldens; digit and arrow reads (the golden images cover boosted, hindered, and neutral rows); text match top-1 accuracy per language on cropped rows; nature solver (pure math — exhaustive over sp 0–32 × 25 natures, plus arrow/math disagreement and auto-repair cases); merge pairing and mismatch flagging.
 - **In-app verification**: manual pass in the browser with the golden images through the modal, per the established scan-verification routine.
 
 ## Risks
