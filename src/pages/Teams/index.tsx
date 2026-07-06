@@ -18,6 +18,8 @@ import { useFormat } from '@/features/formats/FormatContext';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ArenaTeams } from '@/features/teams/components/mobile/ArenaTeams';
 
 const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
@@ -32,6 +34,7 @@ const TeamsPage: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -208,6 +211,46 @@ const TeamsPage: React.FC = () => {
       await deleteTeam(id);
     }
   };
+
+  // ponytail: shared modals on mobile; replace with Sheets if UX demands
+  if (isMobile) {
+    return (
+      <>
+        <ArenaTeams
+          teams={teams} loading={teamsLoading} error={error}
+          onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
+          onImport={() => setIsImportModalOpen(true)}
+          onScan={() => setIsScanModalOpen(true)}
+          onOpen={(id) => navigate(`/teams/${id}`)}
+          onExport={(team) => setExportTeam(team)}
+          onDelete={handleDeleteTeam}
+        />
+        {exportTeam && (
+          <TeamExportModal
+            isOpen={!!exportTeam}
+            onClose={() => setExportTeam(null)}
+            teamName={exportTeam.name}
+            members={exportTeam.members.map(m => ({
+              configuration: m.configuration,
+              speciesName: pokemonList.find(p => p.id === m.configuration.selectedId)?.nameEn || 'Unknown'
+            }))}
+          />
+        )}
+        <TeamShowdownImportModal
+          isOpen={isImportModalOpen}
+          onClose={() => setIsImportModalOpen(false)}
+          onImport={handleImportTeam}
+        />
+        <ScanTeamModal
+          isOpen={isScanModalOpen}
+          onClose={() => setIsScanModalOpen(false)}
+          onImport={handleImportTeam}
+          pokemonList={pokemonList}
+        />
+        <ToastNotification message={toast} />
+      </>
+    );
+  }
 
   if (teamsLoading) {
     return <div className="container mx-auto p-4 max-w-4xl text-center text-ink-2">Loading teams...</div>;
