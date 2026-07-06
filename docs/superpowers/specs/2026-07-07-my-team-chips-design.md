@@ -25,8 +25,7 @@ near-unmissable recognition the opponent side got.
 - **Persistence: localStorage `calc.myTeamId` (team id only).** Members
   derive LIVE from `useTeams()` so team edits reflect immediately.
   Lifecycle is independent of battles: persists until ✕ or picking another
-  team. Stored id of a deleted team → treated as no selection (cleared on
-  read/derive).
+  team. Stored id of a deleted team → derives to no selection (picker shows); the stored id is deliberately left in place because teams load asynchronously and clearing during a transient empty list would wipe a valid selection.
 - **Player-side scan mask: yes.** `ScanTeamModal` gains
   `myTeamIds?: number[] | null`; battle-mode PLAYER tiles resolve to the
   team's form-family set (same `formFamilyIds`, aliases included).

@@ -39,11 +39,19 @@ const MyTeamChips: React.FC<MyTeamChipsProps> = ({ teams, team, byId, activeId, 
   }
 
   const members = team.members.filter((m) => m.configuration.selectedId != null);
+
+  // One chip per species (first member wins) — duplicate species on a team
+  // would otherwise produce duplicate React keys; pick semantics are already
+  // species-level (find() takes the first member with that id).
+  const uniqueMembers = members.filter(
+    (m, i) => members.findIndex((o) => o.configuration.selectedId === m.configuration.selectedId) === i,
+  );
+
   return (
     <RosterChipRow
       label="You"
       tone="accent"
-      entries={members.map((m) => ({
+      entries={uniqueMembers.map((m) => ({
         id: m.configuration.selectedId as number,
         name: byId.get(m.configuration.selectedId as number)?.nameEn ?? `#${m.configuration.selectedId}`,
       }))}

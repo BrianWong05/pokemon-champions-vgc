@@ -8,6 +8,7 @@ export function readMyTeamId(): string | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw || !raw.trim()) {
+      // intentional cleanup: a whitespace-only value is junk, remove it on read
       if (raw != null) localStorage.removeItem(KEY);
       return null;
     }
