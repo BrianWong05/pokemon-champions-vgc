@@ -24,6 +24,8 @@ import { DefenderPanel } from '@/features/damage-calculator/components/DefenderP
 import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
+import { useBattleRoster } from '@/features/scan/useBattleRoster';
+import OpponentRosterStrip from '@/features/scan/OpponentRosterStrip';
 import type { CapturedFrame } from '@/features/scan/captureSource';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
@@ -57,6 +59,8 @@ const DamageCalculatorPage: React.FC = () => {
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { roster: battleRoster, confirmRoster, clearRoster } = useBattleRoster();
+  const pokemonById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -287,7 +291,18 @@ const DamageCalculatorPage: React.FC = () => {
           onLoadAttacker={handleLoadAttacker}
           onSaveTeam={handleSaveOppTeam}
           externalBlob={capturedBlob}
+          battleRoster={battleRoster}
+          onConfirmRoster={confirmRoster}
         />
+        {battleRoster && battleRoster.length > 0 && (
+          <OpponentRosterStrip
+            roster={battleRoster}
+            byId={pokemonById}
+            onSetDefender={(id) => void handleLoadDefender(id)}
+            onSetAttacker={(id) => void handleLoadAttacker(id)}
+            onClear={clearRoster}
+          />
+        )}
         <ToastNotification message={toast} />
       </>
     );
@@ -358,7 +373,18 @@ const DamageCalculatorPage: React.FC = () => {
       onLoadAttacker={handleLoadAttacker}
       onSaveTeam={handleSaveOppTeam}
       externalBlob={capturedBlob}
+      battleRoster={battleRoster}
+      onConfirmRoster={confirmRoster}
     />
+    {battleRoster && battleRoster.length > 0 && (
+      <OpponentRosterStrip
+        roster={battleRoster}
+        byId={pokemonById}
+        onSetDefender={(id) => void handleLoadDefender(id)}
+        onSetAttacker={(id) => void handleLoadAttacker(id)}
+        onClear={clearRoster}
+      />
+    )}
     <ToastNotification message={toast} />
     </>
   );

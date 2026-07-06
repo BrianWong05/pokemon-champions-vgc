@@ -6,9 +6,11 @@ import type { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser
 import type { Candidate, ScanSide } from './types';
 import PokemonImagePicker from './PokemonImagePicker';
 import { useTeamScan, type ScanEngine } from './useTeamScan';
+import type { LegalIdsBySide } from './scanFrame';
 import { loadClassifier } from './classifier';
 import { filePickerSource, cameraSource } from './captureSource';
 import { toParsedSets } from './toParsedSets';
+import { formFamilyIds } from './battleRoster';
 import CropStep from './CropStep';
 
 interface ScanTeamModalProps {
@@ -24,6 +26,10 @@ interface ScanTeamModalProps {
   onSaveTeam?: (sets: ParsedShowdownSet[]) => void;
   /** A screenshot captured externally (e.g. one-tap Android capture) to scan when the modal opens. */
   externalBlob?: Blob | null;
+  /** Battle-roster mode: confirmed opponent ids — battle scans mask opponent tiles to their form families. */
+  battleRoster?: number[] | null;
+  /** Battle-roster mode: when set, team-preview results hide player rows and confirm saves the roster. */
+  onConfirmRoster?: (ids: number[]) => void;
 }
 
 interface RosterEntry {
@@ -33,8 +39,21 @@ interface RosterEntry {
   hpPercent?: number | null;
 }
 
-const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob }) => {
-  const legalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
+const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport, pokemonList, onLoadPokemon, onLoadAttacker, onSaveTeam, externalBlob, battleRoster, onConfirmRoster }) => {
+  const fullLegalIds = useMemo(() => new Set(pokemonList.map((p) => p.id)), [pokemonList]);
+  const maskIds = useMemo(
+    () => (battleRoster && battleRoster.length > 0 ? formFamilyIds(battleRoster, pokemonList) : null),
+    [battleRoster, pokemonList],
+  );
+  // Team-preview scans are never roster-masked (they CREATE the roster);
+  // player-side tiles keep the full format mask (your own mons are not on
+  // the opponent's roster).
+  const legalIds = useMemo<LegalIdsBySide>(
+    () => (maskIds
+      ? (side, scanMode) => (scanMode === 'battle' && side !== 'player' ? maskIds : fullLegalIds)
+      : fullLegalIds),
+    [maskIds, fullLegalIds],
+  );
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const { status, slots, mode, error, scan, reset } = useTeamScan(legalIds);
   // Editable roster, decoupled from the raw scan slots so the user can add/remove entries.
@@ -122,6 +141,16 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
     onSaveTeam(toParsedSets(names));
   };
 
+  const confirmRosterIds = () =>
+    [...new Set(roster.filter((e) => e.side !== 'player' && e.id != null).map((e) => e.id as number))];
+
+  const confirmRoster = () => {
+    const ids = confirmRosterIds();
+    if (ids.length === 0 || !onConfirmRoster) return;
+    onConfirmRoster(ids);
+    handleClose();
+  };
+
   const handleClose = () => {
     reset();
     setRoster([]);
@@ -190,7 +219,10 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
               </p>
             )}
 
-            {roster.map((entry, i) => {
+            {roster
+              .map((entry, i) => ({ entry, i }))
+              .filter(({ entry }) => !(onConfirmRoster && mode !== 'battle' && entry.side === 'player'))
+              .map(({ entry, i }) => {
               const selectedName = entry.id != null ? byId.get(entry.id)?.nameEn : undefined;
               const isPicking = pickerOpenFor === i;
               return (
@@ -337,6 +369,15 @@ const ScanTeamModal: React.FC<ScanTeamModalProps> = ({ isOpen, onClose, onImport
                   disabled={roster.every((e) => e.id == null)}
                 >
                   Save opp team to Teams
+                </button>
+              )}
+              {onConfirmRoster && mode !== 'battle' && (
+                <button
+                  className="px-4 py-2 rounded bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-45"
+                  onClick={confirmRoster}
+                  disabled={confirmRosterIds().length === 0}
+                >
+                  Confirm opponent team
                 </button>
               )}
               {onImport && (
