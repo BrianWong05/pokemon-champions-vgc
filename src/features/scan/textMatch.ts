@@ -75,9 +75,16 @@ function inkBounds(mask: BinMask, startX = 0): TileBox | null {
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
-export function shapeFromMask(rawMask: BinMask): TextShape | null {
+// stripIcon defaults to true for real screenshot crops (textShapeAt below). A
+// rendered candidate label (matchTextShape's render(c.label)) is pure text with
+// no icon ever prepended, so the same gap heuristic there just misreads a
+// short CJK word's own wide inter-glyph spacing as an "icon gap" and chews off
+// real characters (measured: 421/6596 real vocab labels across ja/zh-Hant/
+// zh-Hans corrupted this way, 0/1649 in en) — callers rendering a candidate
+// label must pass stripIcon=false.
+export function shapeFromMask(rawMask: BinMask, stripIcon = true): TextShape | null {
   const mask = stripRuleLines(rawMask);
-  const cut = stripLeadingIcon(mask);
+  const cut = stripIcon ? stripLeadingIcon(mask) : 0;
   const b = inkBounds(mask, cut);
   if (!b || b.h < 4 || b.w < 4) return null;
   const cols = new Array(COLS).fill(0);
@@ -148,7 +155,7 @@ export function matchTextShape(
 ): TextMatchResult[] {
   const scored: TextMatchResult[] = [];
   for (const c of candidates) {
-    const cs = shapeFromMask(render(c.label));
+    const cs = shapeFromMask(render(c.label), false);
     if (!cs) continue;
     scored.push({ key: c.key, score: 1 - shapeDistance(shape, cs) });
   }
