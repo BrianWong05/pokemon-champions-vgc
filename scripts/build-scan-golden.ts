@@ -1,6 +1,6 @@
 // scripts/build-scan-golden.ts
 // Regenerates training/scan-golden.json: the reviewed draft's 16 single-plate
-// frames (truth fields only), 4 native 2v2 frames from the HP golden, and 2
+// frames (truth fields only), 4 native 2v2 frames from the HP golden, and 5
 // team-select frames as mode-regression guards.
 // Run: npx tsx scripts/build-scan-golden.ts
 import * as fs from 'fs';
@@ -16,13 +16,12 @@ const PAIR_FRAMES = [
   'Xnip2026-07-01_05-34-16.png',
   'Xnip2026-07-01_18-08-40.png',
 ];
-// 00-32-38 is a clean full 6/6 team screen. The rest are 2026-07-07 regression
-// guards for the crimson-clipped-card + sprite-spread-outlier bug (see spec):
-// 04-17-17 (cropped stream capture, facecam, off-column sprite → old code
-// misrouted to battle with 1 junk target), 00-32-20 (mid-selection, 0 player
-// cards), 00-28-40 (portrait sibling). All 6 pngs here are gitignored under
-// training/screenshots/ and force-added (git add -f) — local-only like the
-// pair frames; total added size ~3.7MB, well under budget.
+// 5 frames: 04-17-17, 00-32-20, and 00-28-40 are 2026-07-07 regression guards for
+// the crimson-clipped-card + sprite-spread-outlier bug (04-17-17 = cropped stream
+// capture with facecam and off-column sprite; 00-32-20 = mid-selection, 0 player
+// cards; 00-28-40 = portrait sibling). 00-27-35 and 00-32-38 are untracked local-only
+// (not force-added; same as pair frames). The 3 force-added pngs are under
+// training/screenshots/ via git add -f; total added size ~3.7MB, well under budget.
 const TEAM_FRAMES = [
   'Xnip2026-04-23_00-27-35.png',
   'Xnip2026-04-23_00-32-38.png',

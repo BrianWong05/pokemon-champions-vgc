@@ -59,7 +59,8 @@ export function hasHpBarStrip(img: RgbaImage, panel: TileBox): boolean {
   // right from the window top — no non-run boundary above — so accept a band
   // only once a non-long row has been seen above it. One-sided is enough: the
   // window bottom may cut a real strip, but its top is always bounded by body.
-  let sawNonLong = false;
+  // row 0 counts as a boundary too — a bar can start one row below the window top
+  let sawNonLong = !isLong(rows[0]);
   for (let k = 1; k < rows.length - 1; k++) {
     const r = rows[k];
     if (!isLong(r)) { sawNonLong = true; continue; }
