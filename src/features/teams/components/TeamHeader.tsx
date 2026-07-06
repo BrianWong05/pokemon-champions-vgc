@@ -20,7 +20,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
   };
 
   return (
-    <div className="flex justify-between items-end bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+    <div className="flex justify-between items-end bg-card p-6 rounded-3xl border border-line">
       <div>
         <div className="flex items-center gap-4 mb-1">
           {isEditingName ? (
@@ -29,7 +29,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
                 type="text"
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
-                className="text-4xl font-black text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-4 py-1 outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="text-4xl font-black text-ink-1 bg-inset border border-line-2 rounded-xl px-4 py-1 outline-none focus:ring-2 focus:ring-accent/20"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleRename();
@@ -38,7 +38,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
               />
               <button
                 onClick={handleRename}
-                className="bg-blue-600 text-white p-2 rounded-xl hover:bg-blue-700 transition-colors"
+                className="bg-accent text-accent-ink p-2 rounded-xl hover:bg-accent-hover transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -46,7 +46,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
               </button>
               <button
                 onClick={() => setIsEditingName(false)}
-                className="bg-gray-100 text-gray-500 p-2 rounded-xl hover:bg-gray-200 transition-colors"
+                className="bg-inset text-ink-3 p-2 rounded-xl hover:bg-raise transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -55,13 +55,13 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
             </div>
           ) : (
             <>
-              <h1 className="text-4xl font-black text-gray-800">{team.name}</h1>
+              <h1 className="text-4xl font-black text-ink-1">{team.name}</h1>
               <button
                 onClick={() => {
                   setEditedName(team.name);
                   setIsEditingName(true);
                 }}
-                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                className="p-2 text-ink-4 hover:text-accent hover:bg-accent-soft rounded-xl transition-all"
                 title="Rename Team"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,7 +73,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
           <div className="flex items-center gap-2">
             <button
               onClick={onExportTeam}
-              className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -82,7 +82,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
             </button>
             <button
               onClick={onImportTeam}
-              className="text-[10px] font-black text-purple-500 hover:text-purple-600 uppercase tracking-widest bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -91,17 +91,17 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
             </button>
           </div>
         </div>
-        <p className="text-gray-400 font-medium">Created {team.createdAt.toLocaleDateString()}</p>
+        <p className="text-ink-4 font-medium">Created {team.createdAt.toLocaleDateString()}</p>
       </div>
       <div className="text-right">
-        <div className="text-sm font-black text-gray-400 uppercase tracking-widest mb-2">
+        <div className="text-sm font-black text-ink-4 uppercase tracking-widest mb-2">
           {team.members.length} / 6 Members
         </div>
         <div className="flex gap-1.5">
           {[...Array(6)].map((_, i) => (
-            <div 
-              key={i} 
-              className={`w-3 h-3 rounded-full ${i < team.members.length ? 'bg-blue-600' : 'bg-gray-200'}`}
+            <div
+              key={i}
+              className={`w-3 h-3 rounded-full ${i < team.members.length ? 'bg-accent' : 'bg-inset'}`}
             />
           ))}
         </div>

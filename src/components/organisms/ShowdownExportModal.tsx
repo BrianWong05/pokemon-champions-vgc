@@ -25,19 +25,19 @@ const ShowdownExportModal: React.FC<ShowdownExportModalProps> = ({ isOpen, onClo
         <textarea
           readOnly
           value={exportText}
-          className="w-full h-64 p-4 border border-gray-200 rounded-xl bg-gray-50 font-mono text-sm outline-none"
+          className="w-full h-64 p-4 font-mono bg-inset border-line-2 text-ink-1 rounded-xl text-sm outline-none"
         />
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <div className="flex justify-end gap-3 pt-4 border-t border-line">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors font-semibold"
+            className="px-6 py-2 text-ink-3 hover:bg-raise rounded-xl transition-colors font-semibold"
           >
             Close
           </button>
           <button
             onClick={handleCopy}
-            className={`px-8 py-2 rounded-xl transition-all font-bold shadow-sm ${
-              copied ? 'bg-green-100 text-green-700' : 'bg-green-600 text-white hover:bg-green-700'
+            className={`px-8 py-2 rounded-xl transition-all font-bold ${
+              copied ? 'bg-safe-soft text-safe' : 'bg-accent text-accent-ink hover:bg-accent-hover'
             }`}
           >
             {copied ? 'Copied!' : 'Copy to Clipboard'}

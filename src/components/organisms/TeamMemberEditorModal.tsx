@@ -63,17 +63,17 @@ const TeamMemberEditorModal: React.FC<TeamMemberEditorModalProps> = ({
           enforceSpLimit={true}
         />
         
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+        <div className="flex justify-end gap-3 pt-4 border-t border-line">
           <button
             onClick={onClose}
-            className="px-6 py-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors font-semibold"
+            className="px-6 py-2 text-ink-3 hover:bg-raise rounded-xl transition-colors font-semibold"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!state.selectedId}
-            className="px-8 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-8 py-2 bg-accent text-accent-ink rounded-xl hover:bg-accent-hover transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {initialConfig?.selectedId ? "Save Changes" : "Add to Team"}
           </button>

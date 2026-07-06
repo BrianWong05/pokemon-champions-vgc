@@ -36,14 +36,14 @@ const TeamDetailPage: React.FC = () => {
   } = useTeamDetail(id);
 
   if (loading) {
-    return <div className="container mx-auto p-4 max-w-4xl text-center">Loading team...</div>;
+    return <div className="container mx-auto p-4 max-w-4xl text-center text-ink-2">Loading team...</div>;
   }
 
   if (error || !team) {
     return (
       <div className="container mx-auto p-4 max-w-4xl">
-        <div className="text-red-600 mb-4">Error: {error || 'Team not found'}</div>
-        <Link to="/teams" className="text-blue-600 hover:underline">&larr; Back to Teams</Link>
+        <div className="text-danger mb-4">Error: {error || 'Team not found'}</div>
+        <Link to="/teams" className="text-accent hover:text-accent-hover">&larr; Back to Teams</Link>
       </div>
     );
   }
@@ -51,7 +51,7 @@ const TeamDetailPage: React.FC = () => {
   return (
     <div className="container mx-auto p-4 max-w-5xl">
       <div className="mb-8">
-        <Link to="/teams" className="text-blue-600 hover:underline mb-4 inline-block font-semibold">
+        <Link to="/teams" className="text-accent hover:text-accent-hover mb-4 inline-block font-semibold">
           &larr; Back to Teams
         </Link>
         <TeamHeader 
