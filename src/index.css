@@ -1,6 +1,56 @@
 @import "tailwindcss";
 @import "./design-system/arena/tokens.css";
 
+/* Arena tokens exposed as Tailwind utilities (bg-card, text-ink-2, border-line, …) */
+@theme inline {
+  --color-page: var(--bg-page);
+  --color-card: var(--surface-card);
+  --color-inset: var(--surface-inset);
+  --color-raise: var(--surface-hover);
+  --color-line: var(--line-1);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-line: var(--accent-soft-line);
+  --color-safe: var(--safe);
+  --color-safe-soft: var(--safe-soft);
+  --color-safe-line: var(--safe-line);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-field: var(--field);
+  --color-field-soft: var(--field-soft);
+  --color-field-line: var(--field-line);
+}
+
+/* Font utilities. Literal values (NOT var()) — tokens.css defines the same
+   names on :root, so var() self-references would be circular. font-mono
+   deliberately overrides Tailwind's default. */
+@theme {
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-ui: 'Manrope', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark; /* native selects/checkboxes/scrollbars render dark */
+  }
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-body);
+    font-family: var(--font-ui);
+  }
+}
+
 @keyframes slideIn {
   from {
     transform: translateY(1rem);
