@@ -59,9 +59,15 @@ built to prevent. No model retrain involved; this is pure detection logic.
   glowing player plate); (2) a Pelipper 1v1 CJK-UI frame (65% / 152/152,
   non-glowing player plate as glow control); (3) a Charizard/Basculegion
   1v1 frame whose shiny-PINK Basculegion model fills the frame center —
-  plate-mask-adjacent magenta noise — with a 100% full-fill opponent bar.
-  Singles singleton plates sit at the doubles RIGHT-slot position in all
-  three frames.
+  plate-mask-adjacent magenta noise — with a 100% full-fill opponent bar;
+  (4) a Froslass 1v1 frame pair (with and without the FIGHT/POKÉMON action
+  menu; CJK opponent nickname, 39% yellow bar) whose singleton opponent
+  plate sits at the LEFT slot position; (5) a Sylveon("Elara")-vs-Charizard
+  1v1 frame under Harsh Sunlight — the whole arena tinted green (mask
+  color-shift stress) — 23% yellow bar, also LEFT slot.
+- **Singleton plates occur at BOTH slot positions of the doubles pair**
+  (frames 1–3 show the right slot; frames 4–5 the left), so both rect
+  hypotheses are mandatory — neither may be skipped as an optimization.
 
 ## Components
 
@@ -102,9 +108,10 @@ by the width-span + band-coherence requirements.
 
 When `findPlatePair` fails but one plate-aspect magenta blob exists:
 generate slot hypotheses ("blob is the LEFT plate" / "RIGHT plate" of the
-pair prior; slot fractions measured from existing 2-plate golden frames —
-both reference frames suggest singletons sit at the right slot, so a third
-singles fraction is likely unnecessary; confirm during implementation).
+pair prior; slot fractions measured from existing 2-plate golden frames).
+Real frames show singletons at BOTH slot positions (reference frames 1–3
+right, 4–5 left), so both hypotheses always run; validation picks the
+survivor.
 Solve a candidate rect per hypothesis and validate by re-running detection
 inside it; accept only a rect yielding battle mode with a verified plate.
 All hypotheses fail → null → existing manual CropStep fallback. Cost: at
@@ -163,10 +170,11 @@ produce rects with no verified plate inside and are rejected.
 - **Verifier:** bar-track positive at ≥2 source resolutions; near-empty
   (2%) bar positive; full (100%) bar positive; dark-sprite-inside-card
   negative; shiny-pink model fragment negative.
-- **Rect anchor:** letterboxed synthetic frame with a single plate at the
-  right-slot fraction → rect recovered; wrong-slot hypothesis rejected by
-  validation; zero plates → null; shiny-model junk blob alongside the real
-  plate → real plate's rect wins (Basculegion reference frame).
+- **Rect anchor:** letterboxed synthetic frames with a single plate at the
+  RIGHT-slot fraction AND at the LEFT-slot fraction → rect recovered in
+  both; wrong-slot hypothesis rejected by validation; zero plates → null;
+  shiny-model junk blob alongside the real plate → real plate's rect wins
+  (Basculegion reference frame).
 - **Player glow:** the glowing player plate crop as a
   `detectBattlePanels('player')` fixture; if the mask measurably erodes,
   widen the predicate — decided by measurement, not guesswork (the
