@@ -26,7 +26,7 @@ export function ArenaPokemonPicker({ pokemonList, onSelect }: {
   }, [q, pokemonList]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%', minHeight: 0 }}>
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <span style={{ position: 'absolute', left: 12, display: 'inline-flex', pointerEvents: 'none' }}>
           <Icon name="search" size={18} color="var(--ink-3)" />
@@ -58,7 +58,7 @@ export function ArenaPokemonPicker({ pokemonList, onSelect }: {
         />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '46vh', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {results.length === 0 && (
           <div style={{ color: 'var(--ink-3)', padding: '10px 2px', fontSize: 'var(--fs-sm)' }}>No Pokémon found.</div>
         )}

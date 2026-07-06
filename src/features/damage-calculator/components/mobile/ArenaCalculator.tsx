@@ -112,7 +112,7 @@ export function ArenaCalculator({
       />
 
       {/* Species / item / ability / nature picker */}
-      <Sheet open={!!picker} onClose={() => setPicker(null)} title={picker ? pickerTitle(picker.field) : ''}>
+      <Sheet open={!!picker} onClose={() => setPicker(null)} title={picker ? pickerTitle(picker.field) : ''} height={picker?.field === 'species' ? '80vh' : undefined}>
         {picker && picker.field === 'species' && (
           <ArenaPokemonPicker
             pokemonList={pokemonList}

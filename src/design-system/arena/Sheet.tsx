@@ -5,8 +5,8 @@ import { Icon } from './Icon';
  * Sheet — bottom sheet / detail panel that slides up over a scrim. Controlled via `open`.
  * Renders inside the shell's relatively-positioned frame (absolute inset:0).
  */
-export function Sheet({ open, onClose, title = null, children, maxHeight = '78vh' }: {
-  open: boolean; onClose: () => void; title?: React.ReactNode; children?: React.ReactNode; maxHeight?: string;
+export function Sheet({ open, onClose, title = null, children, maxHeight = '78vh', height }: {
+  open: boolean; onClose: () => void; title?: React.ReactNode; children?: React.ReactNode; maxHeight?: string; height?: string;
 }) {
   return (
     <div aria-hidden={!open} style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: open ? 'auto' : 'none' }}>
@@ -20,7 +20,7 @@ export function Sheet({ open, onClose, title = null, children, maxHeight = '78vh
           left: 0,
           right: 0,
           bottom: 0,
-          maxHeight,
+          ...(height ? { height, maxHeight: '92vh' } : { maxHeight }),
           display: 'flex',
           flexDirection: 'column',
           background: 'var(--surface-card)',
@@ -49,7 +49,7 @@ export function Sheet({ open, onClose, title = null, children, maxHeight = '78vh
             {title}
           </div>
         )}
-        <div style={{ overflowY: 'auto', padding: 'var(--sp-4) var(--gutter) var(--sp-6)' }}>
+        <div style={{ overflowY: 'auto', flex: height ? 1 : undefined, minHeight: height ? 0 : undefined, padding: 'var(--sp-4) var(--gutter) var(--sp-6)' }}>
           {children}
         </div>
       </div>
