@@ -20,7 +20,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
   };
 
   return (
-    <div className="flex justify-between items-end bg-card p-6 rounded-3xl border border-line">
+    <div className="flex justify-between items-end bg-card p-6 rounded-xl border border-line">
       <div>
         <div className="flex items-center gap-4 mb-1">
           {isEditingName ? (
@@ -73,21 +73,21 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
           <div className="flex items-center gap-2">
             <button
               onClick={onExportTeam}
-              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft-hover px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Export Team
+              Export team
             </button>
             <button
               onClick={onImportTeam}
-              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              className="text-[10px] font-black text-accent hover:text-accent-hover uppercase tracking-widest bg-accent-soft hover:bg-accent-soft-hover px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
               </svg>
-              Import Team
+              Import team
             </button>
           </div>
         </div>
@@ -95,7 +95,7 @@ export const TeamHeader: React.FC<TeamHeaderProps> = ({ team, onRenameTeam, onEx
       </div>
       <div className="text-right">
         <div className="text-sm font-black text-ink-4 uppercase tracking-widest mb-2">
-          {team.members.length} / 6 Members
+          {team.members.length} / 6 members
         </div>
         <div className="flex gap-1.5">
           {[...Array(6)].map((_, i) => (

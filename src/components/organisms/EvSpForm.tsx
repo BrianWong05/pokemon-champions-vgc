@@ -69,7 +69,7 @@ const EvSpForm: React.FC<EvSpFormProps> = ({
         <div className="flex justify-center pt-4">
           <button
             onClick={onReset}
-            className="px-8 py-2.5 bg-danger-soft text-danger border border-danger-line rounded-xl font-black uppercase tracking-widest text-xs hover:bg-danger-soft hover:text-danger transition-all"
+            className="px-8 py-2.5 bg-danger-soft text-danger border border-danger-line rounded-xl font-black uppercase tracking-widest text-xs hover:bg-danger-soft-hover hover:text-danger transition-all"
           >
             Reset All
           </button>

@@ -32,7 +32,7 @@ export const TeamImportSelector: React.FC<TeamImportSelectorProps> = ({ pokemonL
         <p className="text-xs text-ink-3">You don't have any saved teams yet.</p>
         <a
           href="/teams"
-          className="inline-block text-xs font-black text-accent bg-accent-soft hover:bg-accent-soft px-4 py-2 rounded-lg transition-colors"
+          className="inline-block text-xs font-black text-accent bg-accent-soft hover:bg-accent-soft-hover px-4 py-2 rounded-lg transition-colors"
         >
           Go to team builder
         </a>
