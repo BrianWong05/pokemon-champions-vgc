@@ -8,10 +8,10 @@ interface TypographyProps {
 
 const Typography: React.FC<TypographyProps> = ({ children, variant = 'body', className = '' }) => {
   const baseClasses = {
-    h1: 'text-3xl font-bold text-gray-900',
-    h2: 'text-xl font-semibold text-gray-800',
-    body: 'text-gray-700',
-    label: 'text-xs font-bold text-gray-500 uppercase tracking-wider',
+    h1: 'text-3xl font-bold text-ink-1 font-display tracking-tight',
+    h2: 'text-xl font-semibold text-ink-1 font-display',
+    body: 'text-ink-2',
+    label: 'text-xs font-bold text-ink-3 uppercase tracking-wider',
   };
 
   const Component = variant === 'h1' ? 'h1' : variant === 'h2' ? 'h2' : 'span';

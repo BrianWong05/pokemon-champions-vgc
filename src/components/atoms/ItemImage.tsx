@@ -19,10 +19,10 @@ const ItemImage: React.FC<ItemImageProps> = ({ name, className = '', title }) =>
   if (!imageUrl || error) {
     return (
       <div 
-        className={`flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 ${className}`}
+        className={`flex items-center justify-center bg-inset rounded-lg border border-line ${className}`}
         title={title}
       >
-        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">?</span>
+        <span className="text-[10px] text-ink-4 font-bold uppercase tracking-tighter">?</span>
       </div>
     );
   }
