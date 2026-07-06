@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useFormat } from '@/features/formats/FormatContext';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { ThemeToggle } from '@/design-system/arena';
 import ArenaShell from '@/components/templates/ArenaShell';
 
 const Layout: React.FC = () => {
@@ -53,6 +54,7 @@ const Layout: React.FC = () => {
                 ))}
               </select>
             </label>
+            <ThemeToggle style={{ marginLeft: 8 }} />
           </nav>
         </div>
       </header>

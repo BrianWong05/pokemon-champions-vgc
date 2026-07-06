@@ -8,6 +8,8 @@ import path from 'path'
 // from https://localhost/; the web build keeps the GitHub Pages project base.
 export default defineConfig(({ mode }) => ({
   base: mode === 'capacitor' ? '/' : '/pokemon-champions-vgc/',
+  // Honor the harness-assigned port (Vite ignores PORT natively)
+  server: process.env.PORT ? { port: Number(process.env.PORT), strictPort: true } : undefined,
   plugins: [
     react(),
     tailwindcss(),

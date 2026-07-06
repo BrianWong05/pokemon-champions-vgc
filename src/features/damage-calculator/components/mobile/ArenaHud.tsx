@@ -32,7 +32,7 @@ export function ArenaHud({ state, dir, onSwap, p1Results, p2Results, nameOf }: {
       position: 'sticky',
       top: 0,
       zIndex: 20,
-      background: 'var(--navy-850)',
+      background: 'var(--surface-sticky)',
       borderBottom: '1px solid var(--line-2)',
       boxShadow: 'var(--shadow-hud)',
       padding: '14px var(--gutter) 16px',

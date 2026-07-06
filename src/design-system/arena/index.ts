@@ -21,3 +21,6 @@ export { StatChip } from './StatChip';
 export type { StatChipProps } from './StatChip';
 export { koVerdictFromText } from './ko-verdict';
 export type { KoTone, KoVerdictResult } from './ko-verdict';
+export { resolveTheme, applyTheme, setTheme, useTheme } from './theme';
+export type { Theme } from './theme';
+export { ThemeToggle } from './ThemeToggle';

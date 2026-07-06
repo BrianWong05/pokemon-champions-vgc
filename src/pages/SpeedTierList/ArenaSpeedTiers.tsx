@@ -83,7 +83,7 @@ export const ArenaSpeedTiers: React.FC<ArenaSpeedTiersProps> = ({ groups, isLoad
     <div style={{ paddingBottom: 'var(--sp-7)' }}>
       {groups.map((g) => (
         <div key={g.baseSpeed}>
-          <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '8px var(--gutter)', background: 'var(--navy-850)', borderBottom: '1px solid var(--line-1)' }}>
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '8px var(--gutter)', background: 'var(--surface-sticky)', borderBottom: '1px solid var(--line-1)' }}>
             <Icon name="gauge" size={14} color="var(--accent)" />
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-2)', letterSpacing: '0.02em' }}>Base {g.baseSpeed}</span>
             <span style={{ flex: 1 }} />
