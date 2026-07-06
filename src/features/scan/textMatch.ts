@@ -15,6 +15,19 @@ const ICON_GAP = 8; // item/move crops prefix an icon; a column gap this wide se
 // single line of glyph text is one contiguous ink band with no internal
 // all-zero gap, so any such leading blob is foreign to the text (an icon or
 // a UI divider bleeding into the crop) and should be excluded from the shape.
+//
+// An icon's own silhouette can fragment into several sub-blobs separated by
+// small gaps below `minGap` (e.g. a round icon's outline vs. its lighter
+// fill crossing whiteMask's threshold unevenly) — those sub-blobs are all
+// still "icon", so a small gap between them must not end the scan early;
+// keep merging blobs across sub-`minGap` gaps into the same leading region.
+// A qualifying (>= minGap) gap doesn't necessarily mark the final boundary
+// either — e.g. a rule-line row plus a separate small noise blob are each
+// their own qualifying-gap blob before the real text starts — so keep
+// advancing `cut` past every further blob that is itself followed by a
+// qualifying gap, and only stop once a blob runs to the end of the array
+// (nothing left to strip) or is followed by a sub-`minGap` gap (that gap
+// is an ordinary inter-letter gap, i.e. we've reached the real text).
 function stripLeadingBlob(counts: number[], minGap: number): number {
   let i = 0;
   let cut = 0;
@@ -25,10 +38,12 @@ function stripLeadingBlob(counts: number[], minGap: number): number {
     if (blobStart >= counts.length) break;
     let gapEnd = i;
     while (gapEnd < counts.length && counts[gapEnd] === 0) gapEnd++;
-    if (gapEnd - i >= minGap && gapEnd < counts.length) {
-      cut = gapEnd; // this blob (+ trailing gap) is not text
+    if (gapEnd >= counts.length) break; // blob runs to the end: nothing left to strip
+    if (gapEnd - i >= minGap) {
+      cut = gapEnd; // this blob (+ trailing gap) is not text; keep looking for more
+      i = gapEnd;
     } else {
-      break; // reached text: gap after this blob is a normal letter-gap (or end of mask)
+      i = gapEnd; // small gap: still inside the leading region, merge and keep scanning
     }
   }
   return cut;

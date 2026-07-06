@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import type { RgbaImage } from './types';
-import { scanPlayerImage } from './scanPlayerFrame';
-import { buildPlayerScanVocab } from '@/db/repositories/scan.repo';
+import { scanPlayerImage, rescanMovesPanelText } from './scanPlayerFrame';
+import { buildPlayerScanVocab, candidatesForLang } from '@/db/repositories/scan.repo';
+import { textShapeAt, matchTextShape } from './textMatch';
 
 function blank(w: number, h: number): RgbaImage {
   return { data: new Uint8ClampedArray(w * h * 4), width: w, height: h };
@@ -87,4 +88,60 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden full-frame scans', () => {
       });
     });
   }, 600_000);
+
+  // Isolates text-shape matching from the (separately tracked, Task 3) species
+  // sprite-crop bug: feeds the correct species id straight into
+  // rescanMovesPanelText so ability/item/move top-1 accuracy is measured
+  // against the REAL full vocabulary (~1649 labels/lang) rather than the
+  // golden-team decoy pool. This is what Task 7's report flagged as blocking:
+  // ability 6/6, item was 4/6 (2 missing mega stone candidates), moves 22/24
+  // (2 shape-matching near-misses).
+  it('en-rental full-vocab: every ability/item/move is top-1 among ~1649 real candidates', async () => {
+    const { loadPng } = await import('../../../scripts/hp-accuracy-core');
+    const { detectPlayerPanels } = await import('./playerPanels');
+    const { nodeRender, buildVocabNode } = await import('../../../scripts/player-scan-core');
+    const golden = JSON.parse(fs.readFileSync('training/player-golden.json', 'utf8'))['en-rental'];
+    const img = loadPng(`${GOLDEN_DIR}/${golden.movesImage}`);
+    const det = detectPlayerPanels(img);
+    expect(det?.kind).toBe('moves');
+    if (det?.kind !== 'moves') return;
+    const db = (await import('better-sqlite3')).default('vgc_pokemon.db', { readonly: true }) as any;
+    const idByName = (n: string) => (db.prepare('SELECT id FROM pokemon WHERE name_en = ?').get(n) as any)?.id;
+    const moveName = (id: string) => (db.prepare('SELECT name_en FROM moves WHERE id = ?').get(Number(id)) as any)?.name_en;
+    const vocab = buildVocabNode();
+
+    let abilityCorrect = 0, itemCorrect = 0, moveCorrect = 0, moveTotal = 0;
+    det.panels.forEach((panel, slot) => {
+      const expected = golden.team[slot];
+      const speciesId = idByName(expected.species);
+      const read = rescanMovesPanelText(img, panel, speciesId, vocab, nodeRender);
+      if (read.ability?.byLang.en[0]?.key === expected.ability) abilityCorrect++;
+      expected.moves.forEach((m: string, j: number) => {
+        moveTotal++;
+        if (moveName(read.moves[j]?.byLang.en[0]?.key) === m) moveCorrect++;
+      });
+      const itemShape = readTextFieldForTest(img, panel.itemText, vocab.items, nodeRender);
+      if (itemShape?.byLang.en[0]?.key === expected.item) itemCorrect++;
+    });
+
+    expect(abilityCorrect, 'abilities top-1').toBe(6);
+    expect(itemCorrect, 'items top-1').toBe(6);
+    expect(moveCorrect, `moves top-1 (of ${moveTotal})`).toBe(moveTotal);
+  }, 600_000);
 });
+
+// Local re-implementation of scanPlayerFrame's private readTextField, needed
+// here only because item reads aren't exposed via rescanMovesPanelText (item
+// doesn't depend on species). Mirrors it exactly.
+function readTextFieldForTest(
+  img: RgbaImage, box: any, entries: any[], render: (t: string) => any,
+) {
+  if (!box) return null;
+  const shape = textShapeAt(img, box);
+  if (!shape) return null;
+  const byLang: any = {};
+  for (const lang of ['en', 'ja', 'zh-Hant', 'zh-Hans'] as const) {
+    byLang[lang] = matchTextShape(shape, candidatesForLang(entries, lang), render);
+  }
+  return { byLang };
+}
