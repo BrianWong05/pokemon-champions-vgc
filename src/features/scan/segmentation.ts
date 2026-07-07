@@ -558,6 +558,71 @@ export function detectPlayerSpriteBoxes(img: RgbaImage): TileBox[] {
   });
 }
 
+/**
+ * Player team-detail panels (playerPanels.ts) carve the sprite region as a
+ * fixed top-left fraction of the panel — but the Pokémon name banner sits
+ * immediately to the sprite's right and can bleed 1-2 glyphs into that fixed
+ * box, corrupting descriptor matching. Content-aware refine: within a coarse
+ * search window (super-set of the fixed box), find columns that aren't
+ * panel-background-colored, merge them into runs (small gaps bridge a
+ * sprite's own internal gaps — ears, limbs — without bridging into the
+ * banner text, which starts after a wider gap), and keep the widest run —
+ * the sprite is reliably the widest solid blob, while name-banner glyphs and
+ * badge icons are comparatively narrow fragments. Then trim vertically the
+ * same way (tallest content row-run) to drop the panel's blank lower area.
+ * Falls back to the caller's coarse box if no content is found at all.
+ */
+export function refineSpritePanelBox(
+  img: RgbaImage,
+  panel: TileBox,
+  coarse: TileBox,
+  isBackgroundPixel: (r: number, g: number, b: number) => boolean,
+): TileBox {
+  const isContent = (x: number, y: number): boolean => {
+    const i = (y * img.width + x) * 4;
+    return !isBackgroundPixel(img.data[i], img.data[i + 1], img.data[i + 2]);
+  };
+
+  const x0 = panel.x;
+  const x1 = Math.min(img.width, panel.x + Math.round(panel.w * 0.40));
+  const y0 = panel.y;
+  const y1 = Math.min(img.height, panel.y + Math.round(panel.h * 0.60));
+  if (x1 - x0 < 4 || y1 - y0 < 4) return coarse;
+
+  const colFlags: boolean[] = [];
+  for (let x = x0; x < x1; x++) {
+    let cnt = 0;
+    for (let y = y0; y < y1; y++) if (isContent(x, y)) cnt++;
+    colFlags.push(cnt > (y1 - y0) * 0.15);
+  }
+  const colRuns = runsOf(colFlags, 3);
+  if (colRuns.length === 0) return coarse;
+  const widestCol = colRuns.reduce((a, b) => (b.end - b.start > a.end - a.start ? b : a));
+  const bx0 = x0 + widestCol.start;
+  const bx1 = x0 + widestCol.end + 1;
+
+  const rowFlags: boolean[] = [];
+  for (let y = y0; y < y1; y++) {
+    let any = false;
+    for (let x = bx0; x < bx1; x++) if (isContent(x, y)) { any = true; break; }
+    rowFlags.push(any);
+  }
+  const rowRuns = runsOf(rowFlags, 3);
+  const tallestRow = rowRuns.length > 0
+    ? rowRuns.reduce((a, b) => (b.end - b.start > a.end - a.start ? b : a))
+    : { start: 0, end: y1 - y0 - 1 };
+  const by0 = y0 + tallestRow.start;
+  const by1 = y0 + tallestRow.end + 1;
+
+  const padX = Math.round(panel.h * 0.03);
+  const padY = Math.round(panel.h * 0.05);
+  const x = Math.max(panel.x, bx0 - padX);
+  const xEnd = Math.min(panel.x + panel.w, bx1 + padX);
+  const y = Math.max(panel.y, by0 - padY);
+  const yEnd = Math.min(panel.y + panel.h, by1 + padY);
+  return { x, y, w: xEnd - x, h: yEnd - y };
+}
+
 export function cropImage(img: RgbaImage, box: TileBox): RgbaImage {
   const data = new Uint8ClampedArray(box.w * box.h * 4);
   for (let y = 0; y < box.h; y++) {

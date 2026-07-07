@@ -20,23 +20,24 @@ def main():
     pokemon_moves_df = fetch_csv("pokemon_moves.csv")
     
     print("Processing localized names...")
-    # languages: 9 (En), 11 (Ja), 4 (Zh-Hant)
+    # languages: 9 (En), 11 (Ja), 4 (Zh-Hant), 12 (Zh-Hans)
     # Note: Using 11 for Ja (Hrkt) as it's common for moves, or 1 if it's Hrkt-specific
     names_en = move_names_df[move_names_df['local_language_id'] == 9][['move_id', 'name']].rename(columns={'name': 'name_en'})
     names_ja = move_names_df[move_names_df['local_language_id'] == 1][['move_id', 'name']].rename(columns={'name': 'name_ja'})
     names_zh = move_names_df[move_names_df['local_language_id'] == 4][['move_id', 'name']].rename(columns={'name': 'name_zh'})
+    names_zh_hans = move_names_df[move_names_df['local_language_id'] == 12][['move_id', 'name']].rename(columns={'name': 'name_zh_hans'})
 
     # Merge names
-    names_merged = names_en.merge(names_ja, on='move_id', how='left').merge(names_zh, on='move_id', how='left')
+    names_merged = names_en.merge(names_ja, on='move_id', how='left').merge(names_zh, on='move_id', how='left').merge(names_zh_hans, on='move_id', how='left')
 
     # Merge with base move data
     # moves.csv columns: id, identifier, generation_id, type_id, power, pp, accuracy, priority, target_id, damage_class_id, effect_id, effect_chance, contest_type_id, contest_effect_id, super_contest_effect_id
     final_moves_df = moves_df.merge(names_merged, left_on='id', right_on='move_id', how='left')
-    
+
     # Select columns matching schema.ts
-    # id, identifier, nameEn, nameJa, nameZh, typeId, damageClassId, power, accuracy, pp, priority
+    # id, identifier, nameEn, nameJa, nameZh, nameZhHans, typeId, damageClassId, power, accuracy, pp, priority
     final_moves_df = final_moves_df[[
-        'id', 'identifier', 'name_en', 'name_ja', 'name_zh', 
+        'id', 'identifier', 'name_en', 'name_ja', 'name_zh', 'name_zh_hans',
         'type_id', 'damage_class_id', 'power', 'accuracy', 'pp', 'priority'
     ]].fillna({'name_en': 'Unknown'})
 
@@ -53,14 +54,20 @@ def main():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    # Self-migrate: add name_zh_hans column if missing
+    cursor.execute("PRAGMA table_info(moves)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if "name_zh_hans" not in cols:
+        cursor.execute("ALTER TABLE moves ADD COLUMN name_zh_hans TEXT")
+
     print(f"Inserting data into {db_path}...")
-    
+
     # Insert moves
     moves_records = final_moves_df.to_records(index=False).tolist()
     cursor.executemany("""
-        INSERT OR REPLACE INTO moves 
-        (id, identifier, name_en, name_ja, name_zh, type_id, damage_class_id, power, accuracy, pp, priority) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO moves
+        (id, identifier, name_en, name_ja, name_zh, name_zh_hans, type_id, damage_class_id, power, accuracy, pp, priority)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, moves_records)
     
     print(f"Successfully inserted/updated {cursor.rowcount} moves.")

@@ -67,3 +67,11 @@ progress.md
 task_plan.md
 .antigravitycli/
 training/screenshots/
+
+# player team scan golden screenshots (local only)
+training/player-screens/
+# player panel crop debug output
+training/.player-crop-preview/
+
+# browser-decoded player stats fixtures (regenerate: python3 scripts/capture-player-browser-fixtures.py)
+training/player-fixtures/
