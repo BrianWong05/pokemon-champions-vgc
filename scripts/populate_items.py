@@ -36,7 +36,11 @@ MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho", "Scrafti
 # one "ナ" when the species name already ends in "ナ" (フシギバナ -> フシギバナイト,
 # confirmed against the existing Venusaurite row). MANUAL_JA overrides anything the
 # heuristic can't express (e.g. a species name_ja carrying a stray suffix artifact).
-MANUAL_JA = {"Meowsticite": "ニャオニクスナイト"}
+# Delphoxite: the game also elides a trailing long-vowel mark (マフォクシー ->
+# マフォクシナイト). Confirmed against the ja-rental-r676 golden screenshot by
+# same-font glyph composition: 0.923 for the elided form vs 0.850 with "ー"
+# (scripts/build-text-glyph-atlas.ts machinery).
+MANUAL_JA = {"Meowsticite": "ニャオニクスナイト", "Delphoxite": "マフォクシナイト"}
 
 def synthesize_ja(species_ja):
     if not species_ja:

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { createCanvas } from 'canvas';
 import {
   makeTextRenderer, matchTextShape, shapeFromMask,
-  parseAtlas, composeAtlasMask, matchTextShapeHybrid, shapeDistance, ATLAS_ACCEPT,
+  parseAtlas, composeAtlasMask, makeCellDecoder, matchTextAtlas, matchTextHybrid, ATLAS_ACCEPT,
 } from './textMatch';
 
 const render = makeTextRenderer((w, h) => createCanvas(w, h));
@@ -64,13 +64,17 @@ describe('textMatch self-render round trip', () => {
   });
 });
 
-describe('glyph atlas composition + hybrid matching', () => {
-  // Hand-packed synthetic glyphs: 'I' = 4x8 solid bar, 'O' = 8x8 ring.
+describe('glyph atlas cell decoding + hybrid matching', () => {
+  // Hand-packed synthetic glyphs on a 32px line (hFrac ~1 like real text):
+  // 'I' = 4x32 solid bar, 'O' = 8x32 ring, 'B' = 10x32 solid block. Pitch 12
+  // keeps composed inter-cell gaps below the icon-strip threshold, like real
+  // monospaced text.
   const atlasEntries = [
-    { char: 'I', w: 4, h: 8, yOff: 0, hex: 'ffffffff' },
-    { char: 'O', w: 8, h: 8, yOff: 0, hex: 'ff818181818181ff' },
+    { char: 'I', w: 4, h: 32, yOff: 0, hex: 'f'.repeat(32) },
+    { char: 'O', w: 8, h: 32, yOff: 0, hex: 'ff' + '81'.repeat(30) + 'ff' },
+    { char: 'B', w: 10, h: 32, yOff: 0, hex: 'f'.repeat(80) },
   ];
-  const atlas = () => parseAtlas(atlasEntries, 2);
+  const atlas = () => parseAtlas(atlasEntries, 12);
 
   it('parseAtlas decodes hex bits row-major, MSB first', () => {
     const g = atlas().glyphs.get('O')!;
@@ -81,51 +85,61 @@ describe('glyph atlas composition + hybrid matching', () => {
 
   it('composeAtlasMask returns null when any char is uncovered', () => {
     expect(composeAtlasMask(atlas(), 'IX')).toBeNull();
-    expect(composeAtlasMask(atlas(), 'IO')).not.toBeNull();
+    expect(composeAtlasMask(atlas(), 'IB')).not.toBeNull();
   });
 
-  it('hybrid: exact composition wins with a near-perfect score', () => {
+  it('decode: exact cells win with a near-perfect score; uncovered candidates are skipped', () => {
     const a = atlas();
-    const shape = shapeFromMask(composeAtlasMask(a, 'IO')!, false)!;
+    const crop = composeAtlasMask(a, 'IB')!;
+    const decode = makeCellDecoder(crop, a);
     const candidates = [
-      { key: 'oi', label: 'OI' },
-      { key: 'io', label: 'IO' },
-      { key: 'p', label: 'Protect' }, // uncovered: excluded from an accepted atlas pass
+      { key: 'bi', label: 'BI' },
+      { key: 'ib', label: 'IB' },
+      { key: 'p', label: 'Protect' }, // uncovered: never rankable by the atlas
     ];
-    const result = matchTextShapeHybrid(shape, candidates, render, a);
-    expect(result[0].key).toBe('io');
-    expect(result[0].score).toBeGreaterThan(0.99);
+    const ranked = matchTextAtlas(decode, candidates);
+    expect(ranked[0].key).toBe('ib');
+    expect(ranked[0].score).toBeGreaterThan(0.95);
+    expect(ranked.map(r => r.key)).not.toContain('p');
+
+    const shape = shapeFromMask(crop, false)!;
+    const hybrid = matchTextHybrid(decode, shape, candidates, render);
+    expect(hybrid).toEqual(ranked); // accept branch: atlas ranking wins
   });
 
   it('hybrid: falls back to canvas matching when no candidate is covered', () => {
     const a = atlas();
-    const shape = shapeFromMask(render('Protect'), false)!;
+    const raw = render('Protect');
+    const shape = shapeFromMask(raw, false)!;
     const candidates = ['Protect', 'Reflect'].map(l => ({ key: l, label: l }));
-    const result = matchTextShapeHybrid(shape, candidates, render, a);
+    const result = matchTextHybrid(makeCellDecoder(raw, a), shape, candidates, render);
     expect(result[0].key).toBe('Protect');
     expect(result).toEqual(matchTextShape(shape, candidates, render));
   });
 
   it('hybrid: falls back when the best atlas score is below the acceptance gate', () => {
     const a = atlas();
-    const shape = shapeFromMask(composeAtlasMask(a, 'IO')!, false)!;
-    // Precondition: the only covered candidate ('II') really is sub-threshold
-    // against the 'IO' shape — if calibration moves ATLAS_ACCEPT below this
-    // score, this fixture needs a more dissimilar decoy.
-    const iiShape = shapeFromMask(composeAtlasMask(a, 'II')!, false)!;
-    expect(1 - shapeDistance(shape, iiShape)).toBeLessThan(ATLAS_ACCEPT);
+    const crop = render('Protect'); // latin canvas ink: nothing like bar/block glyphs
+    const decode = makeCellDecoder(crop, a);
     const candidates = [
-      { key: 'ii', label: 'II' },
+      { key: 'ib', label: 'IB' }, // covered but dissimilar: rankable, sub-gate
       { key: 'p', label: 'Protect' }, // uncovered: only reachable via fallback
     ];
-    const result = matchTextShapeHybrid(shape, candidates, render, a);
-    expect(result).toHaveLength(2); // atlas accept branch could only ever return 'ii'
+    // Precondition: the covered candidate really is sub-threshold against
+    // this crop — if calibration moves ATLAS_ACCEPT down this needs re-checking.
+    const atlasTop = matchTextAtlas(decode, candidates)[0];
+    expect(atlasTop?.key).toBe('ib');
+    expect(atlasTop?.score).toBeLessThan(ATLAS_ACCEPT);
+    const shape = shapeFromMask(crop, false)!;
+    const result = matchTextHybrid(decode, shape, candidates, render);
+    expect(result).toHaveLength(2); // atlas accept branch could only ever return 'ib'
+    expect(result[0].key).toBe('p'); // canvas fallback ranks the true label first
   });
 
-  it('hybrid: null atlas is plain shape matching', () => {
+  it('hybrid: null decoder is plain shape matching', () => {
     const shape = shapeFromMask(render('Protect'), false)!;
     const candidates = ['Protect', 'Reflect'].map(l => ({ key: l, label: l }));
-    expect(matchTextShapeHybrid(shape, candidates, render, null))
+    expect(matchTextHybrid(null, shape, candidates, render))
       .toEqual(matchTextShape(shape, candidates, render));
   });
 });
@@ -154,5 +168,46 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('golden text crops', () => {
       check(panel.itemText, expected.item, golden.team.map((t: any) => t.item));
       expected.moves.forEach((m: string, j: number) => check(panel.moveTexts![j], m, allMoves));
     });
+  }, 300_000);
+});
+
+describe.skipIf(!fs.existsSync(GOLDEN_DIR))('glyph atlas on golden crops', () => {
+  // The crops pinned as text-match KNOWN_ISSUES / exceptions before the
+  // atlas existed (scripts/player-scan-accuracy.test.ts): each must now rank
+  // top-1 with atlas-level confidence against its full per-species vocabulary.
+  // (ja slot1 moves 3/4: the original golden had Taunt/Light Screen swapped
+  // vs the screen — fixed 2026-07-07 — so both rows are asserted here.)
+  it('previously-failing zh/ja crops rank top-1 via the atlas pass', async () => {
+    const { loadPng } = await import('../../../scripts/hp-accuracy-core');
+    const { detectPlayerPanels } = await import('./playerPanels');
+    const { buildVocabNode } = await import('../../../scripts/player-scan-core');
+    const { candidatesForLang } = await import('@/db/repositories/scan.repo');
+    const { whiteMask, MASK_THRESHOLDS } = await import('./hpText');
+    const { TEXT_GLYPH_ATLAS, TEXT_GLYPH_PITCH } = await import('./textGlyphAtlas');
+    const Database = (await import('better-sqlite3')).default;
+
+    const db = new Database('vgc_pokemon.db', { readonly: true });
+    const idOf = (n: string) => (db.prepare('SELECT id FROM pokemon WHERE name_en = ?').get(n) as any).id;
+    const moveKey = (n: string) => String((db.prepare('SELECT id FROM moves WHERE name_en = ?').get(n) as any).id);
+    const vocab = buildVocabNode();
+    const atlas = parseAtlas(TEXT_GLYPH_ATLAS, TEXT_GLYPH_PITCH);
+
+    const check = (img: any, box: any, lang: any, entries: any[], expectedKey: string, label: string) => {
+      const decode = makeCellDecoder(MASK_THRESHOLDS.map((t: number) => whiteMask(img, box, t)), atlas);
+      const result = matchTextAtlas(decode, candidatesForLang(entries, lang));
+      expect(result[0]?.score, `${label}: atlas-pass confidence`).toBeGreaterThanOrEqual(ATLAS_ACCEPT);
+      expect(result[0]?.key, label).toBe(expectedKey);
+    };
+
+    const zh = loadPng(`${GOLDEN_DIR}/zh-team17-moves.png`);
+    const zhDet = detectPlayerPanels(zh)!;
+    check(zh, zhDet.panels[2].moveTexts![2], 'zh-Hant', vocab.movesFor(idOf('Dragonite')), moveKey('Tailwind'), 'zh-team17 slot3 Tailwind');
+
+    const ja = loadPng(`${GOLDEN_DIR}/ja-rental-r676-moves.png`);
+    const jaDet = detectPlayerPanels(ja)!;
+    check(ja, jaDet.panels[0].moveTexts![2], 'ja', vocab.movesFor(idOf('Grimmsnarl')), moveKey('Light Screen'), 'ja-rental slot1 row3 Light Screen');
+    check(ja, jaDet.panels[0].moveTexts![3], 'ja', vocab.movesFor(idOf('Grimmsnarl')), moveKey('Taunt'), 'ja-rental slot1 row4 Taunt');
+    check(ja, jaDet.panels[5].moveTexts![1], 'ja', vocab.movesFor(idOf('Gengar')), moveKey('Sludge Wave'), 'ja-rental slot6 Sludge Wave');
+    check(ja, jaDet.panels[4].itemText!, 'ja', vocab.items, 'Delphoxite', 'ja-rental slot5 Delphoxite');
   }, 300_000);
 });

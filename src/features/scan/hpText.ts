@@ -6,7 +6,7 @@ import type { RgbaImage, TileBox } from './types';
 
 export const GLYPH_SIZE = 16;
 
-const QUANT = 9;                 // coverage levels per cell: 0..9
+export const QUANT = 9;                 // coverage levels per cell: 0..9
 const MAX_DIST = 0.1;            // per-glyph ceiling (matchGlyph; also caps decode candidates)
 const MIN_MARGIN = 0.02;         // matchGlyph: best other-char distance must exceed the best by this
 const MAX_PHRASE_DIST = 0.10;    // mean per-glyph cost ceiling for a decoded phrase
