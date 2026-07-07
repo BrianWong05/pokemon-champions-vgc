@@ -86,6 +86,22 @@ describe('useDamageScenarios', () => {
     expect(maxBulk!.maxPercent).toBeLessThan(noSp!.maxPercent * 0.75);
   });
 
+  it('invests bulk in Defense for Psyshock despite its Special category', () => {
+    // Psyshock is Special but damages against Def (overrideDefensiveStat).
+    // Low Def / high SpD defender: only Def investment can blunt it — if bulk
+    // went to SpD by category, maxBulk would only drop by the HP investment.
+    const psyshock = { nameEn: 'Psyshock', nameZh: null, typeId: 14 } as unknown as MoveData;
+    const asym = {
+      ...baseState,
+      p1: side({ ...flutterMane, moves: [psyshock, null, null, null] }),
+      p2: side({ selectedId: 887, baseHp: 88, baseAtk: 120, baseDef: 40, baseSpa: 100, baseSpd: 150, baseSpe: 142 }),
+    };
+    const { result } = renderHook(() => useDamageScenarios(asym, pokemonList, 'p1'));
+    const { maxBulk, noSp } = result.current;
+    expect(maxBulk && noSp).toBeTruthy();
+    expect(maxBulk!.maxPercent).toBeLessThan(noSp!.maxPercent * 0.75);
+  });
+
   it('computes scenarios against p1 as defender when dir is p2', () => {
     const s = { ...baseState, p2: dragapultWithMove };
     const { result } = renderHook(() => useDamageScenarios(s, pokemonList, 'p2'));
