@@ -13,6 +13,7 @@ export { AppBar } from './AppBar';
 export { RegPill } from './RegPill';
 export { TabBar, ARENA_TABS } from './TabBar';
 export type { ArenaTab } from './TabBar';
+export { NavRail } from './NavRail';
 export { Icon } from './Icon';
 export type { IconName } from './Icon';
 export { Button } from './Button';

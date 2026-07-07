@@ -1,0 +1,67 @@
+// @vitest-environment jsdom
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { useViewportMode } from './useViewportMode';
+
+/**
+ * Mock matchMedia keyed by exact query string, so a broken query in the hook
+ * fails the test instead of silently matching via a loose substring check.
+ */
+const LANDSCAPE_QUERY = '(orientation: landscape) and (max-height: 767px)';
+const PORTRAIT_QUERY = '(max-width: 767px)';
+
+function mockViewport(initial: { landscape: boolean; portrait: boolean }) {
+  const listeners = new Set<() => void>();
+  const state = { ...initial };
+  // @ts-expect-error test shim
+  window.matchMedia = (query: string) => ({
+    get matches() {
+      if (query === LANDSCAPE_QUERY) return state.landscape;
+      if (query === PORTRAIT_QUERY) return state.portrait;
+      throw new Error('unexpected query: ' + query);
+    },
+    media: query,
+    addEventListener: (_: string, cb: () => void) => listeners.add(cb),
+    removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
+  });
+  return {
+    set(next: { landscape: boolean; portrait: boolean }) {
+      Object.assign(state, next);
+      listeners.forEach((cb) => cb());
+    },
+  };
+}
+
+describe('useViewportMode', () => {
+  it('375x812 portrait phone → arena', () => {
+    mockViewport({ landscape: false, portrait: true });
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current).toBe('arena');
+  });
+
+  it('800x360 landscape phone → arena-landscape', () => {
+    mockViewport({ landscape: true, portrait: false });
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current).toBe('arena-landscape');
+  });
+
+  it('landscape wins when both queries match (small landscape phone)', () => {
+    mockViewport({ landscape: true, portrait: true });
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current).toBe('arena-landscape');
+  });
+
+  it('1280x800 desktop → desktop', () => {
+    mockViewport({ landscape: false, portrait: false });
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current).toBe('desktop');
+  });
+
+  it('updates when the device rotates', () => {
+    const vp = mockViewport({ landscape: false, portrait: true });
+    const { result } = renderHook(() => useViewportMode());
+    expect(result.current).toBe('arena');
+    act(() => vp.set({ landscape: true, portrait: false }));
+    expect(result.current).toBe('arena-landscape');
+  });
+});

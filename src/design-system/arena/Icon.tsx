@@ -5,7 +5,7 @@ export type IconName =
   | 'calculator' | 'users' | 'sliders-horizontal' | 'gauge'
   | 'cloud-sun' | 'x' | 'zap' | 'search'
   | 'plus' | 'pencil' | 'share' | 'trash-2' | 'users-round' | 'clipboard-paste'
-  | 'sun' | 'moon';
+  | 'sun' | 'moon' | 'arrow-left-right' | 'rotate-ccw';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   'chevron-right': <path d="m9 18 6-6-6-6" />,
@@ -122,6 +122,20 @@ const PATHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   'moon': <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
+  'arrow-left-right': (
+    <>
+      <path d="M8 3 4 7l4 4" />
+      <path d="M4 7h16" />
+      <path d="m16 21 4-4-4-4" />
+      <path d="M20 17H4" />
+    </>
+  ),
+  'rotate-ccw': (
+    <>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </>
+  ),
 };
 
 /**

@@ -19,9 +19,10 @@ const row = (active: boolean): React.CSSProperties => ({
  * ItemSearchSelect). Search field + a "No item" row + item rows (icon + name).
  * Item pool is @smogon/calc Gen 9; empty search shows a popular shortlist.
  */
-export function ArenaItemPicker({ selectedItem, onSelect }: {
+export function ArenaItemPicker({ selectedItem, onSelect, autoFocus = true }: {
   selectedItem: string | null;
   onSelect: (item: string | null) => void;
+  autoFocus?: boolean;
 }) {
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
@@ -41,7 +42,7 @@ export function ArenaItemPicker({ selectedItem, onSelect }: {
           <Icon name="search" size={18} color="var(--ink-3)" />
         </span>
         <input
-          autoFocus
+          autoFocus={autoFocus}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => setFocused(true)}

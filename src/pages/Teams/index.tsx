@@ -18,7 +18,8 @@ import { useFormat } from '@/features/formats/FormatContext';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
+import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaTeams } from '@/features/teams/components/mobile/ArenaTeams';
 
 const TeamsPage: React.FC = () => {
@@ -34,7 +35,8 @@ const TeamsPage: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode === 'arena';
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -211,6 +213,8 @@ const TeamsPage: React.FC = () => {
       await deleteTeam(id);
     }
   };
+
+  if (mode === 'arena-landscape') return <RotateToPortrait label="Teams" />;
 
   // ponytail: shared modals on mobile; replace with Sheets if UX demands
   if (isMobile) {

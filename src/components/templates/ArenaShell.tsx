@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AppBar, RegPill, TabBar, ARENA_TABS, ThemeToggle } from '@/design-system/arena';
+import { AppBar, RegPill, TabBar, ARENA_TABS, ThemeToggle, NavRail } from '@/design-system/arena';
 import { useFormat } from '@/features/formats/FormatContext';
 
 const ROUTE_BY_TAB: Record<string, string> = {
@@ -23,7 +23,7 @@ const TITLE_BY_TAB: Record<string, string> = {
  * Height-bounded (100dvh) so <main> is the scroll container and the calculator's
  * result HUD can pin to its top.
  */
-const ArenaShell: React.FC = () => {
+const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { format, setFormat, availableFormats } = useFormat();
@@ -37,32 +37,47 @@ const ArenaShell: React.FC = () => {
       height: '100dvh',
       overflow: 'hidden',
       display: 'flex',
-      flexDirection: 'column',
+      flexDirection: landscape ? 'row' : 'column',
       background: 'var(--bg-page)',
       fontFamily: 'var(--font-ui)',
       color: 'var(--text-body)',
     }}>
-      <AppBar
-        title={TITLE_BY_TAB[active]}
-        right={
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <ThemeToggle />
-            <RegPill value={format} onClick={() => setRegOpen(true)} />
-          </div>
-        }
-      />
-      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      {landscape ? (
+        <NavRail
+          active={active}
+          onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')}
+          bottom={
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <ThemeToggle />
+              <RegPill compact value={format} onClick={() => setRegOpen(true)} />
+            </div>
+          }
+        />
+      ) : (
+        <AppBar
+          title={TITLE_BY_TAB[active]}
+          right={
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <ThemeToggle />
+              <RegPill value={format} onClick={() => setRegOpen(true)} />
+            </div>
+          }
+        />
+      )}
+      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
         <Outlet />
       </main>
-      <TabBar active={active} tabs={ARENA_TABS} onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')} />
+      {!landscape && <TabBar active={active} tabs={ARENA_TABS} onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')} />}
       {regOpen && (
         <>
           <div onClick={() => setRegOpen(false)} style={{ position: 'absolute', inset: 0, zIndex: 35 }} />
           <div role="menu" aria-label="Regulation" style={{
             position: 'absolute',
-            /* 2px below the 34px RegPill centered in the app bar */
-            top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)',
-            right: 'var(--gutter)',
+            /* portrait: 2px below the 34px RegPill centered in the app bar;
+               landscape: beside the rail's bottom corner where the pill lives */
+            ...(landscape
+              ? { left: 64, bottom: 10 }
+              : { top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)', right: 'var(--gutter)' }),
             zIndex: 40,
             minWidth: 180,
             background: 'var(--surface-card)',
