@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import ArenaShell from './ArenaShell';
 
@@ -9,8 +9,6 @@ vi.mock('@/features/formats/FormatContext', () => ({
 }));
 
 describe('ArenaShell landscape', () => {
-  afterEach(cleanup);
-
   // ponytail: jsdom has no matchMedia; ThemeToggle (rendered by ArenaShell) needs it.
   // Same stub pattern as src/design-system/arena/theme-toggle.test.tsx.
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
