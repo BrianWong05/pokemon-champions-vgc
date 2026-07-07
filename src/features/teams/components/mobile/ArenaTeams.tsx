@@ -9,6 +9,7 @@ export interface ArenaTeamsProps {
   onCreate: (name: string) => void;          // page's createTeam-and-navigate
   onImport: () => void;                       // opens existing TeamShowdownImportModal
   onScan: () => void;                         // opens existing ScanTeamModal
+  onScanPlayer?: () => void;                  // opens PlayerScanModal
   onOpen: (id: string) => void;               // navigate to /teams/:id
   onExport: (team: TeamWithMembers) => void;  // opens existing TeamExportModal
   onDelete: (id: string, name: string) => void;
@@ -69,7 +70,7 @@ const TeamCard: React.FC<{
 };
 
 export const ArenaTeams: React.FC<ArenaTeamsProps> = ({
-  teams, loading, error, onCreate, onImport, onScan, onOpen, onExport, onDelete,
+  teams, loading, error, onCreate, onImport, onScan, onScanPlayer, onOpen, onExport, onDelete,
 }) => {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
@@ -84,6 +85,9 @@ export const ArenaTeams: React.FC<ArenaTeamsProps> = ({
         <Button variant="primary" block icon={<Icon name="plus" size={18} />} onClick={() => setCreateOpen(true)}>Create new team</Button>
         <Button variant="secondary" icon={<Icon name="clipboard-paste" size={16} />} onClick={onImport}>Import</Button>
         <Button variant="secondary" icon={<Icon name="search" size={16} />} onClick={onScan}>Scan</Button>
+        {onScanPlayer && (
+          <Button variant="secondary" icon={<Icon name="search" size={16} />} onClick={onScanPlayer}>Scan my team</Button>
+        )}
       </div>
 
       {teams.length === 0 ? (

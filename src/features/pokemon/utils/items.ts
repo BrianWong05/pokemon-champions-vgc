@@ -1,17 +1,19 @@
-const MEGA_STONES = new Set([
+export const MEGA_STONES = new Set([
   "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite",
   "Altarianite", "Ampharosite", "Audinite", "Banettite", "Beedrillite",
-  "Blastoisinite", "Cameruptite", "Chandelurite", "Charizardite X",
-  "Charizardite Y", "Chesnaughtite", "Chimechite", "Clefablite",
-  "Crabominite", "Delphoxite", "Dragoninite", "Drampanite", "Emboarite",
-  "Excadrite", "Feraligite", "Floettite", "Froslassite", "Galladite",
-  "Garchompite", "Gardevoirite", "Gengarite", "Glalitite", "Glimmoranite",
-  "Golurkite", "Greninjite", "Gyaradosite", "Hawluchanite", "Heracronite",
-  "Houndoominite", "Kangaskhanite", "Lopunnite", "Lucarionite", "Manectite",
-  "Medichamite", "Meganiumite", "Meowsticite", "Pidgeotite", "Pinsirite",
-  "Sablenite", "Scizorite", "Scovillainite", "Sharpedonite", "Skarmorite",
-  "Slowbronite", "Starminite", "Steelixite", "Tyranitarite", "Venusaurite",
-  "Victreebelite"
+  "Black Augurite", "Blastoisinite", "Blazikenite", "Cameruptite",
+  "Chandelurite", "Charizardite X", "Charizardite Y", "Chesnaughtite",
+  "Chimechite", "Clefablite", "Crabominite", "Delphoxite", "Diancite",
+  "Dragoninite", "Drampanite", "Emboarite", "Excadrite", "Feraligite",
+  "Floettite", "Froslassite", "Galladite", "Garchompite", "Gardevoirite",
+  "Gengarite", "Glalitite", "Glimmoranite", "Golurkite", "Greninjite",
+  "Gyaradosite", "Hawluchanite", "Heracronite", "Houndoominite",
+  "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite",
+  "Manectite", "Mawilite", "Medichamite", "Meganiumite", "Meowsticite",
+  "Metagrossite", "Mewtwonite X", "Mewtwonite Y", "Pidgeotite", "Pinsirite",
+  "Sablenite", "Salamencite", "Scraftite", "Sceptilite", "Scizorite", "Scovillainite",
+  "Sharpedonite", "Skarmorite", "Slowbronite", "Starminite", "Steelixite",
+  "Swampertite", "Tyranitarite", "Venusaurite", "Victreebelite"
 ]);
 
 /**
