@@ -68,24 +68,12 @@ const TEXT_FIELD_EXCEPTIONS: Array<{
 // PINNED to their current cascaded wrong values too, not silently skipped --
 // this keeps assertion coverage on those fields instead of dropping them.
 const KNOWN_ISSUES = {
-  species: [
-    {
-      pairKey: 'zh-team17', slot: 0, expected: 'Hisuian Zoroark',
-      reason: 'classifier miss on nicknamed-panel sprite crop: correct id present in candidates at near-zero score, softmax mass concentrated on Annihilape instead',
-      correctIdInCandidates: true,
-      wrongTop1: 'Annihilape',
-      cascades: { ability: 'Vital Spirit', moves: ['Assurance', 'Assurance', 'Close Combat', 'U-turn'] },
-      date: '2026-07-07', followUp: 'task-11-report.md Recommendation #1 (classifier hardening on nicknamed-panel crops)',
-    },
-    {
-      pairKey: 'zh-team17', slot: 4, expected: 'Scrafty',
-      reason: 'classifier miss on nicknamed-panel sprite crop: correct id absent from candidates entirely (worse than slot 0 -- not even a low-score presence)',
-      correctIdInCandidates: false,
-      wrongTop1: 'Whimsicott',
-      cascades: { ability: 'Infiltrator', moves: ['Protect', 'Energy Ball', 'Fake Tears', 'Grassy Glide'] },
-      date: '2026-07-07', followUp: 'task-11-report.md Recommendation #1 (classifier hardening on nicknamed-panel crops)',
-    },
-  ] as Array<{
+  // Species entries resolved 2026-07-07: sprite-net retrained with
+  // panel-composited crops (scripts/generate-panel-crops.ts) + partial-crop/
+  // small-size augmentation, and refineSpritePanelBox grew a narrow-pick
+  // rescue pass — both zh-team17 misses (Hisuian Zoroark slot 1, Scrafty
+  // slot 5) are strict top-1 assertions again.
+  species: [] as Array<{
     pairKey: string; slot: number; expected: string; reason: string;
     correctIdInCandidates: boolean; wrongTop1: string;
     cascades: { ability: string; moves: string[] };
@@ -205,9 +193,10 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('player scan end-to-end', () => {
         }
 
         if (want.item === null) {
-          // Documented DB gap (item has no row at all, e.g. zh-team17 Scrafty's
-          // Scraftite) -- not scan-quality, not exception-eligible (nothing to
-          // rank against). See training/player-golden.json's _note.
+          // Documented DB gap (item has no row at all) -- not scan-quality,
+          // not exception-eligible (nothing to rank against). No current
+          // golden uses this (zh-team17 Scrafty's Scraftite gained a DB row
+          // in the task-11 fix wave and is asserted strictly again).
         } else if (!speciesIssue) {
           const itemException = TEXT_FIELD_EXCEPTIONS.find(e => e.pairKey === key && e.slot === i && e.field === 'item');
           if (itemException) {

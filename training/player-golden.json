@@ -29,7 +29,7 @@
     "movesImage": "zh-team17-moves.png",
     "statsImage": "zh-team17-stats.png",
     "lang": "zh-Hant",
-    "_note": "nicknamed panels (species never shown as text); Hisuian Zoroark disambiguated from Zoroark via stat math (HP 132 = 55+75+2, only Hisuian's base 55 fits). Scrafty's item '頭巾混混進化石' (Scraftite) has no row at all in the items table (unlike the EN gate's event-move gaps, this is a whole missing item, not a learnset join) -- documented, not asserted.",
+    "_note": "nicknamed panels (species never shown as text); Hisuian Zoroark disambiguated from Zoroark via stat math (HP 132 = 55+75+2, only Hisuian's base 55 fits). Scrafty's item '頭巾混混進化石' = Scraftite (DB row added in the task-11 fix wave; asserted strictly since the 2026-07-07 classifier retrain fixed the upstream species read).",
     "team": [
       { "species": "Hisuian Zoroark", "ability": "Illusion", "item": "Choice Scarf",
         "moves": ["Bitter Malice", "Icy Wind", "Grass Knot", "U-turn"],
@@ -43,7 +43,7 @@
       { "species": "Gholdengo", "ability": "Good as Gold", "item": "Life Orb",
         "moves": ["Protect", "Shadow Ball", "Make It Rain", "Nasty Plot"],
         "stats": [164, 72, 115, 203, 111, 136], "sp": [2, 0, 0, 32, 0, 32], "nature": "Modest" },
-      { "species": "Scrafty", "ability": "Moxie", "item": null,
+      { "species": "Scrafty", "ability": "Moxie", "item": "Scraftite",
         "moves": ["Protect", "Close Combat", "Knock Off", "Fake Out"],
         "stats": [164, 156, 135, 58, 135, 88], "sp": [24, 32, 0, 0, 0, 10], "nature": "Adamant" },
       { "species": "Whimsicott", "ability": "Prankster", "item": "Focus Sash",

@@ -4,8 +4,10 @@ Train a tiny IN-DOMAIN Pokemon menu-sprite classifier for the scan feature.
 RUN THIS ON A GPU (Google Colab, free) — NOT in this repo's environment.
 
 Colab quick start:
-  1. Zip `training/menu-sprites/` and upload+unzip it in Colab so you
-     have a folder of `<id>[_tag]_<src>_<n>.png` files (e.g. `6_shiny_Xnip..._0.png`).
+  1. Zip `training/menu-sprites/` PLUS `training/panel-crops/` (generate the
+     latter with `npx tsx scripts/generate-panel-crops.ts` — panel-realistic
+     composites the player team scan needs) into ONE folder of
+     `<id>[_tag]_<src>_<n>.png` files (e.g. `6_shiny_Xnip..._0.png`).
   2. !pip install torch torchvision onnx
   3. !python train_sprite_net.py --data menu-sprites --epochs 40 --out out
   4. Download out/model.onnx + out/classes.json and drop them in
@@ -27,8 +29,12 @@ IMG = 224
 
 
 class CaptureDownscale:
-    """Shrink to a random small size then upscale back — mimics the tiny in-game crop."""
-    def __init__(self, lo=48, hi=110):
+    """Shrink to a random small size then upscale back — mimics the tiny in-game crop.
+
+    lo=26 covers the player-panel header sprites (28-37px live crops, smaller
+    than the 48px+ opponent battle-box crops this was originally tuned for).
+    """
+    def __init__(self, lo=26, hi=110):
         self.lo, self.hi = lo, hi
 
     def __call__(self, img):
@@ -48,6 +54,10 @@ class SpriteDataset(Dataset):
         if train:
             self.tf = T.Compose([
                 T.Resize((IMG, IMG)),
+                # Partial-sprite crops: live player-panel boxes sometimes clip the
+                # sprite (left-cut Annihilape 21/33px, zoomed Gengar showing only the
+                # lower face on zh-team17/ja-rental-r676) — train on random windows too.
+                T.RandomApply([T.RandomResizedCrop(IMG, scale=(0.35, 1.0), ratio=(0.6, 1.5))], p=0.35),
                 T.RandomApply([CaptureDownscale()], p=0.8),                  # capture blur
                 T.RandomAffine(degrees=8, translate=(0.06, 0.06), scale=(0.85, 1.15)),
                 T.RandomPerspective(distortion_scale=0.15, p=0.3),   # phone-camera angle
@@ -85,7 +95,7 @@ def main():
     dl = DataLoader(SpriteDataset(files, id_to_idx, train=True),
                     batch_size=a.batch, shuffle=True, num_workers=2)
 
-    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+    dev = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     model = shufflenet_v2_x1_0(weights=None if a.resume else 'DEFAULT')  # ~1.4M params
     model.fc = nn.Linear(model.fc.in_features, len(ids))
     if a.resume:

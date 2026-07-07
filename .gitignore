@@ -75,3 +75,4 @@ training/.player-crop-preview/
 
 # browser-decoded player stats fixtures (regenerate: python3 scripts/capture-player-browser-fixtures.py)
 training/player-fixtures/
+training/panel-crops/
