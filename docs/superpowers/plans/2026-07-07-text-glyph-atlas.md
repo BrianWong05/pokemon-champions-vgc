@@ -1,5 +1,18 @@
 # Text Glyph Atlas Implementation Plan
 
+> **Execution addendum (2026-07-07, all tasks complete):** the runtime match
+> switched from Task 1's *composition* matching (compose candidate strips from
+> atlas glyphs, compare 48-bin shapes) to **per-cell decoding**
+> (`makeCellDecoder`/`matchTextAtlas`): composition lost row geometry and its
+> measured score bands overlapped (min correct 0.71 < max wrong 0.90 — no
+> viable gate), while per-cell glyph distances separate cleanly (71/71 golden
+> crops top-1, zero wrong tops, `ATLAS_ACCEPT = 0.78`). Composition remains as
+> a test/probe utility. Execution also uncovered and fixed three root causes
+> beyond the plan's scope: `stripRuleLines` eating text when junk trails below
+> it, the ja-rental-r676 golden having slot-1 moves 3/4 swapped vs the screen,
+> and `items.name_ja` for Delphoxite mis-synthesized (game elides the ー before
+> ナイト). See the spec's Risks #6 for the shipped state.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Eliminate the game-font-vs-render-font noise floor in player-scan text matching by extracting per-character glyph templates from labeled golden screenshots (zh-Hant + ja) and using them as a high-confidence first pass, with the existing canvas shape-matching as fallback — then flip the corresponding KNOWN_ISSUES/exception entries to strict assertions.
