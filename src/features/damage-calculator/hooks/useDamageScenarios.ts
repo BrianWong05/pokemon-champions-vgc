@@ -60,12 +60,16 @@ export function useDamageScenarios(
         };
       };
 
-      const isPhysical = critMove.category === 'Physical';
+      // Psyshock/Psystrike/Secret Sword are Special but damage against Def —
+      // prefer the move's overrideDefensiveStat over its category.
+      const defStat = critMove.overrideDefensiveStat
+        ?? (critMove.category === 'Physical' ? 'def' : 'spd');
+      const investsDef = defStat === 'def';
       const maxBulkSide = {
         ...defender,
         spHp: 32,
-        ...(isPhysical ? { spDef: 32 } : { spSpd: 32 }),
-        boostedStat: isPhysical ? 'def' : 'spd',
+        ...(investsDef ? { spDef: 32 } : { spSpd: 32 }),
+        boostedStat: investsDef ? 'def' : 'spd',
         hinderedStat: 'atk',
       } as SideState;
       const noSpSide = { ...defender, ...SP_ZERO, boostedStat: null, hinderedStat: null } as SideState;
