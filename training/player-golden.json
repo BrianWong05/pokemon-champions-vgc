@@ -29,7 +29,7 @@
     "movesImage": "zh-team17-moves.png",
     "statsImage": "zh-team17-stats.png",
     "lang": "zh-Hant",
-    "_note": "nicknamed panels (species never shown as text); Hisuian Zoroark disambiguated from Zoroark via stat math (HP 132 = 55+75+2, only Hisuian's base 55 fits).",
+    "_note": "nicknamed panels (species never shown as text); Hisuian Zoroark disambiguated from Zoroark via stat math (HP 132 = 55+75+2, only Hisuian's base 55 fits). Scrafty's item '頭巾混混進化石' = Scraftite (DB row added in the task-11 fix wave; asserted strictly since the 2026-07-07 classifier retrain fixed the upstream species read).",
     "team": [
       { "species": "Hisuian Zoroark", "ability": "Illusion", "item": "Choice Scarf",
         "moves": ["Bitter Malice", "Icy Wind", "Grass Knot", "U-turn"],

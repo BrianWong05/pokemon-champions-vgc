@@ -34,7 +34,7 @@ export function generateDescriptors(srcDir: string): Record<string, Descriptor[]
 // "Fix C"). Reference menu-sprite files sit on their own light-lavender card
 // background instead, which is a structurally different backdrop for
 // dhash/rgb16/edge8 to compare against a live crop.
-const PANEL_BG: [number, number, number] = [169, 151, 207];
+export const PANEL_BG: [number, number, number] = [169, 151, 207];
 
 function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
   const rn = r / 255, gn = g / 255, bn = b / 255;
@@ -105,7 +105,7 @@ function floodBackgroundMask(img: RgbaImage, tol = 14): Uint8Array {
 // Recolors background to panel purple and trims to the sprite's content
 // bounding box (+ small padding) — the same tight, panel-colored framing
 // `refineSpritePanelBox` produces for the live crop.
-function toPanelRealisticCrop(img: RgbaImage): RgbaImage {
+export function toPanelRealisticCrop(img: RgbaImage): RgbaImage {
   const mask = floodBackgroundMask(img);
   let minX = img.width, minY = img.height, maxX = 0, maxY = 0;
   for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) {

@@ -7,6 +7,7 @@ import {
   detectPlayerTiles,
   detectOpponentSpriteBoxes,
   detectPlayerSpriteBoxes,
+  refineSpritePanelBox,
   cropImage,
 } from './segmentation';
 import type { RgbaImage } from './types';
@@ -250,5 +251,43 @@ describe('cropImage', () => {
     const c = cropImage(img, { x: 2, y: 3, w: 4, h: 4 });
     expect(c.width).toBe(4); expect(c.height).toBe(4);
     expect([c.data[0], c.data[1], c.data[2]]).toEqual([1, 2, 3]);
+  });
+});
+
+describe('refineSpritePanelBox', () => {
+  const PANEL: [number, number, number] = [169, 151, 207];
+  const isBg = (r: number, g: number, b: number) => r === PANEL[0] && g === PANEL[1] && b === PANEL[2];
+  const panel = { x: 0, y: 0, w: 480, h: 124 };
+
+  // Sprite whose left flank is sparse (few content rows per column over the
+  // full search window) but solid within the sprite's own row band — the
+  // zh-team17-moves Annihilape shape that clipped to a 21px sliver.
+  function paintSparseFlankSprite(img: RgbaImage) {
+    fillRect(img, 0, 0, img.width, img.height, ...PANEL);
+    // dense core: columns 34..46, rows 10..46
+    fillRect(img, 34, 10, 13, 36, 240, 240, 240);
+    // sparse flank: columns 14..33 carry content only inside the sprite band
+    // (8 of 36 rows ≈ 22% of the band but only ~11% of the 74-row window)
+    fillRect(img, 14, 20, 20, 8, 240, 240, 240);
+  }
+
+  it('rescues a sliver pick by re-measuring density over the sprite row band', () => {
+    const img = blank(480, 124);
+    paintSparseFlankSprite(img);
+    const box = refineSpritePanelBox(img, panel, { x: 0, y: 0, w: 60, h: 60 }, isBg);
+    // without the rescue pass the box starts at the dense core (x≈30 after pad)
+    expect(box.x).toBeLessThan(20);       // flank recovered
+    expect(box.x + box.w).toBeGreaterThan(46); // core still included
+  });
+
+  it('leaves a normal sprite-sized pick untouched by the rescue guard', () => {
+    const img = blank(480, 124);
+    fillRect(img, 0, 0, img.width, img.height, ...PANEL);
+    fillRect(img, 14, 10, 34, 36, 240, 240, 240); // solid square-ish sprite
+    // banner glyphs inside the sprite row band: narrow fragments separated by
+    // gaps wider than the run-bridging (must not be grabbed)
+    for (let gx = 100; gx < 140; gx += 11) fillRect(img, gx, 12, 6, 30, 250, 250, 250);
+    const box = refineSpritePanelBox(img, panel, { x: 0, y: 0, w: 60, h: 60 }, isBg);
+    expect(box.x + box.w).toBeLessThan(60); // never bridges into the banner
   });
 });

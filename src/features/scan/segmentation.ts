@@ -598,8 +598,8 @@ export function refineSpritePanelBox(
   const colRuns = runsOf(colFlags, 3);
   if (colRuns.length === 0) return coarse;
   const widestCol = colRuns.reduce((a, b) => (b.end - b.start > a.end - a.start ? b : a));
-  const bx0 = x0 + widestCol.start;
-  const bx1 = x0 + widestCol.end + 1;
+  let bx0 = x0 + widestCol.start;
+  let bx1 = x0 + widestCol.end + 1;
 
   const rowFlags: boolean[] = [];
   for (let y = y0; y < y1; y++) {
@@ -613,6 +613,33 @@ export function refineSpritePanelBox(
     : { start: 0, end: y1 - y0 - 1 };
   const by0 = y0 + tallestRow.start;
   const by1 = y0 + tallestRow.end + 1;
+
+  // Rescue pass for implausibly narrow picks: a sprite is never much narrower
+  // than it is tall, but a ~36px sprite in the ~74px search window leaves its
+  // limb/flank columns at 7-14% of the WINDOW height — under the 15% floor —
+  // so the widest run can catch only a sliver (left-cut Annihilape on
+  // zh-team17-moves reads as a white-maned lookalike). Re-measure column
+  // density over the sprite's own row band and widen to the run overlapping
+  // the first pick. Guard rails, each load-bearing: only fires when the pick
+  // is narrower than 0.7x the band height (normal picks skip it untouched);
+  // growth is clamped to one band-height per side and rows are NOT re-derived
+  // (banner glyphs also gain density over the narrow band — an unclamped
+  // re-pick walks the box onto the nickname text / item icons).
+  const bandH = by1 - by0;
+  if (bandH >= 4 && bx1 - bx0 < bandH * 0.7) {
+    const colFlags2: boolean[] = [];
+    for (let x = x0; x < x1; x++) {
+      let cnt = 0;
+      for (let y = by0; y < by1; y++) if (isContent(x, y)) cnt++;
+      colFlags2.push(cnt > bandH * 0.15);
+    }
+    const seed = (bx0 + bx1) / 2 - x0;
+    const run2 = runsOf(colFlags2, 3).find((r) => r.start <= seed && seed <= r.end);
+    if (run2) {
+      bx0 = Math.max(x0 + run2.start, bx0 - bandH);
+      bx1 = Math.min(x0 + run2.end + 1, bx1 + bandH);
+    }
+  }
 
   const padX = Math.round(panel.h * 0.03);
   const padY = Math.round(panel.h * 0.05);
