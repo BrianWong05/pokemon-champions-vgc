@@ -2,7 +2,12 @@ import type { RgbaImage, TileBox, Candidate, ReferenceEntry } from './types';
 import { detectPlayerPanels } from './playerPanels';
 import type { PanelRegions, ScanLang } from './playerTypes';
 import { readStatCell, type StatRowRead } from './statDigits';
-import { textShapeAt, matchTextShape, browserTextRenderer, type TextRenderer, type TextMatchResult } from './textMatch';
+import {
+  shapeFromMask, matchTextHybrid, makeCellDecoder, parseAtlas,
+  browserTextRenderer, type TextRenderer, type TextMatchResult,
+} from './textMatch';
+import { whiteMask, MASK_THRESHOLDS } from './hpText';
+import { TEXT_GLYPH_ATLAS, TEXT_GLYPH_PITCH } from './textGlyphAtlas';
 import { loadPlayerPanelDescriptors, filterByFormatLegal } from './referenceData';
 import { loadClassifier, type Classifier } from './classifier';
 import { computeDescriptor } from './fingerprint';
@@ -40,17 +45,26 @@ export const PLAYER_SCAN_DEPS: PlayerScanDeps = {
   render: browserTextRenderer,
 };
 
+// Game-font glyph templates extracted from labeled goldens
+// (scripts/build-text-glyph-atlas.ts) — the atlas-first pass in
+// matchTextHybrid; canvas shape matching remains the fallback.
+const textAtlas = parseAtlas(TEXT_GLYPH_ATLAS, TEXT_GLYPH_PITCH);
+
 function readTextField(
   img: RgbaImage, box: TileBox | undefined,
   entries: Array<{ key?: string; moveId?: number; names: any }>,
   render: TextRenderer,
 ): TextFieldRead | null {
   if (!box) return null;
-  const shape = textShapeAt(img, box);
+  const raw = whiteMask(img, box, 0.72); // CALIBRATE threshold (mirrors textShapeAt)
+  const shape = shapeFromMask(raw);
   if (!shape) return null;
+  const decode = makeCellDecoder(
+    MASK_THRESHOLDS.map(t => (t === 0.72 ? raw : whiteMask(img, box, t))), textAtlas,
+  );
   const byLang = {} as TextFieldRead['byLang'];
   for (const lang of LANGS) {
-    byLang[lang] = matchTextShape(shape, candidatesForLang(entries, lang), render);
+    byLang[lang] = matchTextHybrid(decode, shape, candidatesForLang(entries, lang), render);
   }
   return { byLang };
 }

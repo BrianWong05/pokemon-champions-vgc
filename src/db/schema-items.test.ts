@@ -28,8 +28,15 @@ describe('localized scan data', () => {
     expect(row?.name_ja).toBe('ズルズキンナイト');
   });
   it('Champions mega stones have synthesized ja names', () => {
+    // Delphoxite is a MANUAL_JA override, not plain synthesis: the game
+    // elides the trailing long-vowel mark (マフォクシー -> マフォクシナイト),
+    // confirmed against the ja-rental-r676 golden screenshot by same-font
+    // glyph composition (scripts/build-text-glyph-atlas.ts, 2026-07-07).
     const row = db.prepare("SELECT name_ja FROM items WHERE name_en = 'Delphoxite'").get() as any;
-    expect(row?.name_ja).toBe('マフォクシーナイト');
+    expect(row?.name_ja).toBe('マフォクシナイト');
+    // and an actually-synthesized one keeps the plain speciesJa + ナイト form
+    const syn = db.prepare("SELECT name_ja FROM items WHERE name_en = 'Pidgeotite'").get() as any;
+    expect(syn?.name_ja).toBe('ピジョットナイト');
   });
   it('public copy is in sync', () => {
     const pub = new Database('public/vgc_pokemon.db', { readonly: true });
