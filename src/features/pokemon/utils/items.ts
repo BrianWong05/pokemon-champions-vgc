@@ -1,19 +1,20 @@
 export const MEGA_STONES = new Set([
-  "Abomasite", "Absolite", "Aerodactylite", "Aggronite", "Alakazite",
-  "Altarianite", "Ampharosite", "Audinite", "Banettite", "Beedrillite",
-  "Black Augurite", "Blastoisinite", "Blazikenite", "Cameruptite",
+  "Abomasite", "Absolite", "Absolite Z", "Aerodactylite", "Aggronite", "Alakazite",
+  "Altarianite", "Ampharosite", "Audinite", "Banettite", "Barbaracite", "Baxcalibrite", "Beedrillite",
+  "Blastoisinite", "Blazikenite", "Cameruptite",
   "Chandelurite", "Charizardite X", "Charizardite Y", "Chesnaughtite",
-  "Chimechite", "Clefablite", "Crabominite", "Delphoxite", "Diancite",
-  "Dragoninite", "Drampanite", "Emboarite", "Excadrite", "Feraligite",
-  "Floettite", "Froslassite", "Galladite", "Garchompite", "Gardevoirite",
-  "Gengarite", "Glalitite", "Glimmoranite", "Golurkite", "Greninjite",
-  "Gyaradosite", "Hawluchanite", "Heracronite", "Houndoominite",
-  "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite",
-  "Manectite", "Mawilite", "Medichamite", "Meganiumite", "Meowsticite",
+  "Chimechite", "Clefablite", "Crabominite", "Darkranite", "Delphoxite", "Diancite",
+  "Dragalgite", "Dragoninite", "Drampanite", "Eelektrossite", "Emboarite", "Excadrite", "Falinksite", "Feraligite",
+  "Floettite", "Froslassite", "Galladite", "Garchompite", "Garchompite Z", "Gardevoirite",
+  "Gengarite", "Glalitite", "Glimmoranite", "Golisopite", "Golurkite", "Greninjite",
+  "Gyaradosite", "Hawluchanite", "Heatranite", "Heracronite", "Houndoominite",
+  "Kangaskhanite", "Latiasite", "Latiosite", "Lopunnite", "Lucarionite", "Lucarionite Z",
+  "Magearnite", "Malamarite", "Manectite", "Mawilite", "Medichamite", "Meganiumite", "Meowsticite",
   "Metagrossite", "Mewtwonite X", "Mewtwonite Y", "Pidgeotite", "Pinsirite",
-  "Sablenite", "Salamencite", "Scraftite", "Sceptilite", "Scizorite", "Scovillainite",
-  "Sharpedonite", "Skarmorite", "Slowbronite", "Starminite", "Steelixite",
-  "Swampertite", "Tyranitarite", "Venusaurite", "Victreebelite"
+  "Pyroarite", "Raichunite X", "Raichunite Y", "Sablenite", "Salamencite", "Scraftinite", "Sceptilite", "Scizorite", "Scolipite", "Scovillainite",
+  "Sharpedonite", "Skarmorite", "Slowbronite", "Staraptite", "Starminite", "Steelixite",
+  "Swampertite", "Tatsugirinite", "Tyranitarite", "Venusaurite", "Victreebelite",
+  "Zeraorite", "Zygardite"
 ]);
 
 /**
