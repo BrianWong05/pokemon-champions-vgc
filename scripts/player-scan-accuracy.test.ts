@@ -181,7 +181,7 @@ describe.skipIf(!fs.existsSync(GOLDEN_DIR))('player scan end-to-end', () => {
         if (want.item === null) {
           // Documented DB gap (item has no row at all) -- not scan-quality,
           // not exception-eligible (nothing to rank against). No current
-          // golden uses this (zh-team17 Scrafty's Scraftite gained a DB row
+          // golden uses this (zh-team17 Scrafty's Scraftinite gained a DB row
           // in the task-11 fix wave and is asserted strictly again).
         } else if (!speciesIssue) {
           const itemException = TEXT_FIELD_EXCEPTIONS.find(e => e.pairKey === key && e.slot === i && e.field === 'item');

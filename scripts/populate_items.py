@@ -20,35 +20,52 @@ def lang(df, lid, col):
 # Champions-only mega stones: not in PokeAPI. Synthesize zh names as "<species zh>進化石"
 # (official Champions naming, e.g. 快龍進化石) by longest-common-prefix species match.
 MEGA_STONES = [  # keep in sync with src/features/pokemon/utils/items.ts MEGA_STONES
-    "Abomasite","Absolite","Aerodactylite","Aggronite","Alakazite","Altarianite","Ampharosite",
-    "Audinite","Banettite","Beedrillite","Blastoisinite","Cameruptite","Chandelurite",
+    "Abomasite","Absolite","Absolite Z","Aerodactylite","Aggronite","Alakazite","Altarianite","Ampharosite",
+    "Audinite","Banettite","Barbaracite","Baxcalibrite","Beedrillite","Blastoisinite","Cameruptite","Chandelurite",
     "Charizardite X","Charizardite Y","Chesnaughtite","Chimechite","Clefablite","Crabominite",
-    "Delphoxite","Dragoninite","Drampanite","Emboarite","Excadrite","Feraligite","Floettite",
-    "Froslassite","Galladite","Garchompite","Gardevoirite","Gengarite","Glalitite","Glimmoranite",
-    "Golurkite","Greninjite","Gyaradosite","Hawluchanite","Heracronite","Houndoominite",
-    "Kangaskhanite","Lopunnite","Lucarionite","Manectite","Medichamite","Meganiumite",
-    "Meowsticite","Pidgeotite","Pinsirite","Sablenite","Scizorite","Scovillainite","Scraftite","Sharpedonite",
-    "Skarmorite","Slowbronite","Starminite","Steelixite","Tyranitarite","Venusaurite","Victreebelite",
+    "Darkranite","Delphoxite","Dragalgite","Dragoninite","Drampanite","Eelektrossite","Emboarite","Excadrite","Falinksite","Feraligite","Floettite",
+    "Froslassite","Galladite","Garchompite","Garchompite Z","Gardevoirite","Gengarite","Glalitite","Glimmoranite",
+    "Golisopite","Golurkite","Greninjite","Gyaradosite","Hawluchanite","Heatranite","Heracronite","Houndoominite",
+    "Kangaskhanite","Lopunnite","Lucarionite","Lucarionite Z","Magearnite","Malamarite","Manectite","Medichamite","Meganiumite",
+    "Meowsticite","Pidgeotite","Pinsirite","Pyroarite","Raichunite X","Raichunite Y","Sablenite","Scizorite","Scolipite","Scovillainite","Scraftinite","Sharpedonite",
+    "Skarmorite","Slowbronite","Staraptite","Starminite","Steelixite","Tatsugirinite","Tyranitarite","Venusaurite","Victreebelite",
+    "Zeraorite","Zygardite",
 ]
-MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho", "Scraftite": "Scrafty"}  # extend if prefix match misfires
+# The MEGA_STONES list above is the full 92-stone Legends Z-A / Champions set, every name verified
+# against Bulbapedia (the same source download_mega_stone.py scrapes). A few en/ja/zh fields are
+# also confirmed on-screen in training/player-screens/: Barbaracite en (en-rental-43et-moves.png),
+# Raichunite Y ja (ja-team7-moves.png), Dragalgite zh (zh-team3-moves.png). The "... Z" stones are
+# the Mega Z forms of Absol/Garchomp/Lucario (full-width Ｚ suffix, like the X/Y stones).
+MANUAL_SPECIES = {"Dragoninite": "Dragonite", "Chimechite": "Chimecho", "Scraftinite": "Scrafty"}  # extend if prefix match misfires
 
 # name_ja synthesis for Champions-only stones: <species name_ja> + "ナイト", eliding
 # one "ナ" when the species name already ends in "ナ" (フシギバナ -> フシギバナイト,
-# confirmed against the existing Venusaurite row). MANUAL_JA overrides anything the
-# heuristic can't express (e.g. a species name_ja carrying a stray suffix artifact).
-# Delphoxite: the game also elides a trailing long-vowel mark (マフォクシー ->
-# マフォクシナイト). Confirmed against the ja-rental-r676 golden screenshot by
-# same-font glyph composition: 0.923 for the elided form vs 0.850 with "ー"
-# (scripts/build-text-glyph-atlas.ts machinery).
-MANUAL_JA = {"Meowsticite": "ニャオニクスナイト", "Delphoxite": "マフォクシナイト"}
+# confirmed against the existing Venusaurite row). MANUAL_JA overrides names the ナ-only
+# heuristic can't express -- several Z-A stones drop the species' final mora before ナイト
+# (Bulbapedia; same rule as the in-table リザードン->リザードナイト / ミュウツー->ミュウツナイト):
+#   ドラミドロ->ドラミド, ペンドラー->ペンドラ, シビルドン->シビルド, カラマネロ->カラマネ,
+#   ズルズキン->ズルズキ (Scraftinite), ヒードラン->ヒードラ (Heatranite).
+MANUAL_JA = {
+    "Meowsticite": "ニャオニクスナイト", "Delphoxite": "マフォクシナイト", "Dragalgite": "ドラミドナイト",
+    "Scolipite": "ペンドラナイト", "Eelektrossite": "シビルドナイト", "Malamarite": "カラマネナイト",
+    "Scraftinite": "ズルズキナイト", "Heatranite": "ヒードラナイト",
+}
 
 def synthesize_ja(species_ja):
     if not species_ja:
         return None
     return species_ja[:-1] + "ナイト" if species_ja.endswith("ナ") else species_ja + "ナイト"
 
+def strip_form_suffix(name):
+    # Form/gender species rows carry a trailing parenthetical in every name field
+    # (Pyroar "(Male)", Tatsugiri "(Curly)", Zygarde "(50)", Absol "(Mega Z)", ...);
+    # drop it before synthesizing the stone name.
+    if name and name.endswith(")") and " (" in name:
+        return name[: name.rfind(" (")]
+    return name
+
 def species_for(stone, pokemon):
-    base = stone.replace(" X", "").replace(" Y", "")
+    base = stone.replace(" X", "").replace(" Y", "").replace(" Z", "")
     if stone in MANUAL_SPECIES:
         return MANUAL_SPECIES[stone]
     best, best_len = None, 0
@@ -115,10 +132,14 @@ def main():
             continue  # classic stones came from PokeAPI
         sp = species_for(stone, pokemon)
         row = pokemon[pokemon.name_en == sp].iloc[0] if sp is not None and (pokemon.name_en == sp).any() else None
-        suffix = " X" if stone.endswith(" X") else (" Y" if stone.endswith(" Y") else "")
-        zh = (str(row.name_zh) + "進化石" + suffix) if row is not None and pd.notna(row.name_zh) else None
+        # ja/zh append a full-width Ｘ/Ｙ/Ｚ with no space, matching the PokeAPI classic rows
+        # already in this table (リザードナイトＹ / 噴火龍進化石Ｙ) and Bulbapedia (ライチュウナイトＹ,
+        # アブソルナイトＺ). Only name_en keeps the ASCII spaced "... Y" form (matches Charizardite Y).
+        suffix = ("Ｘ" if stone.endswith(" X") else "Ｙ" if stone.endswith(" Y")
+                  else "Ｚ" if stone.endswith(" Z") else "")
+        zh = (strip_form_suffix(str(row.name_zh)) + "進化石" + suffix) if row is not None and pd.notna(row.name_zh) else None
         zh_hans = None  # zh-Hant name is char-convertible if needed later; matching falls back to en
-        ja = MANUAL_JA.get(stone) or (synthesize_ja(row.name_ja) + suffix if row is not None and pd.notna(row.name_ja) else None)
+        ja = MANUAL_JA.get(stone) or (synthesize_ja(strip_form_suffix(row.name_ja)) + suffix if row is not None and pd.notna(row.name_ja) else None)
         if stone in existing_ids:
             item_id = existing_ids[stone]
         else:
@@ -133,6 +154,13 @@ def main():
     """, mega_records)
 
     print(f"Successfully inserted/updated {len(mega_records)} Champions-only mega stones.")
+
+    # Drop stale Champions rows no longer in MEGA_STONES (e.g. a renamed stone like
+    # Scraftite -> Scraftinite) so re-runs don't leave orphans behind.
+    placeholders = ",".join("?" * len(MEGA_STONES))
+    cursor.execute(f"DELETE FROM items WHERE id >= 100000 AND name_en NOT IN ({placeholders})", MEGA_STONES)
+    if cursor.rowcount:
+        print(f"Removed {cursor.rowcount} stale Champions stone row(s).")
 
     conn.commit()
 

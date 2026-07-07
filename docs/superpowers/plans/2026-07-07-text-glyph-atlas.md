@@ -66,7 +66,7 @@
 - Produces: `TEXT_GLYPH_ATLAS: AtlasGlyphData[]` and `TEXT_GLYPH_GAP: number` in the generated file.
 
 **Builder algorithm:**
-1. For each golden pair with `lang !== 'en'`: decode movesImage, `detectPlayerPanels`, per slot look up localized labels (ability/item/4 moves) from the DB by the golden's English names (`name_zh` for zh-Hant, `name_ja` for ja); skip null labels (e.g. Scraftite).
+1. For each golden pair with `lang !== 'en'`: decode movesImage, `detectPlayerPanels`, per slot look up localized labels (ability/item/4 moves) from the DB by the golden's English names (`name_zh` for zh-Hant, `name_ja` for ja); skip null labels (e.g. Scraftinite, before it gained a DB row).
 2. Per (box, label): `whiteMask@0.72` → `stripRuleLines` → `stripLeadingIcon` → `inkBounds` → column-projection blobs → group into `[...label].length` contiguous groups by pitch-uniformity DP (minimize Σ|groupExtent − pitch|); skip crop on failure (log).
 3. Per group: vertical ink bounds; scale mask region to line height 32 (area-average, ≥0.5 → 1); record `yOff`. Record inter-group gaps (scaled); atlas gap = global median.
 4. Dedupe per char: keep the largest-native-height variant; warn on shape conflicts.
