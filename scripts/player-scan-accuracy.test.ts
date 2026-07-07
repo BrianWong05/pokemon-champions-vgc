@@ -16,35 +16,30 @@ const GOLDEN_DIR = 'training/player-screens';
 // Human-approved (2026-07-07, carried from src/features/scan/scanPlayerFrame.test.ts's
 // FULL_VOCAB_TOP1_EXCEPTIONS): mega-stone names are a confusable family;
 // Swampertite ranks ~5th after the stone-vocabulary completion, top-1 margin
-// < 0.03, flagged low-confidence in the UI. Same contract here.
+// < 0.03, flagged low-confidence in the UI. EN stays on canvas shape matching
+// (the glyph atlas covers only zh/ja game glyphs), so the exception stands.
 //
-// Human-approved (2026-07-07): items.name_ja is now backfilled for all
-// Champions-only mega stones (scripts/populate_items.py's synthesize_ja), so
-// the original reason for this exception (NULL-fallback to an English label
-// that could never shape-match katakana) is gone -- tried removing it. It is
-// still needed, but for a DIFFERENT reason now: with the real katakana label
-// "マフォクシーナイト" in the vocabulary, shape-matching against the on-screen
-// crop ranks it 868th of 2200 candidates (score 0.826 vs top score 0.903,
-// "メガニウムナイト" Meganiumite) -- every mega-stone name shares the "ナイト"
-// suffix, so they cluster tightly near the top and this specific species-name
-// prefix loses the shape race. This is a text-match-algorithm accuracy gap
-// (Task 4/9 territory), not a data gap; kept as a flagged low-confidence
-// field, same class as the EN gate's Swampertite exception.
+// RESOLVED (2026-07-07): the ja Delphoxite "rank 868" exception is gone. Its
+// root cause was never a shape-race loss: items.name_ja held the synthesized
+// "マフォクシーナイト" while the game renders "マフォクシナイト" (long-vowel
+// mark elided before ナイト; confirmed by same-font glyph composition against
+// the golden crop, 0.923 vs 0.850). With the label fixed in both DB copies
+// (scripts/populate_items.py MANUAL_JA) and the glyph atlas providing a
+// game-font first pass, the field is now asserted strictly below.
 const TEXT_FIELD_EXCEPTIONS: Array<{
   pairKey: string; slot: number; field: 'ability' | 'item';
   expected: string; withinTopN: number; maxMargin: number;
 }> = [
   { pairKey: 'en-rental', slot: 1, field: 'item', expected: 'Swampertite', withinTopN: 5, maxMargin: 0.03 },
-  { pairKey: 'ja-rental-r676', slot: 4, field: 'item', expected: 'Delphoxite', withinTopN: 868, maxMargin: 0.08 },
 ];
 
 // KNOWN_ISSUES: human decision (2026-07-07) -- ship v1 with the zh-Hant/ja
 // residue below as DOCUMENTED known issues rather than blocking the gate.
 // Full evidence: .superpowers/sdd/task-11-report.md ("## Fix: templates +
-// stone data" and its predecessor sections). Follow-ups: classifier
-// hardening on nicknamed-panel sprite crops, per-language glyph/text-match
-// work (both out of scope here, tracked separately, see report's "Follow-up
-// flagged" section, task_e6ab1b5c).
+// stone data" and its predecessor sections). Remaining follow-up: classifier
+// hardening on nicknamed-panel sprite crops (the per-language glyph/
+// text-match follow-up shipped 2026-07-07 as the glyph atlas -- see the
+// resolved notes on KNOWN_ISSUES.move below).
 //
 // Each entry REPLACES the strict assertion for its (pairKey, slot, field)
 // with a PIN of the current wrong behavior, narrow enough that a silent
@@ -79,29 +74,20 @@ const KNOWN_ISSUES = {
     cascades: { ability: string; moves: string[] };
     date: string; followUp: string;
   }>,
-  move: [
-    {
-      pairKey: 'zh-team17', slot: 2, moveIndex: 2, expected: 'Tailwind',
-      expectedInOptions: true,
-      resolvedMoves: ['Draco Meteor', 'Thunderbolt', 'Heat Wave', 'Haze'],
-      reason: 'text-match miss: Tailwind (rank 2, score 0.7773) shape-loses top-1 to Heat Wave (score 0.7821) within top-3',
-      date: '2026-07-07', followUp: 'task-11-report.md Recommendation (Task 4/9, text-match accuracy)',
-    },
-    {
-      pairKey: 'ja-rental-r676', slot: 0, moveIndex: 2, expected: 'Taunt',
-      expectedInOptions: false,
-      resolvedMoves: ['Spirit Break', 'Reflect', 'Light Screen'],
-      reason: 'text-match miss: Taunt absent from top-3 entirely (worse than a close-margin collision); move 4 ("Light Screen") separately reads as no-shape-detected (null) on this crop and is dropped, so the resolved array is 3 long, not 4',
-      date: '2026-07-07', followUp: 'task-11-report.md Recommendation (Task 4/9, text-match accuracy)',
-    },
-    {
-      pairKey: 'ja-rental-r676', slot: 5, moveIndex: 1, expected: 'Sludge Wave',
-      expectedInOptions: true,
-      resolvedMoves: ['Shadow Ball', 'Venoshock', 'Icy Wind', 'Destiny Bond'],
-      reason: 'text-match miss: Sludge Wave/Venoshock swap, margin 0.002 (would be exception-eligible alone but not named in the original brief\'s expected residue, kept as a known issue instead of a TEXT_FIELD_EXCEPTIONS entry)',
-      date: '2026-07-07', followUp: 'task-11-report.md Recommendation (Task 4/9, text-match accuracy)',
-    },
-  ] as Array<{
+  // RESOLVED (2026-07-07) -- the three v1 move-text known issues are gone,
+  // fixed at their real roots by the glyph-atlas work (docs/superpowers/plans/
+  // 2026-07-07-text-glyph-atlas.md):
+  //   - zh-team17 slot 2 Tailwind/Heat Wave: genuine canvas-font shape
+  //     collision; the game-font atlas pass now ranks Tailwind top-1.
+  //   - ja-rental-r676 slot 0 "Taunt not in top-3": the GOLDEN was mislabeled
+  //     -- the screen shows Light Screen as move 3 and Taunt as move 4
+  //     (verified visually); the matcher had been right all along.
+  //   - ja-rental-r676 slot 0 move 4 no-shape null: stripRuleLines ate the
+  //     text band when panel-frame junk trailed below it; fixed to keep the
+  //     tallest row-blob.
+  //   - ja-rental-r676 slot 5 Sludge Wave/Venoshock swap: atlas pass ranks
+  //     Sludge Wave top-1 (margin 0.099, was 0.002 under canvas matching).
+  move: [] as Array<{
     pairKey: string; slot: number; moveIndex: number; expected: string;
     expectedInOptions: boolean; resolvedMoves: string[];
     reason: string; date: string; followUp: string;

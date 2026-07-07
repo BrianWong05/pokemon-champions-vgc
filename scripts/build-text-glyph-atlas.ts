@@ -7,9 +7,10 @@
  * This builder generalizes the digit-template approach
  * (build-stat-glyph-templates.ts): segment each labeled ability/item/move
  * crop into per-character cells, label them with the known localized string,
- * and store the game's own glyph bitmaps. At scan time candidates are
- * COMPOSED from these glyphs (textMatch.ts's composeAtlasMask), so the
- * comparison is game-font vs game-font — also platform-font independent.
+ * and store the game's own glyph bitmaps. At scan time the crop is decoded
+ * into cells and matched per-glyph against the atlas (textMatch.ts's
+ * makeCellDecoder/matchTextAtlas), so the comparison is game-font vs
+ * game-font — also platform-font independent.
  *
  * EN is deliberately excluded: the proportional Latin font has touching
  * letters that column projection cannot segment reliably, and the EN gate is
@@ -27,7 +28,7 @@ import { whiteMask, MASK_THRESHOLDS, type BinMask } from '../src/features/scan/h
 import {
   stripRuleLines, stripLeadingIcon, inkBounds, segmentCells,
   parseAtlas, makeCellDecoder, matchTextAtlas, ATLAS_LINE_H,
-  type AtlasGlyphData, type TextAtlas, type CellBlob,
+  type AtlasGlyphData, type TextAtlas,
 } from '../src/features/scan/textMatch';
 import { Generations } from '@smogon/calc';
 import { MEGA_STONES } from '../src/features/pokemon/utils/items';
