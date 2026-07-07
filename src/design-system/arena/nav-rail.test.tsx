@@ -1,12 +1,10 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { NavRail } from './NavRail';
 import { RegPill } from './RegPill';
 
 describe('NavRail', () => {
-  afterEach(cleanup);
-
   it('renders one icon button per tab with aria-labels, no text labels', () => {
     render(<NavRail active="calc" />);
     expect(screen.getByLabelText('Calculator')).toBeTruthy();
@@ -31,8 +29,6 @@ describe('NavRail', () => {
 });
 
 describe('RegPill compact', () => {
-  afterEach(cleanup);
-
   it('renders only the short code', () => {
     render(<RegPill value="Reg M-B" compact />);
     expect(screen.getByText('M-B')).toBeTruthy();

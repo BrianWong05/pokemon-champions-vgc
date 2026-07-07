@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { ArenaCalculatorLandscape } from './ArenaCalculatorLandscape';
 import type { CalcState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
 import type { DamageResult } from '@/components/organisms/ResultsPanel';
@@ -79,8 +79,6 @@ function setup() {
 }
 
 describe('ArenaCalculatorLandscape', () => {
-  afterEach(cleanup);
-
   it('renders both side panels and per-move damage ranges', () => {
     setup();
     expect(screen.getByText('You')).toBeTruthy();

@@ -9,7 +9,7 @@ import type { PlayerScreenKind } from './playerTypes';
 import PokemonImagePicker from './PokemonImagePicker';
 import CropStep from './CropStep';
 import { filePickerSource, cameraSource } from './captureSource';
-import { usePlayerTeamScan } from './usePlayerTeamScan';
+import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
 import { buildConfigs, type MergedPlayerScan, type PlayerSlot } from './mergePlayerScan';
 import { loadClassifier } from './classifier';
 
@@ -19,6 +19,8 @@ interface PlayerScanModalProps {
   pokemonList: PokemonBaseStats[];
   moveList: MoveData[];
   onSave: (members: PokemonConfig[]) => void;
+  /** test-only affordance: inject fake usePlayerTeamScan deps instead of the real DEFAULT_PLAYER_DEPS */
+  deps?: PlayerTeamScanDeps;
 }
 
 // Editable copy of a slot's fields, seeded from the merged scan and mutated locally.
@@ -44,9 +46,9 @@ const toEditable = (slot: PlayerSlot): EditableSlot => ({
   nature: slot.nature.name,
 });
 
-const PlayerScanModal: React.FC<PlayerScanModalProps> = ({ isOpen, onClose, pokemonList, moveList, onSave }) => {
+const PlayerScanModal: React.FC<PlayerScanModalProps> = ({ isOpen, onClose, pokemonList, moveList, onSave, deps }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
-    usePlayerTeamScan(pokemonList);
+    usePlayerTeamScan(pokemonList, deps);
 
   // ponytail: dev-only harness for golden verification in-browser
   if (import.meta.env.DEV) (window as any).__playerScanDebug = { addFrame };
@@ -68,16 +70,29 @@ const PlayerScanModal: React.FC<PlayerScanModalProps> = ({ isOpen, onClose, poke
   const [croppingKind, setCroppingKind] = useState<PlayerScreenKind | null>(null);
 
   // Seed local editable state whenever the merged scan changes (roster-seeding pattern).
+  // When either image's status just transitioned to 'done' (a new ingest, not a
+  // species-pick rescan), the merged data for ALL slots got better (e.g. moves-first
+  // then stats lands: SP/nature go from defaults to real reads) — force a full re-seed
+  // so stale per-slot edits from the first image don't mask the second image's data.
+  // Between-ingest user edits are intentionally discarded in that case; a rescan
+  // triggered by picking a species doesn't change status, so those edits survive.
+  const prevStatusesRef = React.useRef({ moves: movesImage.status, stats: statsImage.status });
   React.useEffect(() => {
     if (!merged) return;
-    setEdits((prev) => {
+    const prev = prevStatusesRef.current;
+    const justFinished =
+      (movesImage.status === 'done' && prev.moves !== 'done') ||
+      (statsImage.status === 'done' && prev.stats !== 'done');
+    prevStatusesRef.current = { moves: movesImage.status, stats: statsImage.status };
+
+    setEdits((prevEdits) => {
       const next: Record<number, EditableSlot> = {};
       for (const slot of merged.slots) {
-        next[slot.slot] = prev[slot.slot] ?? toEditable(slot);
+        next[slot.slot] = justFinished ? toEditable(slot) : prevEdits[slot.slot] ?? toEditable(slot);
       }
       return next;
     });
-  }, [merged]);
+  }, [merged, movesImage.status, statsImage.status]);
 
   const updateEdit = (slot: number, patch: Partial<EditableSlot>) =>
     setEdits((prev) => ({ ...prev, [slot]: { ...prev[slot], ...patch } }));
@@ -119,7 +134,10 @@ const PlayerScanModal: React.FC<PlayerScanModalProps> = ({ isOpen, onClose, poke
         ability: { ...slot.ability, value: e.ability },
         item: { ...slot.item, value: e.item },
         moves: slot.moves.map((m, i) => ({ ...m, value: e.moves[i] ?? null })),
-        statReads: slot.statReads.map((sr, i) => ({ ...sr, sp: e.sp[i] ?? 0 })),
+        // Build a length-6 array from the edited SP regardless of whether the stats
+        // image was scanned (slot.statReads is [] in that case) — otherwise edited SP
+        // for a moves-only scan never reaches buildConfigs, which falls back to 0.
+        statReads: e.sp.map((sp, i) => ({ ...(slot.statReads[i] ?? { stat: null, mult: null, consistent: false }), sp })),
         nature: { ...slot.nature, name: e.nature },
       };
     });
