@@ -24,6 +24,10 @@ import { DefenderPanel } from '@/features/damage-calculator/components/DefenderP
 import { ResultSummary } from '@/features/damage-calculator/components/ResultSummary';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
+import { useBattleRoster } from '@/features/scan/useBattleRoster';
+import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
+import MyTeamChips from '@/features/scan/MyTeamChips';
+import { useMyTeam } from '@/features/scan/useMyTeam';
 import type { CapturedFrame } from '@/features/scan/captureSource';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
@@ -32,8 +36,9 @@ import { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pokemon/utils/showdown-matcher';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { ArenaCalculator } from '@/features/damage-calculator/components/mobile/ArenaCalculator';
+import { ArenaCalculatorLandscape } from '@/features/damage-calculator/components/mobile/ArenaCalculatorLandscape';
 
 const speciesNameOf = (side: SideState, list: { id: number; nameEn: string }[]) =>
   list.find((p) => p.id === side.selectedId)?.nameEn ?? null;
@@ -53,10 +58,18 @@ const DamageCalculatorPage: React.FC = () => {
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const { createTeam } = useTeams();
+  const { teams, createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode !== 'desktop';
+  const { roster: battleRoster, confirmRoster, clearRoster } = useBattleRoster();
+  const pokemonById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
+  const { team: myTeam, selectTeam, clearTeam } = useMyTeam(teams);
+  const myTeamIds = useMemo(
+    () => (myTeam ? myTeam.members.map((m) => m.configuration.selectedId).filter((n): n is number => n != null) : null),
+    [myTeam],
+  );
 
   const handleCaptured = React.useCallback((frame: CapturedFrame) => {
     setCapturedBlob(frame.blob);
@@ -135,6 +148,28 @@ const DamageCalculatorPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.p2.loadedFromScan, state.p2.nature, state.p2.item, state.p2.activeAbility,
      state.p2.spHp, state.p2.spAtk, state.p2.spDef, state.p2.spSpa, state.p2.spSpd, state.p2.spSpe]);
+
+  const rosterChips = battleRoster && battleRoster.length > 0 ? (
+    <OpponentRosterChips
+      roster={battleRoster}
+      byId={pokemonById}
+      activeId={state.p2.selectedId}
+      onPick={(id) => void handleLoadDefender(id)}
+      onClear={clearRoster}
+    />
+  ) : null;
+
+  const myTeamChips = (
+    <MyTeamChips
+      teams={teams}
+      team={myTeam}
+      byId={pokemonById}
+      activeId={state.p1.selectedId}
+      onSelectTeam={selectTeam}
+      onPick={(member) => void actions.handleLoadConfig('p1', member.configuration)}
+      onClear={clearTeam}
+    />
+  );
 
   const handleApplySpread = (side: 'p1' | 'p2', spread: Spread) =>
     dispatch({ type: 'APPLY_SPREAD', payload: { side, sp: spread.sp, nature: spread.nature } });
@@ -262,10 +297,12 @@ const DamageCalculatorPage: React.FC = () => {
     }
   };
 
+  const MobileCalc = mode === 'arena-landscape' ? ArenaCalculatorLandscape : ArenaCalculator;
+
   if (isMobile) {
     return (
       <>
-        <ArenaCalculator
+        <MobileCalc
           state={state}
           dispatch={dispatch}
           pokemonList={pokemonList}
@@ -278,6 +315,8 @@ const DamageCalculatorPage: React.FC = () => {
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
           onOpenScan={() => setIsScanModalOpen(true)}
+          defenderExtra={rosterChips}
+          attackerExtra={myTeamChips}
         />
         <ScanTeamModal
           isOpen={isScanModalOpen}
@@ -287,6 +326,9 @@ const DamageCalculatorPage: React.FC = () => {
           onLoadAttacker={handleLoadAttacker}
           onSaveTeam={handleSaveOppTeam}
           externalBlob={capturedBlob}
+          battleRoster={battleRoster}
+          onConfirmRoster={confirmRoster}
+          myTeamIds={myTeamIds}
         />
         <ToastNotification message={toast} />
       </>
@@ -326,6 +368,7 @@ const DamageCalculatorPage: React.FC = () => {
           moveList={moveList}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
+          attackerExtra={myTeamChips}
         />
       }
       defenderPanel={
@@ -346,6 +389,7 @@ const DamageCalculatorPage: React.FC = () => {
             moveList={moveList}
             onApplySpread={handleApplySpread}
             onResetBuild={handleResetBuild}
+            defenderExtra={rosterChips}
           />
         </div>
       }
@@ -358,6 +402,9 @@ const DamageCalculatorPage: React.FC = () => {
       onLoadAttacker={handleLoadAttacker}
       onSaveTeam={handleSaveOppTeam}
       externalBlob={capturedBlob}
+      battleRoster={battleRoster}
+      onConfirmRoster={confirmRoster}
+      myTeamIds={myTeamIds}
     />
     <ToastNotification message={toast} />
     </>

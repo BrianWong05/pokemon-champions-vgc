@@ -11,7 +11,8 @@ import { TeamHeader } from '@/features/teams/components/TeamHeader';
 import { TeamMemberGrid } from '@/features/teams/components/TeamMemberGrid';
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
+import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaTeamDetail } from '@/features/teams/components/mobile/ArenaTeamDetail';
 
 const TeamDetailPage: React.FC = () => {
@@ -37,7 +38,8 @@ const TeamDetailPage: React.FC = () => {
     handleImportSingleShowdown
   } = useTeamDetail(id);
 
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode === 'arena';
 
   if (loading) {
     return <div className="container mx-auto p-4 max-w-4xl text-center text-ink-2">Loading team...</div>;
@@ -93,6 +95,8 @@ const TeamDetailPage: React.FC = () => {
       <ToastNotification message={toast} />
     </>
   );
+
+  if (mode === 'arena-landscape') return <RotateToPortrait label="Teams" />;
 
   if (isMobile) {
     return (

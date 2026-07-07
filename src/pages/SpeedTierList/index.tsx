@@ -6,7 +6,8 @@ import SpeedTierTemplate from '@/components/templates/SpeedTierTemplate';
 import TierSection from '@/components/organisms/TierSection';
 import PokemonDetailModal, { FullPokemonDetail } from '@/components/organisms/PokemonDetailModal';
 import { useFormat } from '@/features/formats/FormatContext';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
+import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaSpeedTiers } from './ArenaSpeedTiers';
 
 export interface PokemonWithSpeeds {
@@ -27,7 +28,8 @@ const SpeedTierPage: React.FC = () => {
   const [detailedPokemon, setDetailedPokemon] = useState<FullPokemonDetail | null>(null);
   const [otherForms, setOtherForms] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
+  const isMobile = mode === 'arena';
 
   const handleSelectPokemon = (id: number) => {
     setSelectedPokemonId(id);
@@ -149,6 +151,8 @@ const SpeedTierPage: React.FC = () => {
         pokemon,
       }));
   }, [pokemonData]);
+
+  if (mode === 'arena-landscape') return <RotateToPortrait label="Speed tiers" />;
 
   if (isMobile) {
     return (

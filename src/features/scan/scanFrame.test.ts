@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
 import { scanFrame, ingestFrame } from './scanFrame';
-import type { RgbaImage, ReferenceEntry, SlotResult } from './types';
+import type { RgbaImage, ReferenceEntry, ScanSide, SlotResult } from './types';
+import type { ScanMode } from './scanTargets';
 
 const fakeImage: RgbaImage = { data: new Uint8ClampedArray(4), width: 1, height: 1 };
 const box = { x: 0, y: 0, w: 1, h: 1 };
@@ -52,5 +53,65 @@ describe('ingestFrame', () => {
     const { mode, slots } = await ingestFrame(frame, new Set([25]), battleDeps());
     expect(mode).toBe('battle');
     expect(slots.length).toBe(2);
+  });
+});
+
+describe('per-side legalIds resolver', () => {
+  it('battle: opponent tiles classify under the roster set, player tiles under the full set', async () => {
+    const seen: number[][] = [];
+    const deps = {
+      loadRefs: async (): Promise<ReferenceEntry[]> => [],
+      blobToRgbaImage: async (): Promise<RgbaImage> => fakeImage,
+      scanTeamImage: (): SlotResult[] => [],
+      detectScanTargets: () => ({
+        mode: 'battle' as const,
+        gameRect: null,
+        targets: [
+          { box, side: 'opponent' as const, hpPercent: null },
+          { box, side: 'player' as const, hpPercent: null },
+        ],
+      }),
+      cropImage: (): RgbaImage => fakeImage,
+      matchTile: () => [],
+      loadClassifier: async () => ({
+        classes: [],
+        classify: async (_t: RgbaImage, ids: Set<number>) => {
+          seen.push([...ids].sort((a, b) => a - b));
+          return [{ id: 6, score: 0.9 }];
+        },
+      }),
+    };
+    const resolver = (side: ScanSide | undefined, mode: ScanMode | null) =>
+      mode === 'battle' && side !== 'player' ? new Set([6, 10034]) : new Set([1, 2, 3]);
+    await scanFrame(fakeImage, resolver, deps);
+    expect(seen).toEqual([[6, 10034], [1, 2, 3]]);
+  });
+
+  it('a plain Set behaves exactly as before (adapter default)', async () => {
+    const seen: number[][] = [];
+    const deps = {
+      loadRefs: async (): Promise<ReferenceEntry[]> => [],
+      blobToRgbaImage: async (): Promise<RgbaImage> => fakeImage,
+      scanTeamImage: (): SlotResult[] => [],
+      detectScanTargets: () => ({
+        mode: 'battle' as const,
+        gameRect: null,
+        targets: [
+          { box, side: 'opponent' as const, hpPercent: null },
+          { box, side: 'player' as const, hpPercent: null },
+        ],
+      }),
+      cropImage: (): RgbaImage => fakeImage,
+      matchTile: () => [],
+      loadClassifier: async () => ({
+        classes: [],
+        classify: async (_t: RgbaImage, ids: Set<number>) => {
+          seen.push([...ids].sort((a, b) => a - b));
+          return [{ id: 6, score: 0.9 }];
+        },
+      }),
+    };
+    await scanFrame(fakeImage, new Set([7, 8]), deps);
+    expect(seen).toEqual([[7, 8], [7, 8]]);
   });
 });

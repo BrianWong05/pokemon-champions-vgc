@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useFormat } from '@/features/formats/FormatContext';
-import { useIsMobile } from '@/hooks/useIsMobile';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { ThemeToggle } from '@/design-system/arena';
 import ArenaShell from '@/components/templates/ArenaShell';
 
 const Layout: React.FC = () => {
   const location = useLocation();
   const { format, setFormat, availableFormats } = useFormat();
-  const isMobile = useIsMobile();
+  const mode = useViewportMode();
   const formatOptions = availableFormats.length ? availableFormats : [format];
 
   const getLinkClass = (path: string, exact: boolean = true) => {
@@ -22,7 +22,7 @@ const Layout: React.FC = () => {
       : `${baseClass} text-ink-2 border border-transparent hover:bg-inset hover:text-ink-1`;
   };
 
-  if (isMobile) return <ArenaShell />;
+  if (mode !== 'desktop') return <ArenaShell landscape={mode === 'arena-landscape'} />;
 
   return (
     <div className="min-h-screen bg-page flex flex-col">

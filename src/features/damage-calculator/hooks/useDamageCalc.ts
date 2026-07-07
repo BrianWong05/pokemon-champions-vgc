@@ -4,7 +4,7 @@ import { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import { MoveData } from '@/components/molecules/MoveSearchSelect';
 import { TypeEfficacyMap, calculateEffectiveness } from '@/features/pokemon/utils/type-effectiveness';
 import { TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { calculateHP, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier } from '@/features/damage-calculator/utils/damage-calc';
+import { calculateHP, calculateSmogonDamage, mapToSmogonPokemon, mapToSmogonField, mapToSmogonMove, getMovePowerModifier, flattenDamage } from '@/features/damage-calculator/utils/damage-calc';
 import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 import { DamageResult } from '@/components/organisms/ResultsPanel';
 
@@ -54,16 +54,6 @@ export function useDamageCalc(
 
       const result = calculateSmogonDamage(attackerPokemon, defenderPokemon, move, field);
       const damageArr = Array.isArray(result.damage) ? result.damage : [result.damage || 0];
-      
-      const flattenDamage = (arr: any[]): number[] => {
-        if (arr.length === 0) return [0];
-        if (Array.isArray(arr[0])) {
-          const min = arr.reduce((acc, sub) => acc + (typeof sub[0] === 'number' ? sub[0] : 0), 0);
-          const max = arr.reduce((acc, sub) => acc + (typeof sub[sub.length - 1] === 'number' ? sub[sub.length - 1] : 0), 0);
-          return [min, max];
-        }
-        return arr.filter(d => typeof d === 'number');
-      };
 
       const cleanDamage = flattenDamage(damageArr);
       const minDamage = cleanDamage.length > 0 ? cleanDamage[0] : 0;

@@ -9,9 +9,10 @@ const LIMIT = 100;
  * light PokemonSearchSelect inside the mobile sheet). Search field + a scrollable
  * list of sprite / EN + ZH name / type rows.
  */
-export function ArenaPokemonPicker({ pokemonList, onSelect }: {
+export function ArenaPokemonPicker({ pokemonList, onSelect, autoFocus = true }: {
   pokemonList: PokemonBaseStats[];
   onSelect: (p: PokemonBaseStats) => void;
+  autoFocus?: boolean;
 }) {
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
@@ -32,7 +33,7 @@ export function ArenaPokemonPicker({ pokemonList, onSelect }: {
           <Icon name="search" size={18} color="var(--ink-3)" />
         </span>
         <input
-          autoFocus
+          autoFocus={autoFocus}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => setFocused(true)}

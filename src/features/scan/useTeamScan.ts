@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { scanFrame, DEFAULT_DEPS, type TeamScanDeps } from './scanFrame';
+import { scanFrame, DEFAULT_DEPS, type TeamScanDeps, type LegalIdsBySide } from './scanFrame';
 import { type ScanMode } from './scanTargets';
 import type { SlotResult } from './types';
 
@@ -7,7 +7,7 @@ export type ScanStatus = 'idle' | 'scanning' | 'done' | 'error';
 export type { ScanEngine } from './scanFrame';
 export { DEFAULT_DEPS, type TeamScanDeps } from './scanFrame';
 
-export function useTeamScan(legalIds: Set<number>, deps: TeamScanDeps = DEFAULT_DEPS) {
+export function useTeamScan(legalIds: LegalIdsBySide, deps: TeamScanDeps = DEFAULT_DEPS) {
   const [status, setStatus] = useState<ScanStatus>('idle');
   const [slots, setSlots] = useState<SlotResult[]>([]);
   const [mode, setMode] = useState<ScanMode | null>(null);

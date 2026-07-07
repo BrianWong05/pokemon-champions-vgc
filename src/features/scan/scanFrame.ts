@@ -6,7 +6,7 @@ import { detectScanTargets, type ScanDetection, type ScanMode } from './scanTarg
 import { computeDescriptor } from './fingerprint';
 import { matchTile } from './match';
 import { loadClassifier, type Classifier } from './classifier';
-import type { Candidate, ReferenceEntry, RgbaImage, SlotResult, TileBox } from './types';
+import type { Candidate, ReferenceEntry, RgbaImage, ScanSide, SlotResult, TileBox } from './types';
 import type { CapturedFrame } from './captureSource';
 
 export type ScanEngine = 'auto' | 'classifier' | 'descriptor';
@@ -43,13 +43,27 @@ export interface ScanFrameResult {
   slots: SlotResult[];
 }
 
+export type LegalIdsBySide =
+  | Set<number>
+  | ((side: ScanSide | undefined, mode: ScanMode | null) => Set<number>);
+
 export async function scanFrame(
   image: RgbaImage,
-  legalIds: Set<number>,
+  legalIds: LegalIdsBySide,
   deps: TeamScanDeps = DEFAULT_DEPS,
 ): Promise<ScanFrameResult> {
   const engine = getEngineSetting();
-  const refs = filterByFormatLegal(await deps.loadRefs(), legalIds);
+  const resolve = (side: ScanSide | undefined, mode: ScanMode | null): Set<number> =>
+    typeof legalIds === 'function' ? legalIds(side, mode) : legalIds;
+  const allRefs = await deps.loadRefs();
+  // Descriptor references are filtered per resolved mask; the cache keeps the
+  // plain-Set path to a single filter pass, exactly as before.
+  const refsCache = new Map<Set<number>, ReferenceEntry[]>();
+  const refsFor = (set: Set<number>): ReferenceEntry[] => {
+    let r = refsCache.get(set);
+    if (!r) { r = filterByFormatLegal(allRefs, set); refsCache.set(set, r); }
+    return r;
+  };
 
   // Callers that inject only the legacy 3-dep shape (no target/classifier deps
   // overridden) get the original scanTeamImage-only behavior, regardless of the
@@ -62,7 +76,7 @@ export async function scanFrame(
 
   if (engine === 'descriptor' || (engine !== 'classifier' && !hasTargetPipelineDeps)) {
     console.log('[scan] engine: descriptor');
-    return { mode: null, slots: deps.scanTeamImage(image, refs, 3) };
+    return { mode: null, slots: deps.scanTeamImage(image, refsFor(resolve(undefined, null)), 3) };
   }
 
   const detectTargets = deps.detectScanTargets ?? DEFAULT_DEPS.detectScanTargets;
@@ -75,10 +89,11 @@ export async function scanFrame(
   const slots: SlotResult[] = [];
   for (const { box, side, hpPercent } of targets) {
     const tile = crop(image, box);
-    const classifierCandidates = classifier ? await classifier.classify(tile, legalIds, 3) : [];
+    const mask = resolve(side, mode);
+    const classifierCandidates = classifier ? await classifier.classify(tile, mask, 3) : [];
     const useDescriptorFallback =
       engine === 'auto' && (!classifier || (classifierCandidates[0]?.score ?? 0) < CLASSIFIER_CONFIDENCE_THRESHOLD);
-    const candidates = useDescriptorFallback ? matchTileFn(tile, refs, 3) : classifierCandidates;
+    const candidates = useDescriptorFallback ? matchTileFn(tile, refsFor(mask), 3) : classifierCandidates;
     slots.push({ box, side, hpPercent, candidates });
   }
   console.log(`[scan] mode: ${mode}, engine: ${classifier ? 'classifier' : 'descriptor'} (${engine})`);
@@ -87,7 +102,7 @@ export async function scanFrame(
 
 export async function ingestFrame(
   frame: CapturedFrame,
-  legalIds: Set<number>,
+  legalIds: LegalIdsBySide,
   deps: TeamScanDeps = DEFAULT_DEPS,
 ): Promise<ScanFrameResult> {
   const image = await deps.blobToRgbaImage(frame.blob);

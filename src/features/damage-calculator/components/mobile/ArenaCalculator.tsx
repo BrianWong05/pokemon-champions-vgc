@@ -5,31 +5,20 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
-import { ArenaPokemonPicker } from './ArenaPokemonPicker';
-import { ArenaItemPicker } from './ArenaItemPicker';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
-import { NATURES } from '@/features/pokemon/utils/pokemon-natures';
-import { Sheet } from '@/design-system/arena';
 import { ArenaHud } from './ArenaHud';
 import { ArenaMonCard } from './ArenaMonCard';
 import { ArenaFieldConditions } from './ArenaFieldConditions';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
 import { ArenaAdvancedSheet } from './ArenaAdvancedSheet';
+import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
 
 type Side = 'p1' | 'p2';
 type PickerField = 'species' | 'move' | 'ability' | 'item' | 'nature';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
-const listRow = (activeSel: boolean): React.CSSProperties => ({
-  display: 'block', width: '100%', textAlign: 'left', minHeight: 44, padding: '10px 12px',
-  borderRadius: 'var(--r-sm)', border: `1px solid ${activeSel ? 'var(--accent-soft-line)' : 'var(--line-2)'}`,
-  background: activeSel ? 'var(--accent-soft)' : 'var(--surface-inset)',
-  color: activeSel ? 'var(--accent-hover)' : 'var(--ink-1)', fontFamily: 'var(--font-ui)',
-  fontSize: 'var(--fs-body)', fontWeight: 600, cursor: 'pointer', marginBottom: 8,
-});
-
 export function ArenaCalculator({
-  state, dispatch, pokemonList, moveList, p1Results, p2Results, actions, onApplySpread, onResetBuild, onOpenScan,
+  state, dispatch, pokemonList, moveList, p1Results, p2Results, actions, onApplySpread, onResetBuild, onOpenScan, defenderExtra, attackerExtra,
 }: {
   state: CalcState;
   dispatch: React.Dispatch<CalcAction>;
@@ -43,9 +32,13 @@ export function ArenaCalculator({
   onApplySpread: (side: Side, spread: Spread) => void;
   onResetBuild: (side: Side) => void;
   onOpenScan: () => void;
+  /** Optional slot rendered under the Defender card's header (battle-roster chips). */
+  defenderExtra?: React.ReactNode;
+  /** Optional slot rendered under the Attacker card's header (my-team chips). */
+  attackerExtra?: React.ReactNode;
 }) {
   const [dir, setDir] = useState<Side>('p1');
-  const [picker, setPicker] = useState<{ side: Side; field: PickerField } | null>(null);
+  const [picker, setPicker] = useState<{ side: Side; field: CorePickerField } | null>(null);
   const [movePickerSide, setMovePickerSide] = useState<Side | null>(null);
   const [advancedSide, setAdvancedSide] = useState<Side | null>(null);
   const [showdownSide, setShowdownSide] = useState<Side | null>(null);
@@ -69,8 +62,8 @@ export function ArenaCalculator({
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 'var(--sp-4) var(--gutter) var(--sp-7)' }}>
-        <ArenaMonCard side="p1" role="Attacker" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p1')} onOpenAdvanced={() => setAdvancedSide('p1')} />
-        <ArenaMonCard side="p2" role="Defender" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p2')} onOpenAdvanced={() => setAdvancedSide('p2')} />
+        <ArenaMonCard side="p1" role="Attacker" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p1')} onOpenAdvanced={() => setAdvancedSide('p1')} extra={attackerExtra} />
+        <ArenaMonCard side="p2" role="Defender" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p2')} onOpenAdvanced={() => setAdvancedSide('p2')} extra={defenderExtra} />
 
         <button
           onClick={onOpenScan}
@@ -112,35 +105,14 @@ export function ArenaCalculator({
       />
 
       {/* Species / item / ability / nature picker */}
-      <Sheet open={!!picker} onClose={() => setPicker(null)} title={picker ? pickerTitle(picker.field) : ''} height={picker?.field === 'species' || picker?.field === 'item' ? '80vh' : undefined}>
-        {picker && picker.field === 'species' && (
-          <ArenaPokemonPicker
-            pokemonList={pokemonList}
-            onSelect={(p) => { void actions.handleSelectPokemon(picker.side, p); setPicker(null); }}
-          />
-        )}
-        {picker && picker.field === 'item' && (
-          <ArenaItemPicker
-            selectedItem={state[picker.side].item}
-            onSelect={(it) => { dispatch({ type: 'SET_ITEM', payload: { side: picker.side, item: it } }); setPicker(null); }}
-          />
-        )}
-        {picker && picker.field === 'ability' && (
-          <div>
-            {state[picker.side].abilities.length === 0 && <div style={{ color: 'var(--ink-3)' }}>No abilities available.</div>}
-            {state[picker.side].abilities.map((a) => (
-              <button key={a} style={listRow(a === state[picker.side].activeAbility)} onClick={() => { dispatch({ type: 'SET_ACTIVE_ABILITY', payload: { side: picker.side, ability: a } }); setPicker(null); }}>{a}</button>
-            ))}
-          </div>
-        )}
-        {picker && picker.field === 'nature' && (
-          <div>
-            {NATURES.map((n) => (
-              <button key={n} style={listRow(n === state[picker.side].nature)} onClick={() => { dispatch({ type: 'SET_NATURE', payload: { side: picker.side, nature: n } }); setPicker(null); }}>{n}</button>
-            ))}
-          </div>
-        )}
-      </Sheet>
+      <ArenaPickerSheet
+        picker={picker}
+        onClose={() => setPicker(null)}
+        state={state}
+        dispatch={dispatch}
+        pokemonList={pokemonList}
+        actions={actions}
+      />
 
       {/* Showdown import (reuses the existing modal) */}
       <ShowdownImportModal
@@ -150,8 +122,4 @@ export function ArenaCalculator({
       />
     </>
   );
-}
-
-function pickerTitle(field: PickerField): string {
-  return field === 'species' ? 'Pokémon' : field === 'item' ? 'Item' : field === 'ability' ? 'Ability' : 'Nature';
 }
