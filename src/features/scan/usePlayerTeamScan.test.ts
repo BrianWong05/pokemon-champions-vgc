@@ -159,6 +159,16 @@ describe('usePlayerTeamScan', () => {
     expect(result.current.merged?.slots[0].statReads).toHaveLength(6);
   });
 
+  it('addFrame surfaces a rejection (e.g. corrupt image) as lastError instead of throwing, and clears busy', async () => {
+    const d = { ...baseDeps, blobToRgbaImage: async () => { throw new Error('unsupported image format'); } };
+    const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));
+
+    await act(() => result.current.addFrame(blobOf(1)));
+
+    expect(result.current.lastError).toBe('unsupported image format');
+    expect(result.current.busy).toBe(false);
+  });
+
   it('setSlotSpecies with only a stats image overrides that slot species to a pinned candidate', async () => {
     const d = mkDeps({ 2: statsFrame });
     const { result } = renderHook(() => usePlayerTeamScan(pokemonList, d as any));

@@ -91,6 +91,9 @@ export function usePlayerTeamScan(pokemonList: PokemonBaseStats[], deps: PlayerT
         setStatsImage({ status: 'done', error: null, blob });
       }
       setVersion(v2 => v2 + 1);
+    } catch (e) {
+      console.error('[player-scan] addFrame failed', e);
+      setLastError((e as Error).message);
     } finally {
       setPending(p => p - 1);
     }
