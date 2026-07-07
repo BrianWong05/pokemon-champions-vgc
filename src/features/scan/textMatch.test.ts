@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import { createCanvas } from 'canvas';
-import { makeTextRenderer, matchTextShape, shapeFromMask } from './textMatch';
+import {
+  makeTextRenderer, matchTextShape, shapeFromMask,
+  parseAtlas, composeAtlasMask, matchTextShapeHybrid, shapeDistance, ATLAS_ACCEPT,
+} from './textMatch';
 
 const render = makeTextRenderer((w, h) => createCanvas(w, h));
 
@@ -58,6 +61,72 @@ describe('textMatch self-render round trip', () => {
 
     expect(bestKey('もうか', ['ちどりあし', 'とうそうしん', 'すりぬけ'])).toBe('もうか');
     expect(bestKey('とっしん', ['じしん', 'きりさく', 'てっぺき'])).toBe('とっしん');
+  });
+});
+
+describe('glyph atlas composition + hybrid matching', () => {
+  // Hand-packed synthetic glyphs: 'I' = 4x8 solid bar, 'O' = 8x8 ring.
+  const atlasEntries = [
+    { char: 'I', w: 4, h: 8, yOff: 0, hex: 'ffffffff' },
+    { char: 'O', w: 8, h: 8, yOff: 0, hex: 'ff818181818181ff' },
+  ];
+  const atlas = () => parseAtlas(atlasEntries, 2);
+
+  it('parseAtlas decodes hex bits row-major, MSB first', () => {
+    const g = atlas().glyphs.get('O')!;
+    expect(g.w).toBe(8);
+    expect(Array.from(g.bits.slice(0, 8))).toEqual([1, 1, 1, 1, 1, 1, 1, 1]); // top row
+    expect(Array.from(g.bits.slice(8, 16))).toEqual([1, 0, 0, 0, 0, 0, 0, 1]); // ring row
+  });
+
+  it('composeAtlasMask returns null when any char is uncovered', () => {
+    expect(composeAtlasMask(atlas(), 'IX')).toBeNull();
+    expect(composeAtlasMask(atlas(), 'IO')).not.toBeNull();
+  });
+
+  it('hybrid: exact composition wins with a near-perfect score', () => {
+    const a = atlas();
+    const shape = shapeFromMask(composeAtlasMask(a, 'IO')!, false)!;
+    const candidates = [
+      { key: 'oi', label: 'OI' },
+      { key: 'io', label: 'IO' },
+      { key: 'p', label: 'Protect' }, // uncovered: excluded from an accepted atlas pass
+    ];
+    const result = matchTextShapeHybrid(shape, candidates, render, a);
+    expect(result[0].key).toBe('io');
+    expect(result[0].score).toBeGreaterThan(0.99);
+  });
+
+  it('hybrid: falls back to canvas matching when no candidate is covered', () => {
+    const a = atlas();
+    const shape = shapeFromMask(render('Protect'), false)!;
+    const candidates = ['Protect', 'Reflect'].map(l => ({ key: l, label: l }));
+    const result = matchTextShapeHybrid(shape, candidates, render, a);
+    expect(result[0].key).toBe('Protect');
+    expect(result).toEqual(matchTextShape(shape, candidates, render));
+  });
+
+  it('hybrid: falls back when the best atlas score is below the acceptance gate', () => {
+    const a = atlas();
+    const shape = shapeFromMask(composeAtlasMask(a, 'IO')!, false)!;
+    // Precondition: the only covered candidate ('II') really is sub-threshold
+    // against the 'IO' shape — if calibration moves ATLAS_ACCEPT below this
+    // score, this fixture needs a more dissimilar decoy.
+    const iiShape = shapeFromMask(composeAtlasMask(a, 'II')!, false)!;
+    expect(1 - shapeDistance(shape, iiShape)).toBeLessThan(ATLAS_ACCEPT);
+    const candidates = [
+      { key: 'ii', label: 'II' },
+      { key: 'p', label: 'Protect' }, // uncovered: only reachable via fallback
+    ];
+    const result = matchTextShapeHybrid(shape, candidates, render, a);
+    expect(result).toHaveLength(2); // atlas accept branch could only ever return 'ii'
+  });
+
+  it('hybrid: null atlas is plain shape matching', () => {
+    const shape = shapeFromMask(render('Protect'), false)!;
+    const candidates = ['Protect', 'Reflect'].map(l => ({ key: l, label: l }));
+    expect(matchTextShapeHybrid(shape, candidates, render, null))
+      .toEqual(matchTextShape(shape, candidates, render));
   });
 });
 

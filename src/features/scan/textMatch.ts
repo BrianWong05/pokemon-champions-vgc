@@ -53,7 +53,7 @@ function stripLeadingBlob(counts: number[], minGap: number): number {
 // the item row and the move list, so its mask can carry lit rows that aren't
 // part of any glyph. They always sit above the text band with a full-zero
 // row gap between them (the text band itself never has one) — zero them out.
-function stripRuleLines(mask: BinMask): BinMask {
+export function stripRuleLines(mask: BinMask): BinMask {
   const rowInk = new Array(mask.h).fill(0);
   for (let y = 0; y < mask.h; y++) for (let x = 0; x < mask.w; x++) {
     if (mask.bits[y * mask.w + x]) rowInk[y]++;
@@ -70,7 +70,7 @@ function stripRuleLines(mask: BinMask): BinMask {
 // (observed 13-23 cols on real captures) — much wider than any inter-letter
 // gap within text (observed 1-4 cols). Strip columns at/before the last such
 // wide gap so the shape reflects only the text.
-function stripLeadingIcon(mask: BinMask): number {
+export function stripLeadingIcon(mask: BinMask): number {
   const colInk = new Array(mask.w).fill(0);
   for (let y = 0; y < mask.h; y++) for (let x = 0; x < mask.w; x++) {
     if (mask.bits[y * mask.w + x]) colInk[x]++;
@@ -78,7 +78,7 @@ function stripLeadingIcon(mask: BinMask): number {
   return stripLeadingBlob(colInk, ICON_GAP);
 }
 
-function inkBounds(mask: BinMask, startX = 0): TileBox | null {
+export function inkBounds(mask: BinMask, startX = 0): TileBox | null {
   let minX = mask.w, minY = mask.h, maxX = -1, maxY = -1, ink = 0;
   for (let y = 0; y < mask.h; y++) for (let x = startX; x < mask.w; x++) {
     if (!mask.bits[y * mask.w + x]) continue;
@@ -179,4 +179,99 @@ export function matchTextShape(
     scored.push({ key: c.key, score: 1 - shapeDistance(shape, cs) });
   }
   return scored.sort((a, b) => b.score - a.score).slice(0, topN);
+}
+
+// ---------------------------------------------------------------------------
+// Glyph atlas: per-character templates extracted from labeled screenshots
+// (scripts/build-text-glyph-atlas.ts), so candidates can be composed in the
+// GAME's own font instead of a canvas system font. Same-font comparisons put
+// correct candidates near score 1.0, above the font-mismatch noise floor that
+// causes confusable-pair losses (and above any platform font variation).
+
+/** Serialized glyph: bits row-major, hex-packed 4 per digit, MSB first.
+ *  Geometry is normalized to a 32px text line (ATLAS_LINE_H); yOff is the
+ *  glyph's top offset from the line top at that scale. */
+export interface AtlasGlyphData { char: string; w: number; h: number; yOff: number; hex: string }
+
+export interface TextAtlas {
+  glyphs: Map<string, { w: number; h: number; yOff: number; bits: Uint8Array }>;
+  /** Inter-character advance gap in px at ATLAS_LINE_H scale. */
+  gap: number;
+  /** Per-label composed-shape cache (compose + shapeFromMask is pure). */
+  shapes: Map<string, TextShape | null>;
+}
+
+export const ATLAS_LINE_H = 32;
+// Accept the atlas ranking only when its best score clears this. Composed
+// same-font matches on golden crops score >=0.93; the best wrong-language /
+// wrong-candidate scores stay below (calibrated in Task 3 against the
+// builder's validation report).
+export const ATLAS_ACCEPT = 0.9;
+
+function hexToBits(hex: string, n: number): Uint8Array {
+  const bits = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const nib = parseInt(hex[i >> 2], 16);
+    bits[i] = (nib >> (3 - (i & 3))) & 1;
+  }
+  return bits;
+}
+
+export function parseAtlas(entries: AtlasGlyphData[], gap: number): TextAtlas {
+  const glyphs = new Map(entries.map(e => [
+    e.char, { w: e.w, h: e.h, yOff: e.yOff, bits: hexToBits(e.hex, e.w * e.h) },
+  ]));
+  return { glyphs, gap, shapes: new Map() };
+}
+
+export function composeAtlasMask(atlas: TextAtlas, label: string): BinMask | null {
+  const glyphs = [];
+  for (const ch of [...label]) {
+    const g = atlas.glyphs.get(ch);
+    if (!g) return null;
+    glyphs.push(g);
+  }
+  if (glyphs.length === 0) return null;
+  const gap = Math.max(1, Math.round(atlas.gap));
+  const margin = 2;
+  const w = margin * 2 + glyphs.reduce((s, g) => s + g.w, 0) + gap * (glyphs.length - 1);
+  const h = margin * 2 + Math.max(...glyphs.map(g => g.yOff + g.h));
+  const bits = new Uint8Array(w * h);
+  let x = margin;
+  for (const g of glyphs) {
+    for (let gy = 0; gy < g.h; gy++) for (let gx = 0; gx < g.w; gx++) {
+      if (g.bits[gy * g.w + gx]) bits[(margin + g.yOff + gy) * w + (x + gx)] = 1;
+    }
+    x += g.w + gap;
+  }
+  return { bits, w, h };
+}
+
+function atlasShape(atlas: TextAtlas, label: string): TextShape | null {
+  const cached = atlas.shapes.get(label);
+  if (cached !== undefined) return cached;
+  const mask = composeAtlasMask(atlas, label);
+  const shape = mask ? shapeFromMask(mask, false) : null;
+  atlas.shapes.set(label, shape);
+  return shape;
+}
+
+/** Atlas-first matching: rank atlas-covered candidates against the crop shape;
+ *  if the best clears ATLAS_ACCEPT that ranking wins, else fall back to canvas
+ *  shape matching over the full candidate list. */
+export function matchTextShapeHybrid(
+  shape: TextShape, candidates: TextCandidate[], render: TextRenderer,
+  atlas: TextAtlas | null, topN = 3,
+): TextMatchResult[] {
+  if (atlas) {
+    const scored: TextMatchResult[] = [];
+    for (const c of candidates) {
+      const cs = atlasShape(atlas, c.label);
+      if (!cs) continue;
+      scored.push({ key: c.key, score: 1 - shapeDistance(shape, cs) });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    if ((scored[0]?.score ?? 0) >= ATLAS_ACCEPT) return scored.slice(0, topN);
+  }
+  return matchTextShape(shape, candidates, render, topN);
 }
