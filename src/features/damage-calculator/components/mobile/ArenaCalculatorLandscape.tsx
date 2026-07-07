@@ -7,7 +7,7 @@ import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
 import { buildSpeedCompare } from '@/features/damage-calculator/utils/speed';
-import { TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { Sprite, TypeBadge, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge, StatChip } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
 import { ArenaFieldConditions } from './ArenaFieldConditions';
@@ -19,9 +19,15 @@ type Side = 'p1' | 'p2';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
 const PANEL_W = 240;
-const TYPE_BY_ID: Record<number, string> = Object.fromEntries(
-  Object.entries(TYPE_IDS).map(([name, id]) => [id as number, name]),
-);
+
+const STAT_LABEL: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
+
+/** Format a stat stage as +N / ±0 / -N. */
+function fmtStage(n: number): string {
+  if (n > 0) return `+${n}`;
+  if (n < 0) return `${n}`;
+  return '±0';
+}
 
 /* ---------- small presentational helpers ---------- */
 
@@ -110,7 +116,7 @@ function MoveList({ s, results, onSelect, onEdit }: {
           }
           const on = i === s.activeMoveIndex;
           const r = results[i];
-          const typeName = TYPE_BY_ID[r?.moveType ?? (m as MoveData).typeId];
+          const typeName = REVERSE_TYPE_IDS[r?.moveType ?? (m as MoveData).typeId];
           return (
             <button key={i} onClick={() => onSelect(i)} style={{
               display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: '7px 8px',
@@ -217,7 +223,15 @@ export function ArenaCalculatorLandscape({
   );
 
   const natureShort = (s: SideState) =>
-    s.boostedStat ? `+${s.boostedStat.charAt(0).toUpperCase()}${s.boostedStat.slice(1)}` : '—';
+    s.boostedStat ? `+${STAT_LABEL[s.boostedStat] ?? s.boostedStat}` : '—';
+
+  // Rank tune boxes: offensive stage for the attacker's active move category,
+  // defensive stage for the defender vs. that same category. Physical → atk/def,
+  // Special (or no active move) → spa/spd.
+  const p1ActiveMove = state.p1.moves[state.p1.activeMoveIndex] as MoveData | null;
+  const p1MoveIsPhysical = p1ActiveMove?.damageClassId === 2;
+  const p1RankStat = p1MoveIsPhysical ? 'atk' : 'spa';
+  const p2RankStat = p1MoveIsPhysical ? 'def' : 'spd';
 
   return (
     <div style={{ display: 'flex', height: '100%', minWidth: 0, fontFamily: 'var(--font-ui)', color: 'var(--text-body)' }}>
@@ -233,8 +247,14 @@ export function ArenaCalculatorLandscape({
         />
         <SelectRow label="Ability" value={state.p1.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p1', field: 'ability' })} />
         <SelectRow label="Item" value={state.p1.item ?? 'None'} leading={<ItemIcon item={state.p1.item} size={18} />} onClick={() => setPicker({ side: 'p1', field: 'item' })} />
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           <TuneBox label="Nature" value={natureShort(state.p1)} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
+          <TuneBox
+            label="Rank"
+            value={fmtStage(state.p1.stages[p1RankStat] || 0)}
+            active={(state.p1.stages[p1RankStat] || 0) !== 0}
+            onClick={() => setAdvancedSide('p1')}
+          />
           <TuneBox label="Atk SP" value={state.p1.spAtk} active={state.p1.spAtk > 0} onClick={() => setAdvancedSide('p1')} />
           <TuneBox label="SpA SP" value={state.p1.spSpa} active={state.p1.spSpa > 0} onClick={() => setAdvancedSide('p1')} />
         </div>
@@ -300,17 +320,11 @@ export function ArenaCalculatorLandscape({
               </div>
             )}
             <ArenaFieldConditions state={state} dispatch={dispatch} />
-            <button
-              onClick={() => setAdvancedSide(dir)}
-              style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Advanced
-            </button>
           </>
         ) : (
           <>
             <div>
-              <Micro style={{ marginBottom: 6 }}>{`You — ${nameOf(state[dir].selectedId)}`}</Micro>
+              <Micro style={{ marginBottom: 6 }}>{`${dir === 'p1' ? 'You' : 'Opponent'} — ${nameOf(state[dir].selectedId)}`}</Micro>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--ink-1)', lineHeight: 1 }}>{speed.yours.actual}</div>
                 <div style={{ display: 'flex', gap: 6, flex: 1 }}>
@@ -320,13 +334,13 @@ export function ArenaCalculatorLandscape({
               </div>
               <RankStepper
                 label="Spe rank"
-                ariaPrefix="speed"
+                ariaPrefix="attacker speed"
                 value={state[dir].stages.spe || 0}
                 onChange={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
               />
             </div>
             <div>
-              <Micro style={{ marginBottom: 4 }}>{`Opponent — ${nameOf(state[defDir].selectedId)}`}</Micro>
+              <Micro style={{ marginBottom: 4 }}>{`${dir === 'p1' ? 'Opponent' : 'You'} — ${nameOf(state[defDir].selectedId)}`}</Micro>
               {speed.tiers.map((t) => (
                 <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--line-1)' }}>
                   <span style={{ flex: 1, fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>{t.label}</span>
@@ -337,8 +351,8 @@ export function ArenaCalculatorLandscape({
                 </div>
               ))}
               <RankStepper
-                label="Opp. spe rank"
-                ariaPrefix="opponent speed"
+                label={`${dir === 'p1' ? 'Opp.' : 'Your'} spe rank`}
+                ariaPrefix="defender speed"
                 value={state[defDir].stages.spe || 0}
                 onChange={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
               />
@@ -348,6 +362,12 @@ export function ArenaCalculatorLandscape({
             </code>
           </>
         )}
+        <button
+          onClick={() => setAdvancedSide(dir)}
+          style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Advanced
+        </button>
       </div>
 
       {/* -------- defender (p2) -------- */}
@@ -369,6 +389,12 @@ export function ArenaCalculatorLandscape({
           <TuneBox label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0} onClick={() => setAdvancedSide('p2')} />
           <TuneBox label="Def SP" value={state.p2.spDef} active={state.p2.spDef > 0} onClick={() => setAdvancedSide('p2')} />
           <TuneBox label="SpD SP" value={state.p2.spSpd} active={state.p2.spSpd > 0} onClick={() => setAdvancedSide('p2')} />
+          <TuneBox
+            label="Rank"
+            value={fmtStage(state.p2.stages[p2RankStat] || 0)}
+            active={(state.p2.stages[p2RankStat] || 0) !== 0}
+            onClick={() => setAdvancedSide('p2')}
+          />
         </div>
         <button
           onClick={onOpenScan}

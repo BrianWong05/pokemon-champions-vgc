@@ -120,7 +120,50 @@ describe('ArenaCalculatorLandscape', () => {
   it('speed rank stepper dispatches SET_STAT_STAGE', () => {
     const dispatch = setup();
     fireEvent.click(screen.getByText('Speed'));
-    fireEvent.click(screen.getAllByLabelText('Raise speed rank')[0]);
+    fireEvent.click(screen.getByLabelText('Raise attacker speed rank'));
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat: 'spe', val: 1 } });
+  });
+
+  it('swap direction reverses the matchup line and speed-view labels', () => {
+    setup();
+    // before swap: attacker Flutter Mane vs defender Dragapult
+    const matchupBefore = screen.getByText(/vs/).textContent ?? '';
+    expect(matchupBefore.indexOf('Flutter Mane')).toBeLessThan(matchupBefore.indexOf('Dragapult'));
+
+    fireEvent.click(screen.getByLabelText('Swap direction'));
+
+    const matchupAfter = screen.getByText(/vs/).textContent ?? '';
+    expect(matchupAfter.indexOf('Dragapult')).toBeLessThan(matchupAfter.indexOf('Flutter Mane'));
+
+    fireEvent.click(screen.getByText('Speed'));
+    expect(screen.getByText('Opponent — Dragapult')).toBeTruthy();
+  });
+
+  it('renders an empty state without crashing when nothing is selected', () => {
+    const emptySide = side({});
+    const emptyState: CalcState = {
+      weather: 'None', terrain: 'None', isSpreadTarget: false,
+      isFairyAura: false, isDarkAura: false, isAuraBreak: false, isGravity: false,
+      p1: emptySide, p2: emptySide,
+    } as CalcState;
+    const dispatch = vi.fn();
+    render(
+      <ArenaCalculatorLandscape
+        state={emptyState}
+        dispatch={dispatch}
+        pokemonList={[]}
+        moveList={[]}
+        p1Results={[null, null, null, null]}
+        p2Results={[null, null, null, null]}
+        p1MaxHp={0}
+        p2MaxHp={0}
+        actions={{ handleSelectPokemon: vi.fn(), handleSelectPreset: vi.fn(), handleImportShowdown: vi.fn(), handleLoadConfig: vi.fn() } as any}
+        onApplySpread={vi.fn()}
+        onResetBuild={vi.fn()}
+        onOpenScan={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Pick a move')).toBeTruthy();
   });
 });

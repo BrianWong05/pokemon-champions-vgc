@@ -94,16 +94,22 @@ Three independently scrolling panels (hidden scrollbars), per the mock:
 
 - **Attacker (left, ~240px):** ATTACKER micro-label + "You" badge;
   `attackerExtra` chips; sprite/name/types identity; move list (4 slots, see
-  §4); Ability + Item select rows; Nature / SP / Rank tune boxes (read-only
-  summary; tapping opens the Advanced sheet).
+  §4); Ability + Item select rows; a 2×2 grid of read-only tune boxes — Nature
+  / Rank / Atk SP / SpA SP — tapping any of them opens the Advanced sheet.
+  Rank shows the attacker's offensive stage (Atk or SpA, whichever matches the
+  active move's damage category).
 - **Center (flex):** Damage ↔ Speed segmented toggle + swap-direction button;
   matchup line ("Moonblast · X vs Y"); damage view = % readout + KO verdict +
   roll band + scenario rows + field chips row; speed view = your effective
   speed + scarf/tailwind chips + rank stepper vs opponent tier list with
-  Faster/Outsped/Tie badges; Advanced action at the bottom.
+  Faster/Outsped/Tie badges; Advanced action at the bottom (rendered in both
+  damage and speed views).
 - **Defender (right, ~240px):** DEFENDER micro-label + "Opponent" badge;
   `defenderExtra` chips + scan button; identity; HP bar; Ability + Item rows;
-  Nature / HP SP / SpD-or-Def SP / Rank tune boxes.
+  a 2×2+1 grid of read-only tune boxes — Nature / HP SP / Def SP / SpD SP /
+  Rank — tapping any of them opens the Advanced sheet. Rank shows the
+  defender's defensive stage (Def or SpD, matching the attacker's active move
+  category).
 
 Side identity: sprite rings + badges (accent = you, danger = opponent), flat
 surfaces — never tinted panel backgrounds (design-system rule).
@@ -165,9 +171,12 @@ cover most of the viewport) via an `autoFocus?: boolean` prop defaulting true.
   (`p1Results` slots are nullable already).
 - **Unknown opponent data:** Item "Unknown", nature "—" render as plain values;
   scenario and speed math treat missing SP as 0 (matches state defaults).
-- **Orientation flip mid-edit:** state lives at the page level and is
-  unaffected; open Sheets stay open (Sheet is `position: fixed`) and remain
-  usable in either orientation.
+- **Orientation flip mid-edit:** calculator state (`state`/`dispatch`) lives at
+  the page level and survives the flip. However, swapping between the
+  portrait and landscape trees unmounts the outgoing tree, so any open Sheet
+  closes and the landscape tree's own local UI state (direction swap toggle,
+  damage/speed view toggle) resets to its defaults on remount. The page-level
+  `ScanTeamModal` is unaffected and stays open across the flip.
 - **Light theme:** all styling uses Arena tokens; `data-theme='light'` works
   without additional code.
 

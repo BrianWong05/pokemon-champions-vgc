@@ -33,6 +33,9 @@ const flutterMane = side({
 const dragapult = side({
   selectedId: 887, baseHp: 88, baseAtk: 120, baseDef: 75, baseSpa: 100, baseSpd: 75, baseSpe: 142,
 });
+// Fire-type so it's neutral (not immune/resisted-to-zero) vs the ghost/fairy defender.
+const flamethrower = { nameEn: 'Flamethrower', nameZh: null, typeId: 10 } as unknown as MoveData;
+const dragapultWithMove = side({ ...dragapult, moves: [flamethrower, null, null, null] });
 
 const baseState: CalcState = {
   weather: 'None', terrain: 'None', isSpreadTarget: false,
@@ -81,5 +84,13 @@ describe('useDamageScenarios', () => {
     const { maxBulk, noSp } = result.current;
     expect(maxBulk && noSp).toBeTruthy();
     expect(maxBulk!.maxPercent).toBeLessThan(noSp!.maxPercent * 0.75);
+  });
+
+  it('computes scenarios against p1 as defender when dir is p2', () => {
+    const s = { ...baseState, p2: dragapultWithMove };
+    const { result } = renderHook(() => useDamageScenarios(s, pokemonList, 'p2'));
+    const { crit, maxBulk, noSp } = result.current;
+    expect(crit && maxBulk && noSp).toBeTruthy();
+    expect(crit!.minPercent).toBeGreaterThan(0);
   });
 });

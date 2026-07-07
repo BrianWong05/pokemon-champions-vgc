@@ -4,16 +4,21 @@ import { describe, it, expect } from 'vitest';
 import { useViewportMode } from './useViewportMode';
 
 /**
- * Mock matchMedia keyed by query: the landscape query contains 'orientation',
- * the portrait query is the plain max-width one.
+ * Mock matchMedia keyed by exact query string, so a broken query in the hook
+ * fails the test instead of silently matching via a loose substring check.
  */
+const LANDSCAPE_QUERY = '(orientation: landscape) and (max-height: 767px)';
+const PORTRAIT_QUERY = '(max-width: 767px)';
+
 function mockViewport(initial: { landscape: boolean; portrait: boolean }) {
   const listeners = new Set<() => void>();
   const state = { ...initial };
   // @ts-expect-error test shim
   window.matchMedia = (query: string) => ({
     get matches() {
-      return query.includes('orientation') ? state.landscape : state.portrait;
+      if (query === LANDSCAPE_QUERY) return state.landscape;
+      if (query === PORTRAIT_QUERY) return state.portrait;
+      throw new Error('unexpected query: ' + query);
     },
     media: query,
     addEventListener: (_: string, cb: () => void) => listeners.add(cb),
