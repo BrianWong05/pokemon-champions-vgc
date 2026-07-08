@@ -6,8 +6,9 @@ import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
-import { buildSpeedCompare } from '@/features/damage-calculator/utils/speed';
-import { Sprite, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge } from '@/design-system/arena';
+import { buildSpeedCompare, speedFormula, fmtStage } from '@/features/damage-calculator/utils/speed';
+import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { Sprite, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge, TypeBadge } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
 import { ArenaFieldConditions } from './ArenaFieldConditions';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
@@ -22,20 +23,6 @@ type Side = 'p1' | 'p2';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
 const STAT_LABEL: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
-
-/** Format a stat stage as +N / ±0 / -N. */
-function fmtStage(n: number): string {
-  if (n > 0) return `+${n}`;
-  if (n < 0) return `${n}`;
-  return '±0';
-}
-
-/** Live speed formula string shown under the speed comparison. */
-function speedFormula(s: SideState): string {
-  const mult = s.boostedStat === 'spe' ? 1.1 : s.hinderedStat === 'spe' ? 0.9 : 1.0;
-  const val = Math.floor((s.baseSpe + 20 + s.spSpe) * mult);
-  return `${val} = floor((${s.baseSpe} + 20 + ${s.spSpe}) × ${mult.toFixed(1)})`;
-}
 
 /* ---------- small presentational helpers ---------- */
 
@@ -90,9 +77,9 @@ function Panel({ side, badge, onCollapse, children }: {
   );
 }
 
-function Rail({ side, name, dex, tone, item, hpPercent, onExpand }: {
+function Rail({ side, name, dex, tone, item, hpPercent, subline, onExpand }: {
   side: 'left' | 'right'; name: string; dex: number | null; tone: 'accent' | 'danger';
-  item?: string | null; hpPercent?: number; onExpand: () => void;
+  item?: string | null; hpPercent?: number; subline?: React.ReactNode; onExpand: () => void;
 }) {
   return (
     <aside style={{
@@ -110,6 +97,7 @@ function Rail({ side, name, dex, tone, item, hpPercent, onExpand }: {
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)' }}>{hpPercent}%</div>
       )}
       {item && <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.2 }}>{item}</div>}
+      {subline}
       <span style={{ flex: 1 }} />
       <button onClick={onExpand} aria-label={`Expand ${side === 'left' ? 'attacker' : 'defender'}`} style={{
         width: 40, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)',
@@ -125,7 +113,6 @@ function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | n
   if (!range) return null;
   const danger = range.maxPercent >= 100;
   const ko = koVerdictFromText(range.koChanceText);
-  const badgeTone = ko.tone === 'safe' ? 'safe' : ko.tone === 'field' ? 'field' : ko.tone === 'danger' ? 'danger' : 'neutral';
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -133,7 +120,7 @@ function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | n
         <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
           {range.minPercent}–{range.maxPercent}%
         </span>
-        {range.koChanceText && <Badge tone={badgeTone}>{ko.verdict}</Badge>}
+        {range.koChanceText && <Badge tone={ko.tone}>{ko.verdict}</Badge>}
       </div>
       <div style={{ marginTop: 4, height: 5, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(100, range.maxPercent)}%`, height: '100%', background: danger ? 'var(--danger)' : 'var(--safe)', opacity: 0.85 }} />
@@ -207,6 +194,17 @@ export function ArenaCalculatorLandscape({
   const p1RankStat = p1MoveIsPhysical ? 'atk' : 'spa';
   const p2RankStat = p1MoveIsPhysical ? 'def' : 'spd';
 
+  // Collapsed attacker rail shows the active move (type + name) instead of the item.
+  const p1ActiveMoveType = p1ActiveMove
+    ? REVERSE_TYPE_IDS[p1Results[state.p1.activeMoveIndex]?.moveType ?? p1ActiveMove.typeId]
+    : null;
+  const p1ActiveMoveSubline = p1ActiveMove ? (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      {p1ActiveMoveType && <TypeBadge type={p1ActiveMoveType} size="sm" />}
+      <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.2 }}>{p1ActiveMove.nameEn}</div>
+    </div>
+  ) : undefined;
+
   return (
     <div style={{ display: 'flex', height: '100%', minWidth: 0, fontFamily: 'var(--font-ui)', color: 'var(--text-body)' }}>
       {/* -------- attacker (p1) -------- */}
@@ -216,7 +214,7 @@ export function ArenaCalculatorLandscape({
           name={nameOf(state.p1.selectedId)}
           dex={state.p1.selectedId}
           tone="accent"
-          item={state.p1.item}
+          subline={p1ActiveMoveSubline}
           onExpand={() => toggleCollapsed('p1')}
         />
       ) : (

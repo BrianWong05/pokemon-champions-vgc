@@ -5,7 +5,7 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
-import { buildSpeedCompare } from '@/features/damage-calculator/utils/speed';
+import { buildSpeedCompare, speedFormula } from '@/features/damage-calculator/utils/speed';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 import { ArenaHud } from './ArenaHud';
 import { ArenaMonCard } from './ArenaMonCard';
@@ -62,11 +62,6 @@ export function ArenaCalculator({
     },
     { baseSpe: state[defDir].baseSpe, speStage: state[defDir].stages.spe || 0, isTailwind: state[defDir].isTailwind },
   );
-  const speedFormula = (() => {
-    const s = state[dir]; const mult = s.boostedStat === 'spe' ? 1.1 : s.hinderedStat === 'spe' ? 0.9 : 1.0;
-    const val = Math.floor((s.baseSpe + 20 + s.spSpe) * mult);
-    return `${val} = floor((${s.baseSpe} + 20 + ${s.spSpe}) × ${mult.toFixed(1)})`;
-  })();
 
   return (
     <>
@@ -126,7 +121,7 @@ export function ArenaCalculator({
             youStage={state[dir].stages.spe || 0} oppStage={state[defDir].stages.spe || 0}
             onYouStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
             onOppStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
-            formula={speedFormula}
+            formula={speedFormula(state[dir])}
           />
         </div>
       )}

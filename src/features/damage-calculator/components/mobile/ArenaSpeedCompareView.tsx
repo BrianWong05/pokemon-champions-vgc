@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { SpeedCompare } from '@/features/damage-calculator/utils/speed';
+import { fmtStage } from '@/features/damage-calculator/utils/speed';
 import { Badge } from '@/design-system/arena';
 
 type Mode = 'actual' | 'scarf' | 'tailwind';
@@ -13,7 +14,6 @@ const stepBtn: React.CSSProperties = {
   fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
 };
 const micro: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)' };
-const fmtStage = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `${n}` : '±0');
 
 function RankRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (

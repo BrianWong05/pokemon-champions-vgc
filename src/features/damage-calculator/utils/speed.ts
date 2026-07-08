@@ -1,5 +1,6 @@
 import { calculateStat, getStageMultiplier } from './damage-calc';
 import { calculateSpeedStats } from '@/features/pokemon/utils/stats';
+import type { SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
 
 /**
  * Speed comparison math for the landscape calculator's Speed mode.
@@ -12,6 +13,20 @@ export function effectiveSpeed(speed: number, opts: { scarf?: boolean; tailwind?
   if (opts.scarf) s = Math.floor(s * 1.5);
   if (opts.tailwind) s = Math.floor(s * 2);
   return s;
+}
+
+/** Format a stat stage as +N / ±0 / -N. */
+export function fmtStage(n: number): string {
+  if (n > 0) return `+${n}`;
+  if (n < 0) return `${n}`;
+  return '±0';
+}
+
+/** Live speed formula string shown under the speed comparison. */
+export function speedFormula(s: SideState): string {
+  const mult = s.boostedStat === 'spe' ? 1.1 : s.hinderedStat === 'spe' ? 0.9 : 1.0;
+  const val = Math.floor((s.baseSpe + 20 + s.spSpe) * mult);
+  return `${val} = floor((${s.baseSpe} + 20 + ${s.spSpe}) × ${mult.toFixed(1)})`;
 }
 
 export interface SpeedTierRow { label: string; value: number; outcome: 'faster' | 'tie' | 'outsped' }
