@@ -10,7 +10,7 @@ import { buildSpeedCompare, speedFormula, fmtStage } from '@/features/damage-cal
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { Sprite, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge, TypeBadge } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
-import { ArenaFieldConditions } from './ArenaFieldConditions';
+import { ArenaBattlefieldRow } from './ArenaBattlefieldRow';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
 import { ArenaAdvancedSheet } from './ArenaAdvancedSheet';
 import { ArenaStatCard } from './ArenaStatCard';
@@ -303,7 +303,7 @@ export function ArenaCalculatorLandscape({
                 </div>
               </div>
             )}
-            <ArenaFieldConditions state={state} dispatch={dispatch} />
+            <ArenaBattlefieldRow state={state} dispatch={dispatch} />
           </>
         ) : (
           <ArenaSpeedCompareView
