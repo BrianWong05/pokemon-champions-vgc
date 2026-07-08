@@ -5,7 +5,8 @@ export type IconName =
   | 'calculator' | 'users' | 'sliders-horizontal' | 'gauge'
   | 'cloud-sun' | 'x' | 'zap' | 'search'
   | 'plus' | 'pencil' | 'share' | 'trash-2' | 'users-round' | 'clipboard-paste'
-  | 'sun' | 'moon' | 'arrow-left-right' | 'rotate-ccw' | 'scan-line';
+  | 'sun' | 'moon' | 'arrow-left-right' | 'rotate-ccw' | 'scan-line'
+  | 'check' | 'alert-triangle' | 'upload' | 'camera' | 'clipboard';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   'chevron-right': <path d="m9 18 6-6-6-6" />,
@@ -143,6 +144,33 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
       <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
       <path d="M7 12h10" />
+    </>
+  ),
+  'check': <path d="M20 6 9 17l-5-5" />,
+  'alert-triangle': (
+    <>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </>
+  ),
+  'upload': (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </>
+  ),
+  'camera': (
+    <>
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+      <circle cx="12" cy="13" r="3" />
+    </>
+  ),
+  'clipboard': (
+    <>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
     </>
   ),
 };

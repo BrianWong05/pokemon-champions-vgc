@@ -1,4 +1,5 @@
 import React, { useReducer, useMemo, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DamageCalculatorTemplate from '@/components/templates/DamageCalculatorTemplate';
 import PokemonPanel from '@/components/organisms/PokemonPanel';
 import ResultsPanel, { DamageResult } from '@/components/organisms/ResultsPanel';
@@ -51,6 +52,7 @@ const isDefaultBuild = (side: SideState) =>
   && side.nature === 'Hardy' && side.item == null;
 
 const DamageCalculatorPage: React.FC = () => {
+  const navigate = useNavigate();
   const { state, dispatch } = useCalculatorState();
   const { format } = useFormat();
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
@@ -314,7 +316,7 @@ const DamageCalculatorPage: React.FC = () => {
           actions={actions}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
-          onOpenScan={() => setIsScanModalOpen(true)}
+          onOpenScan={() => navigate('/scan')}
           defenderExtra={rosterChips}
           attackerExtra={myTeamChips}
         />
