@@ -146,7 +146,28 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span style={{ width: 58, flex: 'none', fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)' }}>Ability</span>
-              <input value={ability} onChange={(e) => setAbility(e.target.value)} placeholder="Ability" style={textInput} />
+              <select
+                value={ability}
+                onChange={(e) => setAbility(e.target.value)}
+                style={{
+                  ...textInput,
+                  cursor: 'pointer',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='var%28--ink-3%29' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 10px center',
+                  backgroundSize: '12px',
+                  paddingRight: '30px',
+                }}
+              >
+                {(c.abilities && c.abilities.length > 0 ? c.abilities : [ability]).map((a) => (
+                  <option key={a} value={a} style={{ background: 'var(--surface-inset)', color: 'var(--ink-1)' }}>
+                    {a}
+                  </option>
+                ))}
+              </select>
             </div>
             <div style={{ height: 1, background: 'var(--line-1)', margin: '3px 0' }} />
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-4)' }}>Moves</div>
