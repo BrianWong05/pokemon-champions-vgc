@@ -37,6 +37,18 @@ describe('ArenaBattlefieldRow', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_WEATHER', payload: 'Sun' });
   });
 
+  it('only renders terrain options once the Terrain chip is clicked, and dispatches SET_TERRAIN on selection', () => {
+    const dispatch = vi.fn();
+    render(<ArenaBattlefieldRow state={sampleState} dispatch={dispatch} />);
+    expect(screen.queryByText('Grassy')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Terrain' }));
+    expect(screen.getByText('Grassy')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Grassy'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_TERRAIN', payload: 'Grassy' });
+  });
+
   it('dispatches TOGGLE_TRICK_ROOM, TOGGLE_GRAVITY, and SET_SPREAD_TARGET on the respective clicks', () => {
     const dispatch = vi.fn();
     render(<ArenaBattlefieldRow state={sampleState} dispatch={dispatch} />);

@@ -64,7 +64,7 @@ export function ArenaBattlefieldRow({ state, dispatch }: { state: CalcState; dis
         </Chip>
       </div>
 
-      <Sheet open={picker !== null} onClose={() => setPicker(null)} title={picker === 'weather' ? 'Weather' : 'Terrain'}>
+      <Sheet open={picker !== null} onClose={() => setPicker(null)} title={picker === 'weather' ? 'Weather' : picker === 'terrain' ? 'Terrain' : undefined}>
         {picker === 'weather' ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {WEATHER.map((w) => (
