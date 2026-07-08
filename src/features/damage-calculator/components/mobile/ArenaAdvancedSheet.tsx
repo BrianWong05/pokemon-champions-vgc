@@ -117,6 +117,18 @@ export function ArenaAdvancedSheet({ open, onClose, side, state, dispatch, onApp
           ))}
         </Section>
 
+        <Section title="Field auras">
+          <Row label="Fairy aura">
+            <Toggle on={state.isFairyAura} onChange={() => dispatch({ type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' })} />
+          </Row>
+          <Row label="Dark aura">
+            <Toggle on={state.isDarkAura} onChange={() => dispatch({ type: 'TOGGLE_FIELD_AURA', payload: 'isDarkAura' })} />
+          </Row>
+          <Row label="Aura break">
+            <Toggle on={state.isAuraBreak} onChange={() => dispatch({ type: 'TOGGLE_FIELD_AURA', payload: 'isAuraBreak' })} />
+          </Row>
+        </Section>
+
         <Section title="Moves — crit & hits">
           {[0, 1, 2, 3].map((i) => {
             const m = s.moves[i];

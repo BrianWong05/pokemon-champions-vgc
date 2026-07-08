@@ -6,6 +6,7 @@ import type { CalcState, SideState } from '@/features/damage-calculator/hooks/us
 import type { DamageResult } from '@/components/organisms/ResultsPanel';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
+import { koVerdictFromText } from '@/design-system/arena';
 
 vi.mock('@/components/organisms/ShowdownImportModal', () => ({ default: () => null }));
 
@@ -56,6 +57,25 @@ const res = (moveName: string, minPercent: number, maxPercent: number): DamageRe
 } as DamageResult);
 
 const p1Results = [res('Moonblast', 78, 92.1), res('Shadow Ball', 64.2, 75.6), null, null];
+
+// Same fixture as useDamageScenarios.test.ts's baseState — its crit scenario
+// deterministically produces a 'guaranteed OHKO' koChanceText (see that file's
+// 'surfaces a koChanceText string on the crit scenario...' test).
+const koState: CalcState = {
+  weather: 'None', terrain: 'None', isSpreadTarget: false,
+  isFairyAura: false, isDarkAura: false, isAuraBreak: false, isGravity: false,
+  p1: side({
+    selectedId: 987, type1: 'ghost', type2: 'fairy',
+    baseHp: 55, baseAtk: 55, baseDef: 55, baseSpa: 135, baseSpd: 135, baseSpe: 135,
+    spSpa: 32, boostedStat: 'spa', hinderedStat: 'atk', nature: 'Modest',
+    moves: [mv('Moonblast'), null, null, null],
+    abilities: ['Protosynthesis'], activeAbility: 'Protosynthesis',
+  }),
+  p2: side({
+    selectedId: 887, type1: 'dragon', type2: 'ghost',
+    baseHp: 88, baseAtk: 120, baseDef: 75, baseSpa: 100, baseSpd: 75, baseSpe: 142,
+  }),
+} as CalcState;
 
 function setup() {
   const dispatch = vi.fn();
@@ -109,8 +129,9 @@ describe('ArenaCalculatorLandscape', () => {
   it('speed mode shows the comparison with outcomes', () => {
     setup();
     fireEvent.click(screen.getByText('Speed'));
-    // Flutter Mane 205 vs Dragapult tiers: Max+ 213 outsped, Max 194 faster
-    expect(screen.getByText('205')).toBeTruthy();
+    // Flutter Mane 205 vs Dragapult tiers: Max+ 213 outsped, Max 194 faster.
+    // 205 shows in both the attacker stat card and the speed view's Actual button.
+    expect(screen.getAllByText('205').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Outsped').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Faster').length).toBeGreaterThanOrEqual(1);
   });
@@ -118,7 +139,8 @@ describe('ArenaCalculatorLandscape', () => {
   it('speed rank stepper dispatches SET_STAT_STAGE', () => {
     const dispatch = setup();
     fireEvent.click(screen.getByText('Speed'));
-    fireEvent.click(screen.getByLabelText('Raise attacker speed rank'));
+    // ArenaSpeedCompareView renders a "Spe rank" stepper per side; the "you" (attacker) column is first
+    fireEvent.click(screen.getAllByLabelText('Raise Spe rank')[0]);
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat: 'spe', val: 1 } });
   });
 
@@ -134,7 +156,8 @@ describe('ArenaCalculatorLandscape', () => {
     expect(matchupAfter.indexOf('Dragapult')).toBeLessThan(matchupAfter.indexOf('Flutter Mane'));
 
     fireEvent.click(screen.getByText('Speed'));
-    expect(screen.getByText('Opponent — Dragapult')).toBeTruthy();
+    // after swap the attacker ("You") column of the speed view is now Dragapult
+    expect(screen.getByText('You — Dragapult')).toBeTruthy();
   });
 
   it('renders an empty state without crashing when nothing is selected', () => {
@@ -163,5 +186,54 @@ describe('ArenaCalculatorLandscape', () => {
     );
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pick a move')).toBeTruthy();
+  });
+
+  it('collapsing the attacker side shows a rail with a chevron-to-expand and hides its move list', () => {
+    setup();
+    // both panels show an "Ability" row before collapsing
+    expect(screen.getAllByText('Ability').length).toBe(2);
+    fireEvent.click(screen.getByLabelText('Collapse attacker'));
+    expect(screen.getByLabelText('Expand attacker')).toBeTruthy();
+    // the attacker panel's Ability select row is gone; only the defender's remains
+    expect(screen.getAllByText('Ability').length).toBe(1);
+  });
+
+  it('a scenario with a real KO chance shows a matching verdict badge', () => {
+    render(
+      <ArenaCalculatorLandscape
+        state={koState}
+        dispatch={vi.fn()}
+        pokemonList={pokemonList}
+        moveList={[]}
+        p1Results={[null, null, null, null]}
+        p2Results={[null, null, null, null]}
+        p1MaxHp={162}
+        p2MaxHp={195}
+        actions={{ handleSelectPokemon: vi.fn(), handleSelectPreset: vi.fn(), handleImportShowdown: vi.fn(), handleLoadConfig: vi.fn() } as any}
+        onApplySpread={vi.fn()}
+        onResetBuild={vi.fn()}
+        onOpenScan={vi.fn()}
+      />,
+    );
+    // koState's crit scenario deterministically yields 'guaranteed OHKO' (see fixture comment above).
+    // The uninvested/no-SP scenarios also OHKO this frail defender, so the badge text can appear more than once.
+    expect(screen.getAllByText(koVerdictFromText('guaranteed OHKO').verdict).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('typing a defender HP percent dispatches SET_HP_PERCENT', () => {
+    const dispatch = setup();
+    fireEvent.change(screen.getByLabelText('Defender HP percent'), { target: { value: '40' } });
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: 40 } });
+  });
+
+  it('panels show computed stats and per-side chips; speed view has mode buttons', () => {
+    setup();
+    // ArenaStatCard: the 'S' (Spe) label appears in both stat cards
+    expect(screen.getAllByText('S').length).toBeGreaterThanOrEqual(1);
+    // ArenaSideConditions on the attacker side
+    expect(screen.getByText('Helping Hand')).toBeTruthy();
+    // switching to speed exposes ArenaSpeedCompareView's mode buttons
+    fireEvent.click(screen.getByText('Speed'));
+    expect(screen.getByText('Scarf')).toBeTruthy();
   });
 });

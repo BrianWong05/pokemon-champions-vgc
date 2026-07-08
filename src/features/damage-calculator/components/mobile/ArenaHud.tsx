@@ -61,6 +61,12 @@ export function ArenaHud({ state, dir, onSwap, p1Results, p2Results, nameOf }: {
         </div>
         <KOVerdict verdict={ko.verdict} confidence={ko.confidence} tone={ko.tone} />
       </div>
+      {r && (
+        <div data-testid="hud-roll-bar" style={{ height: 8, marginTop: 12, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden', display: 'flex' }}>
+          <div style={{ width: `${Math.min(100, r.minPercent)}%`, background: 'var(--danger)' }} />
+          <div style={{ width: `${Math.min(100, r.maxPercent) - Math.min(100, r.minPercent)}%`, background: 'var(--danger-soft)', borderLeft: '1px solid var(--danger-line)' }} />
+        </div>
+      )}
     </div>
   );
 }

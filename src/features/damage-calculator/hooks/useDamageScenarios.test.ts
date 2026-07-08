@@ -102,6 +102,17 @@ describe('useDamageScenarios', () => {
     expect(maxBulk!.maxPercent).toBeLessThan(noSp!.maxPercent * 0.75);
   });
 
+  it('surfaces a koChanceText string on the crit scenario when the move guarantees a KO', () => {
+    // Flutter Mane's max-invested Modest Moonblast crits for a guaranteed OHKO
+    // on this Dragapult fixture (see 'crit deals more than...' above) — a
+    // determinate, non-flaky KO string to assert against.
+    const { result } = renderHook(() => useDamageScenarios(baseState, pokemonList, 'p1'));
+    expect(result.current.crit).not.toBeNull();
+    expect(typeof result.current.crit!.koChanceText).toBe('string');
+    expect(result.current.crit!.koChanceText!.length).toBeGreaterThan(0);
+    expect(result.current.crit!.koChanceText).toBe('guaranteed OHKO');
+  });
+
   it('computes scenarios against p1 as defender when dir is p2', () => {
     const s = { ...baseState, p2: dragapultWithMove };
     const { result } = renderHook(() => useDamageScenarios(s, pokemonList, 'p2'));

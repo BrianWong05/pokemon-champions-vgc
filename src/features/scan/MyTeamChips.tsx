@@ -49,7 +49,7 @@ const MyTeamChips: React.FC<MyTeamChipsProps> = ({ teams, team, byId, activeId, 
 
   return (
     <RosterChipRow
-      label="You"
+      label="Your team"
       tone="accent"
       entries={uniqueMembers.map((m) => ({
         id: m.configuration.selectedId as number,

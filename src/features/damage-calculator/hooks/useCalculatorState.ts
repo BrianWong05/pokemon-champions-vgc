@@ -53,6 +53,7 @@ export interface FieldState {
   isDarkAura: boolean;
   isAuraBreak: boolean;
   isGravity: boolean;
+  isTrickRoom: boolean;
 }
 
 export interface CalcState extends FieldState {
@@ -96,7 +97,8 @@ export type FieldAction =
   | { type: 'SET_TERRAIN', payload: 'None' | 'Electric' | 'Grassy' | 'Misty' | 'Psychic' }
   | { type: 'SET_SPREAD_TARGET', payload: boolean }
   | { type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak' }
-  | { type: 'TOGGLE_GRAVITY' };
+  | { type: 'TOGGLE_GRAVITY' }
+  | { type: 'TOGGLE_TRICK_ROOM' };
 
 export type CalcAction = SideAction | FieldAction;
 
@@ -139,6 +141,7 @@ export const initialState: CalcState = {
   isDarkAura: false,
   isAuraBreak: false,
   isGravity: false,
+  isTrickRoom: false,
 };
 
 export function sideReducer(state: SideState, action: SideAction): SideState {
@@ -445,6 +448,7 @@ export function fieldReducer(state: FieldState, action: FieldAction): FieldState
     case 'SET_SPREAD_TARGET': return { ...state, isSpreadTarget: action.payload };
     case 'TOGGLE_FIELD_AURA': return { ...state, [action.payload]: !state[action.payload] };
     case 'TOGGLE_GRAVITY': return { ...state, isGravity: !state.isGravity };
+    case 'TOGGLE_TRICK_ROOM': return { ...state, isTrickRoom: !state.isTrickRoom };
     default: return state;
   }
 }
@@ -455,7 +459,8 @@ export function calcReducer(state: CalcState, action: CalcAction): CalcState {
     action.type === 'SET_TERRAIN' ||
     action.type === 'SET_SPREAD_TARGET' ||
     action.type === 'TOGGLE_FIELD_AURA' ||
-    action.type === 'TOGGLE_GRAVITY'
+    action.type === 'TOGGLE_GRAVITY' ||
+    action.type === 'TOGGLE_TRICK_ROOM'
   ) {
     return {
       ...state,

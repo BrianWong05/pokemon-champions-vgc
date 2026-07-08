@@ -15,9 +15,10 @@ interface OpponentRosterChipsProps {
 
 const OpponentRosterChips: React.FC<OpponentRosterChipsProps> = ({ roster, byId, activeId, onPick, onClear }) => (
   <RosterChipRow
-    label="Opp"
+    label="Revealed team"
     tone="danger"
     entries={roster.map((id) => ({ id, name: byId.get(id)?.nameEn ?? `#${id}` }))}
+    unknownCount={Math.max(0, 6 - roster.length)}
     activeId={activeId}
     onPick={onPick}
     onClear={onClear}

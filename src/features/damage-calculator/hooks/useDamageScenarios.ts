@@ -7,7 +7,7 @@ import {
 } from '../utils/damage-calc';
 import { AEGISLASH_ID } from '@/features/pokemon/hooks/usePokemonEditor';
 
-export interface ScenarioRange { minPercent: number; maxPercent: number }
+export interface ScenarioRange { minPercent: number; maxPercent: number; koChanceText?: string }
 export interface DamageScenarios { crit: ScenarioRange | null; maxBulk: ScenarioRange | null; noSp: ScenarioRange | null }
 
 const NULL_SCENARIOS: DamageScenarios = { crit: null, maxBulk: null, noSp: null };
@@ -54,9 +54,12 @@ export function useDamageScenarios(
         const min = clean.length ? clean[0] : 0;
         const max = clean.length ? clean[clean.length - 1] : 0;
         const maxHP = defMon.maxHP();
+        let koChanceText: string | undefined;
+        try { const ko = (result as any).kochance?.(); if (ko && ko.text) koChanceText = ko.text; } catch { /* ignore */ }
         return {
           minPercent: Math.floor((min * 1000) / maxHP) / 10 || 0,
           maxPercent: Math.floor((max * 1000) / maxHP) / 10 || 0,
+          koChanceText,
         };
       };
 
