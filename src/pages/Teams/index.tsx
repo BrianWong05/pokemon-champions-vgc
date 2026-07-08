@@ -311,6 +311,7 @@ const TeamsPage: React.FC = () => {
               focusId={focusTeamId}
               onScanPlayer={() => setIsPlayerScanOpen(true)}
               onEdit={(id) => { setEditTeamId(id); setCreatingTeam(true); }}
+              onDelete={handleDeleteTeam}
               onReviewMon={(teamId, memberId) => setReviewTarget({ teamId, memberId })}
             />
           )

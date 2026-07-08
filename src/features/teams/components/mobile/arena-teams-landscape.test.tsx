@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { memberFlags, teamCompleteness } from './ArenaTeamsLandscape';
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { ArenaTeamsLandscape, memberFlags, teamCompleteness } from './ArenaTeamsLandscape';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { TeamWithMembers } from '@/db/repositories/team.repo';
 
@@ -34,5 +36,27 @@ describe('teamCompleteness', () => {
     expect(teamCompleteness([member(full), member(full)])).toEqual({ filled: 2, complete: false });
     const five = Array.from({ length: 5 }, () => member(full));
     expect(teamCompleteness([...five, member(cfg({ spSpa: 252 }))])).toEqual({ filled: 6, complete: false });
+  });
+});
+
+describe('ArenaTeamsLandscape', () => {
+  it('deletes the selected team through an accessible action', () => {
+    const onDelete = vi.fn();
+    render(
+      <ArenaTeamsLandscape
+        teams={[{ id: 'team-1', name: 'Rain', createdAt: new Date(), members: [] }]}
+        pokemonList={[]}
+        loading={false}
+        error={null}
+        onNew={() => {}}
+        onScanPlayer={() => {}}
+        onEdit={() => {}}
+        onReviewMon={() => {}}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete team' }));
+    expect(onDelete).toHaveBeenCalledWith('team-1', 'Rain');
   });
 });
