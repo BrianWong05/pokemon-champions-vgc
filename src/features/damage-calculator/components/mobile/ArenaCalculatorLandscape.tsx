@@ -18,8 +18,6 @@ import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 type Side = 'p1' | 'p2';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
-const PANEL_W = 240;
-
 const STAT_LABEL: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
 
 /** Format a stat stage as +N / ±0 / -N. */
@@ -55,10 +53,12 @@ function TuneBox({ label, value, active, onClick }: { label: string; value: Reac
   );
 }
 
-function Panel({ side, badge, children }: { side: 'left' | 'right'; badge: React.ReactNode; children: React.ReactNode }) {
+function Panel({ side, badge, onCollapse, children }: {
+  side: 'left' | 'right'; badge: React.ReactNode; onCollapse: () => void; children: React.ReactNode;
+}) {
   return (
     <div style={{
-      width: PANEL_W, flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
+      width: 'clamp(228px, 25%, 300px)', flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
       background: 'var(--surface-sticky)',
       borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
       borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
@@ -66,11 +66,48 @@ function Panel({ side, badge, children }: { side: 'left' | 'right'; badge: React
     }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
         <Micro style={{ letterSpacing: '0.07em' }}>{side === 'left' ? 'Attacker' : 'Defender'}</Micro>
+        <button onClick={onCollapse} aria-label={`Collapse ${side === 'left' ? 'attacker' : 'defender'}`} style={{
+          width: 24, height: 24, marginLeft: 6, marginRight: 6, borderRadius: 6, background: 'transparent',
+          border: '1px solid var(--line-1)', color: 'var(--ink-3)', cursor: 'pointer', display: 'grid', placeItems: 'center',
+        }}>
+          <Icon name="chevron-right" size={14} color="var(--ink-3)" style={{ transform: side === 'left' ? 'scaleX(-1)' : undefined }} />
+        </button>
         <span style={{ flex: 1 }} />
         {badge}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </div>
+  );
+}
+
+function Rail({ side, name, dex, tone, item, hpPercent, onExpand }: {
+  side: 'left' | 'right'; name: string; dex: number | null; tone: 'accent' | 'danger';
+  item?: string | null; hpPercent?: number; onExpand: () => void;
+}) {
+  return (
+    <aside style={{
+      width: 88, flex: 'none', background: 'var(--surface-sticky)',
+      borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
+      borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '12px 8px',
+    }}>
+      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: tone === 'accent' ? 'var(--ink-3)' : 'var(--danger)' }}>
+        {side === 'left' ? 'You' : 'Opp'}
+      </div>
+      <Sprite dex={dex} name={name} size={46} ring tone={tone} />
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', lineHeight: 1.2 }}>{name || '—'}</div>
+      {hpPercent != null && (
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)' }}>{hpPercent}%</div>
+      )}
+      {item && <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.2 }}>{item}</div>}
+      <span style={{ flex: 1 }} />
+      <button onClick={onExpand} aria-label={`Expand ${side === 'left' ? 'attacker' : 'defender'}`} style={{
+        width: 40, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)',
+        color: 'var(--ink-2)', cursor: 'pointer', display: 'grid', placeItems: 'center',
+      }}>
+        <Icon name="chevron-right" size={18} color="var(--ink-2)" style={{ transform: side === 'right' ? 'scaleX(-1)' : undefined }} />
+      </button>
+    </aside>
   );
 }
 
@@ -202,6 +239,8 @@ export function ArenaCalculatorLandscape({
   const [movePickerSide, setMovePickerSide] = useState<Side | null>(null);
   const [advancedSide, setAdvancedSide] = useState<Side | null>(null);
   const [showdownSide, setShowdownSide] = useState<Side | null>(null);
+  const [collapsed, setCollapsed] = useState<{ p1: boolean; p2: boolean }>({ p1: false, p2: false });
+  const toggleCollapsed = (s: Side) => setCollapsed((c) => ({ ...c, [s]: !c[s] }));
 
   const defDir: Side = dir === 'p1' ? 'p2' : 'p1';
   const nameOf = (id: number | null) => pokemonList.find((p) => p.id === id)?.nameEn ?? '—';
@@ -236,32 +275,43 @@ export function ArenaCalculatorLandscape({
   return (
     <div style={{ display: 'flex', height: '100%', minWidth: 0, fontFamily: 'var(--font-ui)', color: 'var(--text-body)' }}>
       {/* -------- attacker (p1) -------- */}
-      <Panel side="left" badge={<Badge tone="accent">You</Badge>}>
-        {attackerExtra}
-        <Identity s={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" onClick={() => setPicker({ side: 'p1', field: 'species' })} />
-        <MoveList
-          s={state.p1}
-          results={p1Results}
-          onSelect={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index } })}
-          onEdit={() => setMovePickerSide('p1')}
+      {collapsed.p1 ? (
+        <Rail
+          side="left"
+          name={nameOf(state.p1.selectedId)}
+          dex={state.p1.selectedId}
+          tone="accent"
+          item={state.p1.item}
+          onExpand={() => toggleCollapsed('p1')}
         />
-        <SelectRow label="Ability" value={state.p1.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p1', field: 'ability' })} />
-        <SelectRow label="Item" value={state.p1.item ?? 'None'} leading={<ItemIcon item={state.p1.item} size={18} />} onClick={() => setPicker({ side: 'p1', field: 'item' })} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <TuneBox label="Nature" value={natureShort(state.p1)} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
-          <TuneBox
-            label="Rank"
-            value={fmtStage(state.p1.stages[p1RankStat] || 0)}
-            active={(state.p1.stages[p1RankStat] || 0) !== 0}
-            onClick={() => setAdvancedSide('p1')}
+      ) : (
+        <Panel side="left" badge={<Badge tone="accent">You</Badge>} onCollapse={() => toggleCollapsed('p1')}>
+          {attackerExtra}
+          <Identity s={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" onClick={() => setPicker({ side: 'p1', field: 'species' })} />
+          <MoveList
+            s={state.p1}
+            results={p1Results}
+            onSelect={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index } })}
+            onEdit={() => setMovePickerSide('p1')}
           />
-          <TuneBox label="Atk SP" value={state.p1.spAtk} active={state.p1.spAtk > 0} onClick={() => setAdvancedSide('p1')} />
-          <TuneBox label="SpA SP" value={state.p1.spSpa} active={state.p1.spSpa > 0} onClick={() => setAdvancedSide('p1')} />
-        </div>
-      </Panel>
+          <SelectRow label="Ability" value={state.p1.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p1', field: 'ability' })} />
+          <SelectRow label="Item" value={state.p1.item ?? 'None'} leading={<ItemIcon item={state.p1.item} size={18} />} onClick={() => setPicker({ side: 'p1', field: 'item' })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <TuneBox label="Nature" value={natureShort(state.p1)} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
+            <TuneBox
+              label="Rank"
+              value={fmtStage(state.p1.stages[p1RankStat] || 0)}
+              active={(state.p1.stages[p1RankStat] || 0) !== 0}
+              onClick={() => setAdvancedSide('p1')}
+            />
+            <TuneBox label="Atk SP" value={state.p1.spAtk} active={state.p1.spAtk > 0} onClick={() => setAdvancedSide('p1')} />
+            <TuneBox label="SpA SP" value={state.p1.spSpa} active={state.p1.spSpa > 0} onClick={() => setAdvancedSide('p1')} />
+          </div>
+        </Panel>
+      )}
 
       {/* -------- center: result column -------- */}
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 520, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ flex: 1, display: 'flex', gap: 3, padding: 3, background: 'var(--surface-inset)', borderRadius: 'var(--r-pill)', border: '1px solid var(--line-1)' }}>
             {(['damage', 'speed'] as const).map((v) => {
@@ -371,38 +421,50 @@ export function ArenaCalculatorLandscape({
       </div>
 
       {/* -------- defender (p2) -------- */}
-      <Panel side="right" badge={<Badge tone="danger">Opponent</Badge>}>
-        {defenderExtra}
-        <Identity s={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onClick={() => setPicker({ side: 'p2', field: 'species' })} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Micro>HP</Micro>
-          <div style={{ flex: 1, height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
-            <div style={{ width: `${state.p2.hpPercent}%`, height: '100%', background: 'var(--safe)' }} />
+      {collapsed.p2 ? (
+        <Rail
+          side="right"
+          name={nameOf(state.p2.selectedId)}
+          dex={state.p2.selectedId}
+          tone="danger"
+          item={state.p2.item}
+          hpPercent={state.p2.hpPercent}
+          onExpand={() => toggleCollapsed('p2')}
+        />
+      ) : (
+        <Panel side="right" badge={<Badge tone="danger">Opponent</Badge>} onCollapse={() => toggleCollapsed('p2')}>
+          {defenderExtra}
+          <Identity s={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onClick={() => setPicker({ side: 'p2', field: 'species' })} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Micro>HP</Micro>
+            <div style={{ flex: 1, height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ width: `${state.p2.hpPercent}%`, height: '100%', background: 'var(--safe)' }} />
+            </div>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>{state.p2.hpPercent}%</span>
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>{state.p2.hpPercent}%</span>
-        </div>
-        <SelectRow label="Move" value={state.p2.moves[state.p2.activeMoveIndex]?.nameEn ?? 'None'} onClick={() => setMovePickerSide('p2')} />
-        <SelectRow label="Ability" value={state.p2.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p2', field: 'ability' })} />
-        <SelectRow label="Item" value={state.p2.item ?? 'None'} leading={<ItemIcon item={state.p2.item} size={18} />} onClick={() => setPicker({ side: 'p2', field: 'item' })} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <TuneBox label="Nature" value={natureShort(state.p2)} onClick={() => setPicker({ side: 'p2', field: 'nature' })} />
-          <TuneBox label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0} onClick={() => setAdvancedSide('p2')} />
-          <TuneBox label="Def SP" value={state.p2.spDef} active={state.p2.spDef > 0} onClick={() => setAdvancedSide('p2')} />
-          <TuneBox label="SpD SP" value={state.p2.spSpd} active={state.p2.spSpd > 0} onClick={() => setAdvancedSide('p2')} />
-          <TuneBox
-            label="Rank"
-            value={fmtStage(state.p2.stages[p2RankStat] || 0)}
-            active={(state.p2.stages[p2RankStat] || 0) !== 0}
-            onClick={() => setAdvancedSide('p2')}
-          />
-        </div>
-        <button
-          onClick={onOpenScan}
-          style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
-        >
-          Scan opponent
-        </button>
-      </Panel>
+          <SelectRow label="Move" value={state.p2.moves[state.p2.activeMoveIndex]?.nameEn ?? 'None'} onClick={() => setMovePickerSide('p2')} />
+          <SelectRow label="Ability" value={state.p2.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p2', field: 'ability' })} />
+          <SelectRow label="Item" value={state.p2.item ?? 'None'} leading={<ItemIcon item={state.p2.item} size={18} />} onClick={() => setPicker({ side: 'p2', field: 'item' })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <TuneBox label="Nature" value={natureShort(state.p2)} onClick={() => setPicker({ side: 'p2', field: 'nature' })} />
+            <TuneBox label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0} onClick={() => setAdvancedSide('p2')} />
+            <TuneBox label="Def SP" value={state.p2.spDef} active={state.p2.spDef > 0} onClick={() => setAdvancedSide('p2')} />
+            <TuneBox label="SpD SP" value={state.p2.spSpd} active={state.p2.spSpd > 0} onClick={() => setAdvancedSide('p2')} />
+            <TuneBox
+              label="Rank"
+              value={fmtStage(state.p2.stages[p2RankStat] || 0)}
+              active={(state.p2.stages[p2RankStat] || 0) !== 0}
+              onClick={() => setAdvancedSide('p2')}
+            />
+          </div>
+          <button
+            onClick={onOpenScan}
+            style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Scan opponent
+          </button>
+        </Panel>
+      )}
 
       {/* -------- sheets (same wiring as portrait) -------- */}
       <ArenaAdvancedSheet

@@ -164,4 +164,14 @@ describe('ArenaCalculatorLandscape', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Pick a move')).toBeTruthy();
   });
+
+  it('collapsing the attacker side shows a rail with a chevron-to-expand and hides its move list', () => {
+    setup();
+    // both panels show an "Ability" row before collapsing
+    expect(screen.getAllByText('Ability').length).toBe(2);
+    fireEvent.click(screen.getByLabelText('Collapse attacker'));
+    expect(screen.getByLabelText('Expand attacker')).toBeTruthy();
+    // the attacker panel's Ability select row is gone; only the defender's remains
+    expect(screen.getAllByText('Ability').length).toBe(1);
+  });
 });
