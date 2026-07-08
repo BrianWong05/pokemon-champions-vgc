@@ -64,7 +64,16 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const [ability, setAbility] = useState(c.activeAbility ?? '');
   const [moves, setMoves] = useState<(MoveData | null)[]>([0, 1, 2, 3].map((i) => c.moves[i] ?? null));
 
-  const setSpVal = (spKey: string, v: number) => setSp((prev) => ({ ...prev, [spKey]: Math.max(0, Math.min(SP_MAX, v || 0)) }));
+  const setSpVal = (spKey: string, v: number) => {
+    const targetVal = Math.max(0, Math.min(SP_MAX, v || 0));
+    const currentTotalWithoutThis = STATS.reduce((sum, s) => {
+      if (s.spKey === spKey) return sum;
+      return sum + sp[s.spKey as string];
+    }, 0);
+    const maxAllowed = Math.max(0, 66 - currentTotalWithoutThis);
+    const cappedVal = Math.min(targetVal, maxAllowed);
+    setSp((prev) => ({ ...prev, [spKey]: cappedVal }));
+  };
   const natMult = (key: string) => (up === key ? 1.1 : down === key ? 0.9 : 1.0);
   const valueFor = (key: string, baseKey: keyof PokemonConfig, spKey: keyof PokemonConfig) => {
     const base = c[baseKey] as number;
