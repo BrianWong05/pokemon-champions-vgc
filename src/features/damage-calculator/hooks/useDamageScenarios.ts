@@ -39,7 +39,6 @@ export function useDamageScenarios(
       const field = mapToSmogonField(
         state.weather, state.isSpreadTarget, state.isFairyAura, state.isDarkAura,
         state.isAuraBreak, state.terrain, state.isGravity, attacker, defender,
-        state.isTrickRoom,
       );
       const atkMon = mapToSmogonPokemon(attacker, formName(atkBase, attacker), atkBase.type1, atkBase.type2);
       const idx = attacker.activeMoveIndex;
