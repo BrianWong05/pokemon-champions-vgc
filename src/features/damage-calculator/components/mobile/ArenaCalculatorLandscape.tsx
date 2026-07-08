@@ -7,12 +7,15 @@ import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
 import { buildSpeedCompare } from '@/features/damage-calculator/utils/speed';
-import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { Sprite, TypeBadge, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge, StatChip } from '@/design-system/arena';
+import { Sprite, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
 import { ArenaFieldConditions } from './ArenaFieldConditions';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
 import { ArenaAdvancedSheet } from './ArenaAdvancedSheet';
+import { ArenaStatCard } from './ArenaStatCard';
+import { ArenaMoveList } from './ArenaMoveList';
+import { ArenaSideConditions } from './ArenaSideConditions';
+import { ArenaSpeedCompareView } from './ArenaSpeedCompareView';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 
 type Side = 'p1' | 'p2';
@@ -25,6 +28,13 @@ function fmtStage(n: number): string {
   if (n > 0) return `+${n}`;
   if (n < 0) return `${n}`;
   return '±0';
+}
+
+/** Live speed formula string shown under the speed comparison. */
+function speedFormula(s: SideState): string {
+  const mult = s.boostedStat === 'spe' ? 1.1 : s.hinderedStat === 'spe' ? 0.9 : 1.0;
+  const val = Math.floor((s.baseSpe + 20 + s.spSpe) * mult);
+  return `${val} = floor((${s.baseSpe} + 20 + ${s.spSpe}) × ${mult.toFixed(1)})`;
 }
 
 /* ---------- small presentational helpers ---------- */
@@ -111,71 +121,6 @@ function Rail({ side, name, dex, tone, item, hpPercent, onExpand }: {
   );
 }
 
-function Identity({ s, name, tone, onClick }: { s: SideState; name: string; tone: 'accent' | 'danger'; onClick: () => void }) {
-  const types = [s.type1, s.type2].filter(Boolean) as string[];
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <Sprite dex={s.selectedId} name={name} size={44} ring tone={tone} />
-      <button onClick={onClick} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', minWidth: 0 }}>
-        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14.5, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {name || 'Select Pokémon'}
-        </div>
-        <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>{types.map((t) => <TypeBadge key={t} type={t} size="sm" />)}</div>
-      </button>
-    </div>
-  );
-}
-
-function MoveList({ s, results, onSelect, onEdit }: {
-  s: SideState; results: (DamageResult | null)[]; onSelect: (index: number) => void; onEdit: () => void;
-}) {
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-        <Micro>Moves</Micro>
-        <span style={{ flex: 1 }} />
-        <button onClick={onEdit} aria-label="Edit moves" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'inline-flex', color: 'var(--ink-3)' }}>
-          <Icon name="pencil" size={14} color="var(--ink-3)" />
-        </button>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {s.moves.map((m, i) => {
-          if (!m) {
-            return (
-              <button key={i} onClick={onEdit} style={{
-                display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: '7px 8px',
-                borderRadius: 'var(--r-sm)', cursor: 'pointer', background: 'transparent',
-                border: '1px dashed var(--line-2)', color: 'var(--ink-4)', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
-              }}>
-                Add move
-              </button>
-            );
-          }
-          const on = i === s.activeMoveIndex;
-          const r = results[i];
-          const typeName = REVERSE_TYPE_IDS[r?.moveType ?? (m as MoveData).typeId];
-          return (
-            <button key={i} onClick={() => onSelect(i)} style={{
-              display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: '7px 8px',
-              borderRadius: 'var(--r-sm)', cursor: 'pointer',
-              background: on ? 'var(--accent-soft)' : 'transparent',
-              border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
-            }}>
-              {typeName && <TypeBadge type={typeName} size="sm" />}
-              <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, color: on ? 'var(--ink-1)' : 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {(m as MoveData).nameEn}
-              </span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink-3)' }}>
-                {r ? `${r.minPercent}–${r.maxPercent}%` : '—'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | null }) {
   if (!range) return null;
   const danger = range.maxPercent >= 100;
@@ -202,25 +147,6 @@ const hpStep: React.CSSProperties = {
   border: '1px solid var(--line-2)', color: 'var(--ink-2)',
   fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
 };
-
-function RankStepper({ label, value, onChange, ariaPrefix }: { label: string; value: number; onChange: (val: number) => void; ariaPrefix: string }) {
-  const btn: React.CSSProperties = {
-    width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)',
-    border: '1px solid var(--line-2)', color: 'var(--ink-2)',
-    fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
-  };
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-      <Micro>{label}</Micro>
-      <span style={{ flex: 1 }} />
-      <button aria-label={`Lower ${ariaPrefix} rank`} style={btn} onClick={() => onChange(Math.max(-6, value - 1))}>−</button>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)', width: 22, textAlign: 'center' }}>
-        {value > 0 ? `+${value}` : value}
-      </span>
-      <button aria-label={`Raise ${ariaPrefix} rank`} style={btn} onClick={() => onChange(Math.min(6, value + 1))}>+</button>
-    </div>
-  );
-}
 
 /* ---------- the screen ---------- */
 
@@ -296,9 +222,9 @@ export function ArenaCalculatorLandscape({
       ) : (
         <Panel side="left" badge={<Badge tone="accent">You</Badge>} onCollapse={() => toggleCollapsed('p1')}>
           {attackerExtra}
-          <Identity s={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" onClick={() => setPicker({ side: 'p1', field: 'species' })} />
-          <MoveList
-            s={state.p1}
+          <ArenaStatCard side={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" onOpenSpecies={() => setPicker({ side: 'p1', field: 'species' })} />
+          <ArenaMoveList
+            side={state.p1}
             results={p1Results}
             onSelect={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index } })}
             onEdit={() => setMovePickerSide('p1')}
@@ -316,6 +242,7 @@ export function ArenaCalculatorLandscape({
             <TuneBox label="Atk SP" value={state.p1.spAtk} active={state.p1.spAtk > 0} onClick={() => setAdvancedSide('p1')} />
             <TuneBox label="SpA SP" value={state.p1.spSpa} active={state.p1.spSpa > 0} onClick={() => setAdvancedSide('p1')} />
           </div>
+          <ArenaSideConditions side={state.p1} which="p1" dispatch={dispatch} />
         </Panel>
       )}
 
@@ -381,45 +308,18 @@ export function ArenaCalculatorLandscape({
             <ArenaFieldConditions state={state} dispatch={dispatch} />
           </>
         ) : (
-          <>
-            <div>
-              <Micro style={{ marginBottom: 6 }}>{`${dir === 'p1' ? 'You' : 'Opponent'} — ${nameOf(state[dir].selectedId)}`}</Micro>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--ink-1)', lineHeight: 1 }}>{speed.yours.actual}</div>
-                <div style={{ display: 'flex', gap: 6, flex: 1 }}>
-                  <StatChip label="Scarf" value={speed.yours.scarf} tone="accent" />
-                  <StatChip label="Tailwind" value={speed.yours.tailwind} />
-                </div>
-              </div>
-              <RankStepper
-                label="Spe rank"
-                ariaPrefix="attacker speed"
-                value={state[dir].stages.spe || 0}
-                onChange={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
-              />
-            </div>
-            <div>
-              <Micro style={{ marginBottom: 4 }}>{`${dir === 'p1' ? 'Opponent' : 'You'} — ${nameOf(state[defDir].selectedId)}`}</Micro>
-              {speed.tiers.map((t) => (
-                <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--line-1)' }}>
-                  <span style={{ flex: 1, fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>{t.label}</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)' }}>{t.value}</span>
-                  <Badge tone={t.outcome === 'faster' ? 'safe' : t.outcome === 'tie' ? 'field' : 'danger'}>
-                    {t.outcome === 'faster' ? 'Faster' : t.outcome === 'tie' ? 'Tie' : 'Outsped'}
-                  </Badge>
-                </div>
-              ))}
-              <RankStepper
-                label={`${dir === 'p1' ? 'Opp.' : 'Your'} spe rank`}
-                ariaPrefix="defender speed"
-                value={state[defDir].stages.spe || 0}
-                onChange={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
-              />
-            </div>
-            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--ink-4)' }}>
-              Stat = floor((base + 20 + SP) × nature)
-            </code>
-          </>
+          <ArenaSpeedCompareView
+            compare={speed}
+            layout="columns"
+            youName={nameOf(state[dir].selectedId)}
+            oppName={nameOf(state[defDir].selectedId)}
+            oppBaseSpe={state[defDir].baseSpe}
+            youStage={state[dir].stages.spe || 0}
+            oppStage={state[defDir].stages.spe || 0}
+            onYouStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
+            onOppStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
+            formula={speedFormula(state[dir])}
+          />
         )}
         <button
           onClick={() => setAdvancedSide(dir)}
@@ -443,7 +343,7 @@ export function ArenaCalculatorLandscape({
       ) : (
         <Panel side="right" badge={<Badge tone="danger">Opponent</Badge>} onCollapse={() => toggleCollapsed('p2')}>
           {defenderExtra}
-          <Identity s={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onClick={() => setPicker({ side: 'p2', field: 'species' })} />
+          <ArenaStatCard side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Micro>HP</Micro>
             <div style={{ flex: 1, height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
@@ -477,6 +377,7 @@ export function ArenaCalculatorLandscape({
               onClick={() => setAdvancedSide('p2')}
             />
           </div>
+          <ArenaSideConditions side={state.p2} which="p2" dispatch={dispatch} />
           <button
             onClick={onOpenScan}
             style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}

@@ -129,8 +129,9 @@ describe('ArenaCalculatorLandscape', () => {
   it('speed mode shows the comparison with outcomes', () => {
     setup();
     fireEvent.click(screen.getByText('Speed'));
-    // Flutter Mane 205 vs Dragapult tiers: Max+ 213 outsped, Max 194 faster
-    expect(screen.getByText('205')).toBeTruthy();
+    // Flutter Mane 205 vs Dragapult tiers: Max+ 213 outsped, Max 194 faster.
+    // 205 shows in both the attacker stat card and the speed view's Actual button.
+    expect(screen.getAllByText('205').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Outsped').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Faster').length).toBeGreaterThanOrEqual(1);
   });
@@ -138,7 +139,8 @@ describe('ArenaCalculatorLandscape', () => {
   it('speed rank stepper dispatches SET_STAT_STAGE', () => {
     const dispatch = setup();
     fireEvent.click(screen.getByText('Speed'));
-    fireEvent.click(screen.getByLabelText('Raise attacker speed rank'));
+    // ArenaSpeedCompareView renders a "Spe rank" stepper per side; the "you" (attacker) column is first
+    fireEvent.click(screen.getAllByLabelText('Raise Spe rank')[0]);
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat: 'spe', val: 1 } });
   });
 
@@ -154,7 +156,8 @@ describe('ArenaCalculatorLandscape', () => {
     expect(matchupAfter.indexOf('Dragapult')).toBeLessThan(matchupAfter.indexOf('Flutter Mane'));
 
     fireEvent.click(screen.getByText('Speed'));
-    expect(screen.getByText('Opponent — Dragapult')).toBeTruthy();
+    // after swap the attacker ("You") column of the speed view is now Dragapult
+    expect(screen.getByText('You — Dragapult')).toBeTruthy();
   });
 
   it('renders an empty state without crashing when nothing is selected', () => {
@@ -221,5 +224,16 @@ describe('ArenaCalculatorLandscape', () => {
     const dispatch = setup();
     fireEvent.change(screen.getByLabelText('Defender HP percent'), { target: { value: '40' } });
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: 40 } });
+  });
+
+  it('panels show computed stats and per-side chips; speed view has mode buttons', () => {
+    setup();
+    // ArenaStatCard: the 'S' (Spe) label appears in both stat cards
+    expect(screen.getAllByText('S').length).toBeGreaterThanOrEqual(1);
+    // ArenaSideConditions on the attacker side
+    expect(screen.getByText('Helping Hand')).toBeTruthy();
+    // switching to speed exposes ArenaSpeedCompareView's mode buttons
+    fireEvent.click(screen.getByText('Speed'));
+    expect(screen.getByText('Scarf')).toBeTruthy();
   });
 });
