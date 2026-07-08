@@ -318,7 +318,25 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
           <div style={{ fontSize: 10.5, color: 'var(--ink-4)', margin: '5px 0 10px', lineHeight: 1.35 }}>Final stats are derived — edit the SP investment (type or slide).</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11, padding: '8px 10px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-1)' }}>
             <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Nature</span>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)' }}>{getNatureFromStats(up, down)}</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)' }}>
+              {(() => {
+                const natStr = getNatureFromStats(up, down);
+                if (!up || !down || up === down) return natStr;
+                const match = natStr.match(/^([^(]+)\(\+([^,]+),\s*-([^)]+)\)$/);
+                if (!match) return natStr;
+                const [, name, boost, hinder] = match;
+                return (
+                  <>
+                    {name.trim()}{' '}
+                    <span style={{ color: 'var(--ink-4)', fontWeight: 500 }}>(</span>
+                    <span style={{ color: 'var(--safe)' }}>+{boost}</span>
+                    <span style={{ color: 'var(--ink-4)', fontWeight: 500 }}>, </span>
+                    <span style={{ color: 'var(--danger)' }}>-{hinder}</span>
+                    <span style={{ color: 'var(--ink-4)', fontWeight: 500 }}>)</span>
+                  </>
+                );
+              })()}
+            </span>
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 10, color: 'var(--ink-4)' }}>Tap a stat: ↑ boost / ↓ lower</span>
           </div>
