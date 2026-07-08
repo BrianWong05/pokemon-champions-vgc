@@ -23,38 +23,46 @@ interface RosterChipRowProps {
 }
 
 const RosterChipRow: React.FC<RosterChipRowProps> = ({ label, tone, entries, unknownCount, activeId, onPick, onClear, pickAriaLabel, clearAriaLabel }) => (
-  <div className="mb-3 flex items-center gap-1 overflow-x-auto rounded-lg border border-line-2 bg-inset p-1">
-    <span className={`px-1 text-[10px] font-semibold ${tone === 'danger' ? 'text-danger' : 'text-accent'}`}>{label}</span>
-    {entries.map((e) => (
+  <div className="mb-3">
+    <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-3">{label}</div>
+    <div className="flex items-center gap-1.5 overflow-x-auto">
+      {entries.map((e) => (
+        <button
+          key={e.id}
+          type="button"
+          onClick={() => onPick(e.id)}
+          className={`grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl border ${
+            activeId === e.id
+              ? tone === 'danger'
+                ? 'border-danger-line bg-danger-soft'
+                : 'border-accent-soft-line bg-accent-soft'
+              : 'border-line bg-transparent'
+          }`}
+          title={e.name}
+          aria-label={pickAriaLabel(e.name)}
+        >
+          <PokemonImage id={e.id} name={e.name} className="w-9 h-9" />
+        </button>
+      ))}
+      {Array.from({ length: unknownCount ?? 0 }).map((_, i) => (
+        <div
+          key={`unknown-${i}`}
+          aria-label="Unrevealed opponent slot"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-dashed border-line-2 text-ink-4 font-display text-xs font-bold"
+        >
+          ?
+        </div>
+      ))}
       <button
-        key={e.id}
         type="button"
-        onClick={() => onPick(e.id)}
-        className={`shrink-0 rounded-lg border p-0.5 ${activeId === e.id ? 'border-transparent bg-accent-soft ring-2 ring-accent' : 'border-line bg-card'}`}
-        title={e.name}
-        aria-label={pickAriaLabel(e.name)}
+        className="ml-auto shrink-0 px-1.5 py-0.5 text-ink-4 hover:text-danger"
+        onClick={onClear}
+        aria-label={clearAriaLabel}
+        title={clearAriaLabel}
       >
-        <PokemonImage id={e.id} name={e.name} className="w-8 h-8" />
+        ✕
       </button>
-    ))}
-    {Array.from({ length: unknownCount ?? 0 }).map((_, i) => (
-      <div
-        key={`unknown-${i}`}
-        aria-label="Unrevealed opponent slot"
-        className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-dashed border-line-2 text-ink-4 font-display text-xs font-bold"
-      >
-        ?
-      </div>
-    ))}
-    <button
-      type="button"
-      className="ml-auto shrink-0 px-1.5 py-0.5 text-danger hover:bg-danger-soft rounded"
-      onClick={onClear}
-      aria-label={clearAriaLabel}
-      title={clearAriaLabel}
-    >
-      ✕
-    </button>
+    </div>
   </div>
 );
 
