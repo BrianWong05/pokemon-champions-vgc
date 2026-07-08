@@ -4,49 +4,21 @@ import { Chip, Sheet } from '@/design-system/arena';
 
 const WEATHER = ['None', 'Sun', 'Rain', 'Sandstorm', 'Snow'] as const;
 const TERRAIN = ['None', 'Electric', 'Grassy', 'Misty', 'Psychic'] as const;
-
-function toggleButtonStyle(active: boolean): React.CSSProperties {
-  return {
-    padding: '4px 11px',
-    cursor: 'pointer',
-    border: 'none',
-    fontFamily: 'var(--font-ui)',
-    fontSize: 10.5,
-    fontWeight: 700,
-    lineHeight: 1.7,
-    whiteSpace: 'nowrap',
-    background: active ? 'var(--accent-soft)' : 'transparent',
-    color: active ? 'var(--accent)' : 'var(--ink-3)',
-  };
-}
+const AURAS: { key: 'isFairyAura' | 'isDarkAura' | 'isAuraBreak'; label: string }[] = [
+  { key: 'isFairyAura', label: 'Fairy Aura' },
+  { key: 'isDarkAura', label: 'Dark Aura' },
+  { key: 'isAuraBreak', label: 'Aura Break' },
+];
 
 /** ArenaBattlefieldRow — compact field-condition row for the landscape calculator center column. */
 export function ArenaBattlefieldRow({ state, dispatch }: { state: CalcState; dispatch: React.Dispatch<CalcAction> }) {
-  const [picker, setPicker] = useState<'weather' | 'terrain' | null>(null);
+  const [picker, setPicker] = useState<'weather' | 'terrain' | 'auras' | null>(null);
+  const anyAura = state.isFairyAura || state.isDarkAura || state.isAuraBreak;
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>
-          BATTLEFIELD
-        </span>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: 'flex', border: '1px solid var(--line-1)', borderRadius: 'var(--r-pill)', overflow: 'hidden', background: 'var(--surface-inset)' }}>
-          <button
-            type="button"
-            style={toggleButtonStyle(!state.isSpreadTarget)}
-            onClick={() => dispatch({ type: 'SET_SPREAD_TARGET', payload: false })}
-          >
-            Single
-          </button>
-          <button
-            type="button"
-            style={toggleButtonStyle(state.isSpreadTarget)}
-            onClick={() => dispatch({ type: 'SET_SPREAD_TARGET', payload: true })}
-          >
-            Spread
-          </button>
-        </div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)', marginBottom: 8 }}>
+        BATTLEFIELD
       </div>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -62,9 +34,12 @@ export function ArenaBattlefieldRow({ state, dispatch }: { state: CalcState; dis
         <Chip tone="accent" active={state.isGravity} onClick={() => dispatch({ type: 'TOGGLE_GRAVITY' })}>
           Gravity
         </Chip>
+        <Chip tone="accent" active={!!anyAura} onClick={() => setPicker('auras')}>
+          Auras
+        </Chip>
       </div>
 
-      <Sheet open={picker !== null} onClose={() => setPicker(null)} title={picker === 'weather' ? 'Weather' : picker === 'terrain' ? 'Terrain' : undefined}>
+      <Sheet open={picker !== null} onClose={() => setPicker(null)} title={picker === 'weather' ? 'Weather' : picker === 'terrain' ? 'Terrain' : picker === 'auras' ? 'Auras' : undefined}>
         {picker === 'weather' ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {WEATHER.map((w) => (
@@ -94,6 +69,20 @@ export function ArenaBattlefieldRow({ state, dispatch }: { state: CalcState; dis
                 }}
               >
                 {t}
+              </Chip>
+            ))}
+          </div>
+        ) : picker === 'auras' ? (
+          // Auras are independent toggles (multiple can be on), so the sheet stays open.
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {AURAS.map((a) => (
+              <Chip
+                key={a.key}
+                tone="accent"
+                active={!!state[a.key]}
+                onClick={() => dispatch({ type: 'TOGGLE_FIELD_AURA', payload: a.key })}
+              >
+                {a.label}
               </Chip>
             ))}
           </div>

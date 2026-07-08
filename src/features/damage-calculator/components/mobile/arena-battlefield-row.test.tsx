@@ -10,19 +10,21 @@ const sampleState = {
   isSpreadTarget: false,
   isTrickRoom: false,
   isGravity: false,
+  isFairyAura: false,
+  isDarkAura: false,
+  isAuraBreak: false,
 } as unknown as CalcState;
 
 describe('ArenaBattlefieldRow', () => {
-  it('renders the header label, Single/Spread toggle, and the four field chips', () => {
+  it('renders the header label and the five field chips', () => {
     render(<ArenaBattlefieldRow state={sampleState} dispatch={() => {}} />);
     expect(screen.getByText('BATTLEFIELD')).toBeTruthy();
-    expect(screen.getByText('Single')).toBeTruthy();
-    expect(screen.getByText('Spread')).toBeTruthy();
     expect(screen.getByText('☀ Weather')).toBeTruthy();
     // "Terrain" also appears as the (closed, hidden) Sheet's default title, so scope to the chip button.
     expect(screen.getByRole('button', { name: 'Terrain' })).toBeTruthy();
     expect(screen.getByText('Trick Room')).toBeTruthy();
     expect(screen.getByText('Gravity')).toBeTruthy();
+    expect(screen.getByText('Auras')).toBeTruthy();
   });
 
   it('only renders weather options once the Weather chip is clicked, and dispatches SET_WEATHER on selection', () => {
@@ -49,7 +51,7 @@ describe('ArenaBattlefieldRow', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_TERRAIN', payload: 'Grassy' });
   });
 
-  it('dispatches TOGGLE_TRICK_ROOM, TOGGLE_GRAVITY, and SET_SPREAD_TARGET on the respective clicks', () => {
+  it('dispatches TOGGLE_TRICK_ROOM and TOGGLE_GRAVITY on the respective clicks', () => {
     const dispatch = vi.fn();
     render(<ArenaBattlefieldRow state={sampleState} dispatch={dispatch} />);
 
@@ -58,8 +60,17 @@ describe('ArenaBattlefieldRow', () => {
 
     fireEvent.click(screen.getByText('Gravity'));
     expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_GRAVITY' });
+  });
 
-    fireEvent.click(screen.getByText('Spread'));
-    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_SPREAD_TARGET', payload: true });
+  it('opens the Auras picker and toggles a field aura (sheet stays open for multi-select)', () => {
+    const dispatch = vi.fn();
+    render(<ArenaBattlefieldRow state={sampleState} dispatch={dispatch} />);
+    expect(screen.queryByText('Fairy Aura')).toBeNull();
+
+    fireEvent.click(screen.getByText('Auras'));
+    expect(screen.getByText('Fairy Aura')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Fairy Aura'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'TOGGLE_FIELD_AURA', payload: 'isFairyAura' });
   });
 });

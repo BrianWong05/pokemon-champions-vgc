@@ -173,6 +173,8 @@ export function ArenaCalculatorLandscape({
   const ko = koVerdictFromText(r?.koChanceText);
   const pct = r ? `${isNaN(r.minPercent) ? '0.0' : r.minPercent}–${isNaN(r.maxPercent) ? '0.0' : r.maxPercent}%` : '—';
   const dmg = r ? `${r.minDamage}–${r.maxDamage} dmg` : 'Pick a move';
+  const activeMove = atk.moves[atk.activeMoveIndex] as MoveData | null;
+  const activeMoveType = activeMove ? REVERSE_TYPE_IDS[r?.moveType ?? activeMove.typeId] : null;
 
   const speed = buildSpeedCompare(
     {
@@ -273,8 +275,33 @@ export function ArenaCalculatorLandscape({
           </button>
         </div>
 
+        {view === 'damage' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            {activeMoveType && <TypeBadge type={activeMoveType} size="sm" />}
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, color: 'var(--ink-1)', letterSpacing: 'var(--ls-tight)', lineHeight: 1.05, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {r?.moveName ?? 'No move'}
+            </span>
+            <span style={{ flex: 1 }} />
+            <div style={{ display: 'flex', flex: '0 0 auto', border: '1px solid var(--line-1)', borderRadius: 'var(--r-pill)', overflow: 'hidden', background: 'var(--surface-inset)' }}>
+              {([['Single', false], ['Spread', true]] as const).map(([label, spread]) => {
+                const on = state.isSpreadTarget === spread;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => dispatch({ type: 'SET_SPREAD_TARGET', payload: spread })}
+                    style={{ padding: '4px 11px', cursor: 'pointer', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 700, lineHeight: 1.7, whiteSpace: 'nowrap', background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--ink-3)' }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-3)' }}>
-          {r?.moveName ?? 'No move'} · <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[dir].selectedId)}</span> vs{' '}
+          <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[dir].selectedId)}</span> vs{' '}
           <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[defDir].selectedId)}</span>
         </div>
 
@@ -342,6 +369,13 @@ export function ArenaCalculatorLandscape({
       ) : (
         <Panel side="right" badge={<Badge tone="danger">Opponent</Badge>} onCollapse={() => toggleCollapsed('p2')}>
           {defenderExtra}
+          <button
+            onClick={onOpenScan}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
+          >
+            <Icon name="scan-line" size={15} color="var(--danger)" />
+            Scan opponent team
+          </button>
           <ArenaStatCard side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Micro>HP</Micro>
@@ -377,12 +411,6 @@ export function ArenaCalculatorLandscape({
             />
           </div>
           <ArenaSideConditions side={state.p2} which="p2" dispatch={dispatch} />
-          <button
-            onClick={onOpenScan}
-            style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Scan opponent
-          </button>
         </Panel>
       )}
 

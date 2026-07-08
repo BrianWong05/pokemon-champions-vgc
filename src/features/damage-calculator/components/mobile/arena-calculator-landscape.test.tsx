@@ -119,6 +119,14 @@ describe('ArenaCalculatorLandscape', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index: 1 } });
   });
 
+  it('the center move header carries the Single/Spread target toggle', () => {
+    const dispatch = setup();
+    // the active move name shows in the header; the target toggle sits beside it
+    expect(screen.getAllByText('Moonblast').length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(screen.getByText('Spread'));
+    expect(dispatch).toHaveBeenCalledWith({ type: 'SET_SPREAD_TARGET', payload: true });
+  });
+
   it('renders scenario rows in damage mode', () => {
     setup();
     expect(screen.getByText('Crit')).toBeTruthy();
