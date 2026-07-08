@@ -11,7 +11,6 @@ export interface ArenaTeamsLandscapeProps {
   loading: boolean;
   error: string | null;
   onNew: () => void;          // open the full-screen "new team" import view
-  onScanPlayer: () => void;   // opens PlayerScanModal
   onEdit: (id: string) => void; // open the 3b import page in edit mode
   onDelete: (id: string, name: string) => void;
   onExport: (team: TeamWithMembers) => void;
@@ -68,7 +67,7 @@ function typeChip(type: string): React.CSSProperties {
  * opens the full-screen import view (owned by the page).
  */
 export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
-  teams, pokemonList, loading, error, onNew, onScanPlayer, onEdit, onDelete, onExport, onReviewMon, focusId,
+  teams, pokemonList, loading, error, onNew, onEdit, onDelete, onExport, onReviewMon, focusId,
 }) => {
   const [selId, setSelId] = useState<string | null>(null);
   useEffect(() => { if (focusId) setSelId(focusId); }, [focusId]);
@@ -156,9 +155,6 @@ export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
                   <button onClick={() => onExport(selected)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 12px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
                     <Icon name="share" size={15} color="var(--ink-2)" />Export team
                   </button>
-                  <button onClick={onScanPlayer} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', borderRadius: 'var(--r-sm)', background: 'var(--accent)', border: 'none', color: '#0a0f1a', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
-                    <Icon name="scan-line" size={15} color="#0a0f1a" />Scan Pokémon
-                  </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -166,9 +162,9 @@ export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
                     const m = selected.members[i];
                     if (!m) {
                       return (
-                        <button key={i} onClick={onScanPlayer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 84, borderRadius: 'var(--r-md)', background: 'transparent', border: '1px dashed var(--line-2)', color: 'var(--ink-3)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                          <Icon name="scan-line" size={18} color="var(--ink-4)" />Scan
-                        </button>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 84, borderRadius: 'var(--r-md)', background: 'transparent', border: '1px dashed var(--line-2)', color: 'var(--ink-4)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700 }}>
+                          Empty slot
+                        </div>
                       );
                     }
                     const c = m.configuration;

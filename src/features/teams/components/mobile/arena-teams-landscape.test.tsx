@@ -49,7 +49,6 @@ describe('ArenaTeamsLandscape', () => {
         loading={false}
         error={null}
         onNew={() => {}}
-        onScanPlayer={() => {}}
         onEdit={() => {}}
         onReviewMon={() => {}}
         onDelete={onDelete}
@@ -71,7 +70,6 @@ describe('ArenaTeamsLandscape', () => {
         loading={false}
         error={null}
         onNew={() => {}}
-        onScanPlayer={() => {}}
         onEdit={() => {}}
         onDelete={() => {}}
         onReviewMon={() => {}}
@@ -81,5 +79,25 @@ describe('ArenaTeamsLandscape', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Export team' }));
     expect(onExport).toHaveBeenCalledWith(team);
+  });
+
+  it('renders no scan actions in the team preview', () => {
+    render(
+      <ArenaTeamsLandscape
+        teams={[{ id: 'team-1', name: 'Rain', createdAt: new Date(), members: [] }]}
+        pokemonList={[]}
+        loading={false}
+        error={null}
+        onNew={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onExport={() => {}}
+        onReviewMon={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Scan Pokémon' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Scan' })).toBeNull();
+    expect(screen.getAllByText('Empty slot')).toHaveLength(6);
   });
 });

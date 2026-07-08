@@ -309,7 +309,6 @@ const TeamsPage: React.FC = () => {
               teams={teams} pokemonList={pokemonList} loading={teamsLoading} error={error}
               onNew={() => setCreatingTeam(true)}
               focusId={focusTeamId}
-              onScanPlayer={() => setIsPlayerScanOpen(true)}
               onEdit={(id) => { setEditTeamId(id); setCreatingTeam(true); }}
               onDelete={handleDeleteTeam}
               onExport={setExportTeam}
