@@ -11,13 +11,15 @@ interface ItemSearchSelectProps {
   selectedItem: string | null;
   onSelect: (item: string | null) => void;
   className?: string;
+  hideClear?: boolean;
 }
 
 const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({ 
   label, 
   selectedItem,
   onSelect, 
-  className = '' 
+  className = '',
+  hideClear = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -71,7 +73,7 @@ const ItemSearchSelect: React.FC<ItemSearchSelectProps> = ({
 
   return (
     <div className={`relative ${className}`}>
-      {(label || selectedItem) && (
+      {!hideClear && (label || selectedItem) && (
         <div className="flex justify-between items-end mb-1 min-h-[16px]">
           {label ? (
             <label className="text-[10px] font-black text-ink-4 uppercase tracking-widest px-0.5">

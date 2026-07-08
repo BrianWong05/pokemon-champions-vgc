@@ -9,6 +9,8 @@ import { convertSpToEv } from '@/features/pokemon/utils/sp-ev-converter';
 import { getNatureFromStats } from '@/features/pokemon/utils/pokemon-natures';
 import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
+import ItemImage from '@/components/atoms/ItemImage';
 
 export interface ArenaReviewMonProps {
   member: TeamWithMembers['members'][number];
@@ -146,7 +148,40 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span style={{ width: 58, flex: 'none', fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)' }}>Held item</span>
-              <input value={item} onChange={(e) => setItem(e.target.value)} placeholder="Held item" style={textInput} />
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {item && (
+                  <div style={{ flex: 'none', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ItemImage name={item} className="w-6 h-6" />
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <ItemSearchSelect
+                    label=""
+                    selectedItem={item || null}
+                    onSelect={(val) => setItem(val || '')}
+                    hideClear
+                  />
+                </div>
+                {item && (
+                  <button
+                    type="button"
+                    onClick={() => setItem('')}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--danger)',
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      flex: 'none',
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span style={{ width: 58, flex: 'none', fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)' }}>Ability</span>
