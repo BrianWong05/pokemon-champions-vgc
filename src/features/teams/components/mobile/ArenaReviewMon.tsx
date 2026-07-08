@@ -63,6 +63,8 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const [item, setItem] = useState(c.item ?? '');
   const [ability, setAbility] = useState(c.activeAbility ?? '');
   const [moves, setMoves] = useState<(MoveData | null)[]>([0, 1, 2, 3].map((i) => c.moves[i] ?? null));
+  const [isAbilityOpen, setIsAbilityOpen] = useState(false);
+  const [hoveredAbilityIndex, setHoveredAbilityIndex] = useState<number | null>(null);
 
   const setSpVal = (spKey: string, v: number) => {
     const targetVal = Math.max(0, Math.min(SP_MAX, v || 0));
@@ -148,28 +150,117 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span style={{ width: 58, flex: 'none', fontSize: 10.5, fontWeight: 700, color: 'var(--ink-3)' }}>Ability</span>
-              <select
-                value={ability}
-                onChange={(e) => setAbility(e.target.value)}
-                style={{
-                  ...textInput,
-                  cursor: 'pointer',
-                  appearance: 'none',
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='var%28--ink-3%29' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 10px center',
-                  backgroundSize: '12px',
-                  paddingRight: '30px',
-                }}
-              >
-                {(c.abilities && c.abilities.length > 0 ? c.abilities : [ability]).map((a) => (
-                  <option key={a} value={a} style={{ background: 'var(--surface-inset)', color: 'var(--ink-1)' }}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAbilityOpen(!isAbilityOpen)}
+                  style={{
+                    ...textInput,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                    paddingRight: '30px',
+                    position: 'relative',
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ability || 'Select Ability'}
+                  </span>
+                  <Icon
+                    name="chevron-down"
+                    size={14}
+                    color="var(--ink-3)"
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </button>
+                {isAbilityOpen && (
+                  <>
+                    <div
+                      onClick={() => setIsAbilityOpen(false)}
+                      style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 90,
+                        background: 'transparent',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        background: 'var(--surface-card)',
+                        border: '1px solid var(--line-2)',
+                        borderRadius: 'var(--r-md)',
+                        boxShadow: 'var(--shadow-pop)',
+                        zIndex: 100,
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        padding: '4px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                      }}
+                    >
+                      {(c.abilities && c.abilities.length > 0 ? c.abilities : [ability]).map((a, idx) => {
+                        const isSelected = ability === a;
+                        const isHovered = hoveredAbilityIndex === idx;
+                        return (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => {
+                              setAbility(a);
+                              setIsAbilityOpen(false);
+                            }}
+                            onMouseEnter={() => setHoveredAbilityIndex(idx)}
+                            onMouseLeave={() => setHoveredAbilityIndex(null)}
+                            style={{
+                              width: '100%',
+                              padding: '8px 10px',
+                              borderRadius: 'var(--r-sm)',
+                              background: isSelected
+                                ? 'var(--accent-soft)'
+                                : isHovered
+                                ? 'var(--surface-inset)'
+                                : 'transparent',
+                              color: isSelected
+                                ? 'var(--accent)'
+                                : isHovered
+                                ? 'var(--ink-1)'
+                                : 'var(--ink-2)',
+                              fontFamily: 'var(--font-ui)',
+                              fontSize: '12.5px',
+                              fontWeight: 600,
+                              textAlign: 'left',
+                              border: 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              outline: 'none',
+                              transition: 'background 0.15s, color 0.15s',
+                            }}
+                          >
+                            <span>{a}</span>
+                            {isSelected && <Icon name="check" size={13} color="var(--accent)" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div style={{ height: 1, background: 'var(--line-1)', margin: '3px 0' }} />
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-4)' }}>Moves</div>
