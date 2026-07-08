@@ -82,9 +82,11 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
   const cycleNature = (key: string) => {
     if (key === 'hp') return;
     const role = up === key ? 'up' : down === key ? 'down' : 'none';
-    if (role === 'none') { setUp(key); setDown((d) => (d === key ? null : d)); }
-    else if (role === 'up') { setUp(null); setDown(key); }
-    else { setDown(null); }
+    if (role === 'up') { setUp(null); return; }
+    if (role === 'down') { setDown(null); return; }
+    if (up && !down) { setDown(key); return; }
+    if (down && !up) { setUp(key); return; }
+    if (!up && !down) setUp(key);
   };
 
   const setMove = (i: number, name: string) => {
