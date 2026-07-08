@@ -179,13 +179,16 @@ function MoveList({ s, results, onSelect, onEdit }: {
 function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | null }) {
   if (!range) return null;
   const danger = range.maxPercent >= 100;
+  const ko = koVerdictFromText(range.koChanceText);
+  const badgeTone = ko.tone === 'safe' ? 'safe' : ko.tone === 'field' ? 'field' : ko.tone === 'danger' ? 'danger' : 'neutral';
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ flex: 1, fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)' }}>{label}</span>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
           {range.minPercent}–{range.maxPercent}%
         </span>
+        {range.koChanceText && <Badge tone={badgeTone}>{ko.verdict}</Badge>}
       </div>
       <div style={{ marginTop: 4, height: 5, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(100, range.maxPercent)}%`, height: '100%', background: danger ? 'var(--danger)' : 'var(--safe)', opacity: 0.85 }} />
@@ -193,6 +196,12 @@ function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | n
     </div>
   );
 }
+
+const hpStep: React.CSSProperties = {
+  width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)',
+  border: '1px solid var(--line-2)', color: 'var(--ink-2)',
+  fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
+};
 
 function RankStepper({ label, value, onChange, ariaPrefix }: { label: string; value: number; onChange: (val: number) => void; ariaPrefix: string }) {
   const btn: React.CSSProperties = {
@@ -440,7 +449,18 @@ export function ArenaCalculatorLandscape({
             <div style={{ flex: 1, height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
               <div style={{ width: `${state.p2.hpPercent}%`, height: '100%', background: 'var(--safe)' }} />
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>{state.p2.hpPercent}%</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              aria-label="Defender HP percent"
+              type="number" min={0} max={100} value={state.p2.hpPercent}
+              onChange={(e) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })}
+              style={{ width: 60, padding: '5px 8px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)', color: 'var(--ink-1)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
+            />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-4)' }}>% HP</span>
+            <span style={{ flex: 1 }} />
+            <button aria-label="Lower defender HP" onClick={() => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, state.p2.hpPercent - 1) } })} style={hpStep}>−</button>
+            <button aria-label="Raise defender HP" onClick={() => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.min(100, state.p2.hpPercent + 1) } })} style={hpStep}>+</button>
           </div>
           <SelectRow label="Move" value={state.p2.moves[state.p2.activeMoveIndex]?.nameEn ?? 'None'} onClick={() => setMovePickerSide('p2')} />
           <SelectRow label="Ability" value={state.p2.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p2', field: 'ability' })} />
