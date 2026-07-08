@@ -288,7 +288,8 @@ export const mapToSmogonField = (
   terrain: string = 'None',
   isGravity: boolean = false,
   attackerSide: any = {},
-  defenderSide: any = {}
+  defenderSide: any = {},
+  isTrickRoom: boolean = false
 ): Field => {
   const weatherMap: Record<string, string> = {
     'Sun': 'Sun',
@@ -298,14 +299,18 @@ export const mapToSmogonField = (
     'None': ''
   };
 
-  return new Field({
+  // ponytail: @smogon/calc's Field has no isTrickRoom (Trick Room affects
+  // turn order, not damage) — built as a non-literal to skip the excess-
+  // property check; harmless no-op until/unless the calc lib adds support.
+  const fieldConfig = {
     weather: weatherMap[weather] as any,
-    gameType: isSpreadTarget ? 'Doubles' : 'Singles',
+    gameType: (isSpreadTarget ? 'Doubles' : 'Singles') as any,
     isFairyAura,
     isDarkAura,
     isAuraBreak,
     terrain: terrain === 'None' ? undefined : terrain as any,
     isGravity,
+    isTrickRoom,
     attackerSide: {
       isReflect: attackerSide.isReflect,
       isLightScreen: attackerSide.isLightScreen,
@@ -322,7 +327,8 @@ export const mapToSmogonField = (
       isFriendGuard: defenderSide.isFriendGuard,
       isTailwind: defenderSide.isTailwind,
     }
-  });
+  };
+  return new Field(fieldConfig);
 };
 
 // Champions-original offensive abilities @smogon/calc doesn't model. Gated to these three so

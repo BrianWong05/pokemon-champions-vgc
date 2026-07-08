@@ -41,7 +41,8 @@ export function useDamageCalc(
       state.terrain, 
       state.isGravity, 
       attacker, // attacker side
-      defender  // defender side
+      defender,  // defender side
+      state.isTrickRoom
     );
 
     return attacker.moves.map((moveData, moveIdx) => {
