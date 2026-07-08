@@ -14,6 +14,7 @@ export interface ArenaTeamsLandscapeProps {
   onScanPlayer: () => void;   // opens PlayerScanModal
   onEdit: (id: string) => void; // open the 3b import page in edit mode
   onDelete: (id: string, name: string) => void;
+  onExport: (team: TeamWithMembers) => void;
   onReviewMon: (teamId: string, memberId: string) => void; // open the 3c Review & save screen
   focusId?: string | null;    // team to select after a create
 }
@@ -67,7 +68,7 @@ function typeChip(type: string): React.CSSProperties {
  * opens the full-screen import view (owned by the page).
  */
 export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
-  teams, pokemonList, loading, error, onNew, onScanPlayer, onEdit, onDelete, onReviewMon, focusId,
+  teams, pokemonList, loading, error, onNew, onScanPlayer, onEdit, onDelete, onExport, onReviewMon, focusId,
 }) => {
   const [selId, setSelId] = useState<string | null>(null);
   useEffect(() => { if (focusId) setSelId(focusId); }, [focusId]);
@@ -151,6 +152,9 @@ export const ArenaTeamsLandscape: React.FC<ArenaTeamsLandscapeProps> = ({
                   </button>
                   <button onClick={() => onDelete(selected.id, selected.name)} aria-label="Delete team" style={{ width: 34, height: 34, flex: 'none', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', cursor: 'pointer' }}>
                     <Icon name="trash-2" size={15} color="var(--danger)" />
+                  </button>
+                  <button onClick={() => onExport(selected)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 12px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
+                    <Icon name="share" size={15} color="var(--ink-2)" />Export team
                   </button>
                   <button onClick={onScanPlayer} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px', borderRadius: 'var(--r-sm)', background: 'var(--accent)', border: 'none', color: '#0a0f1a', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, cursor: 'pointer' }}>
                     <Icon name="scan-line" size={15} color="#0a0f1a" />Scan Pokémon

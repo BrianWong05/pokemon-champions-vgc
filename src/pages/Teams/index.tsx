@@ -312,6 +312,7 @@ const TeamsPage: React.FC = () => {
               onScanPlayer={() => setIsPlayerScanOpen(true)}
               onEdit={(id) => { setEditTeamId(id); setCreatingTeam(true); }}
               onDelete={handleDeleteTeam}
+              onExport={setExportTeam}
               onReviewMon={(teamId, memberId) => setReviewTarget({ teamId, memberId })}
             />
           )

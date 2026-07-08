@@ -53,10 +53,33 @@ describe('ArenaTeamsLandscape', () => {
         onEdit={() => {}}
         onReviewMon={() => {}}
         onDelete={onDelete}
+        onExport={() => {}}
       />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete team' }));
     expect(onDelete).toHaveBeenCalledWith('team-1', 'Rain');
+  });
+
+  it('exports the selected team through a labeled action', () => {
+    const team = { id: 'team-1', name: 'Rain', createdAt: new Date(), members: [] };
+    const onExport = vi.fn();
+    render(
+      <ArenaTeamsLandscape
+        teams={[team]}
+        pokemonList={[]}
+        loading={false}
+        error={null}
+        onNew={() => {}}
+        onScanPlayer={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onReviewMon={() => {}}
+        onExport={onExport}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export team' }));
+    expect(onExport).toHaveBeenCalledWith(team);
   });
 });
