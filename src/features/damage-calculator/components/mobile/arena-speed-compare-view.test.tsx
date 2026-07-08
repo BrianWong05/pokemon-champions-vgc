@@ -51,3 +51,21 @@ it('switching to Tailwind recomputes a tier whose fixture outcome is wrong', () 
   const row = screen.getByText('Max+ scarf').closest('div')!;
   expect(within(row).getByText('Faster')).toBeTruthy();
 });
+
+it('Trick Room flips the comparison direction: slower still moves first', () => {
+  render(<ArenaSpeedCompareView {...props} trickRoom />);
+  // youEff (153) < 253 → normally Outsped, but under Trick Room the slower
+  // side moves first, so this tier must render Faster.
+  const row = screen.getByText('Max+ scarf').closest('div')!;
+  expect(within(row).getByText('Faster')).toBeTruthy();
+});
+
+it('does not show the Trick Room indicator by default', () => {
+  render(<ArenaSpeedCompareView {...props} />);
+  expect(screen.queryByText(/Trick Room/i)).toBeNull();
+});
+
+it('shows the Trick Room indicator when trickRoom is true', () => {
+  render(<ArenaSpeedCompareView {...props} trickRoom />);
+  expect(screen.getByText(/Trick Room/i)).toBeTruthy();
+});

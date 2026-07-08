@@ -317,6 +317,7 @@ export function ArenaCalculatorLandscape({
             onYouStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
             onOppStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
             formula={speedFormula(state[dir])}
+            trickRoom={state.isTrickRoom}
           />
         )}
         <button

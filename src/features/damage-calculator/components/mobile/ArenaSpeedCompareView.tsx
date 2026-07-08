@@ -28,7 +28,7 @@ function RankRow({ label, value, onChange }: { label: string; value: number; onC
 }
 
 export function ArenaSpeedCompareView({
-  compare, layout, youName, oppName, oppBaseSpe, youStage, oppStage, onYouStage, onOppStage, formula,
+  compare, layout, youName, oppName, oppBaseSpe, youStage, oppStage, onYouStage, onOppStage, formula, trickRoom = false,
 }: {
   compare: SpeedCompare;
   layout: 'columns' | 'stacked';
@@ -36,6 +36,7 @@ export function ArenaSpeedCompareView({
   youStage: number; oppStage: number;
   onYouStage: (val: number) => void; onOppStage: (val: number) => void;
   formula: string;
+  trickRoom?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>('actual');
   const youEff = compare.yours[mode];
@@ -65,10 +66,14 @@ export function ArenaSpeedCompareView({
 
   const oppCol = (
     <div style={{ minWidth: 0 }}>
-      <div style={{ ...micro, marginBottom: 4 }}>{`Opp — ${oppName} · Base Spe ${oppBaseSpe}`}</div>
+      <div style={{ ...micro, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>{`Opp — ${oppName} · Base Spe ${oppBaseSpe}`}</span>
+        {trickRoom && <Badge tone="field">Trick Room</Badge>}
+      </div>
       <RankRow label="Spe rank" value={oppStage} onChange={onOppStage} />
       {compare.tiers.map((t) => {
-        const outcome = youEff > t.value ? 'faster' : youEff === t.value ? 'tie' : 'outsped';
+        const first = trickRoom ? youEff < t.value : youEff > t.value;
+        const outcome = youEff === t.value ? 'tie' : first ? 'faster' : 'outsped';
         return (
           <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '1px solid var(--line-1)' }}>
             <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>{t.label}</span>
