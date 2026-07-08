@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTeams, TeamWithMembers } from '@/features/teams/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
@@ -20,11 +20,13 @@ import { matchSpecies, matchMove, matchAbility, matchItem } from '@/features/pok
 import { useToast } from '@/hooks/useToast';
 import { ToastNotification } from '@/components/atoms/ToastNotification';
 import { useViewportMode } from '@/hooks/useViewportMode';
-import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaTeams } from '@/features/teams/components/mobile/ArenaTeams';
+import { ArenaTeamsLandscape } from '@/features/teams/components/mobile/ArenaTeamsLandscape';
+import { ArenaAddTeam } from '@/features/teams/components/mobile/ArenaAddTeam';
+import { ArenaReviewMon } from '@/features/teams/components/mobile/ArenaReviewMon';
 
 const TeamsPage: React.FC = () => {
-  const { teams, loading: teamsLoading, error, createTeam, deleteTeam } = useTeams();
+  const { teams, loading: teamsLoading, error, createTeam, deleteTeam, updateTeam } = useTeams();
   const { format } = useFormat();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
@@ -39,6 +41,19 @@ const TeamsPage: React.FC = () => {
   const { toast } = useToast();
   const mode = useViewportMode();
   const isMobile = mode === 'arena';
+  // Landscape "new team" full-screen view + which team to focus after a create.
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [editTeamId, setEditTeamId] = useState<string | null>(null); // when set, the add-team page edits this team
+  const [focusTeamId, setFocusTeamId] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ teamId: string; memberId: string } | null>(null);
+  const prevTeamCount = useRef(0);
+  useEffect(() => {
+    if (creatingTeam && teams.length > prevTeamCount.current) {
+      const newest = [...teams].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      if (newest) { setFocusTeamId(newest.id); setCreatingTeam(false); }
+    }
+    prevTeamCount.current = teams.length;
+  }, [teams, creatingTeam]);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -75,7 +90,7 @@ const TeamsPage: React.FC = () => {
     fetchMetadata();
   }, [format]);
 
-  const handleImportTeam = async (sets: ParsedShowdownSet[]) => {
+  const handleImportTeam = async (sets: ParsedShowdownSet[], opts?: { name?: string; navigate?: boolean; teamId?: string }) => {
     const newMembers: PokemonConfig[] = [];
     const db = await getDb();
     const corrections: string[] = [];
@@ -185,15 +200,23 @@ const TeamsPage: React.FC = () => {
       return;
     }
 
-    const teamName = sets[0].species + "'s Team";
-    const teamId = await createTeam(teamName, newMembers);
-    setIsImportModalOpen(false);
+    const existing = opts?.teamId ? teams.find((t) => t.id === opts.teamId) : null;
+    const teamName = opts?.name?.trim() || existing?.name || (sets[0].species + "'s Team");
+    let teamId: string;
+    if (opts?.teamId) {
+      await updateTeam(opts.teamId, teamName, newMembers);
+      teamId = opts.teamId;
+    } else {
+      teamId = await createTeam(teamName, newMembers);
+      setIsImportModalOpen(false);
+    }
 
     if (corrections.length > 0) {
       window.dispatchEvent(new CustomEvent('showdown-imported', { detail: { side: 'team', corrections } }));
     }
 
-    navigate(`/teams/${teamId}`);
+    if (opts?.navigate !== false) navigate(`/teams/${teamId}`);
+    return teamId;
   };
 
   const handleSavePlayerTeam = async (members: PokemonConfig[]) => {
@@ -201,7 +224,17 @@ const TeamsPage: React.FC = () => {
     const first = pokemonList.find(p => p.id === members[0].selectedId);
     const teamId = await createTeam(`${first?.nameEn ?? 'Scanned'}'s Team`, members);
     setIsPlayerScanOpen(false);
-    navigate(`/teams/${teamId}`);
+    if (mode !== 'arena-landscape') navigate(`/teams/${teamId}`);
+  };
+
+  const handleSaveReviewedMon = async (config: PokemonConfig) => {
+    if (!reviewTarget) return;
+    const team = teams.find((t) => t.id === reviewTarget.teamId);
+    if (team) {
+      const members = team.members.map((m) => (m.id === reviewTarget.memberId ? config : m.configuration));
+      await updateTeam(team.id, team.name, members);
+    }
+    setReviewTarget(null);
   };
 
   const handleCreateTeam = async (e: React.FormEvent) => {
@@ -224,22 +257,75 @@ const TeamsPage: React.FC = () => {
     }
   };
 
-  if (mode === 'arena-landscape') return <RotateToPortrait label="Teams" />;
+  const reviewTeam = reviewTarget ? teams.find((t) => t.id === reviewTarget.teamId) : null;
+  const reviewMember = reviewTeam && reviewTarget ? reviewTeam.members.find((m) => m.id === reviewTarget.memberId) : null;
+  const editTeam = editTeamId ? teams.find((t) => t.id === editTeamId) : null;
+  const closeAddTeam = () => { setCreatingTeam(false); setEditTeamId(null); };
 
-  // ponytail: shared modals on mobile; replace with Sheets if UX demands
-  if (isMobile) {
+  // ponytail: shared modals for both mobile frames; landscape = master-detail, portrait = card list
+  if (isMobile || mode === 'arena-landscape') {
     return (
       <>
-        <ArenaTeams
-          teams={teams} loading={teamsLoading} error={error}
-          onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
-          onImport={() => setIsImportModalOpen(true)}
-          onScan={() => setIsScanModalOpen(true)}
-          onScanPlayer={() => setIsPlayerScanOpen(true)}
-          onOpen={(id) => navigate(`/teams/${id}`)}
-          onExport={(team) => setExportTeam(team)}
-          onDelete={handleDeleteTeam}
-        />
+        {mode === 'arena-landscape' ? (
+          creatingTeam ? (
+            <ArenaAddTeam
+              pokemonList={pokemonList}
+              moveList={moveList}
+              initialName={editTeam?.name}
+              initialConfigs={editTeam ? editTeam.members.map((m) => m.configuration) : undefined}
+              submitLabel={editTeam ? 'Save changes' : undefined}
+              onBack={closeAddTeam}
+              onScanSave={async (members) => {
+                if (editTeamId) {
+                  const tm = teams.find((t) => t.id === editTeamId);
+                  if (tm) await updateTeam(editTeamId, tm.name, members);
+                  setFocusTeamId(editTeamId); closeAddTeam();
+                } else {
+                  await handleSavePlayerTeam(members);
+                }
+              }}
+              onCreate={async (name, members) => {
+                if (editTeamId) {
+                  await updateTeam(editTeamId, name.trim() || editTeam?.name || 'Team', members);
+                  setFocusTeamId(editTeamId); closeAddTeam();
+                } else {
+                  const nm = name.trim() || `${pokemonList.find((p) => p.id === members[0]?.selectedId)?.nameEn ?? 'New'}'s Team`;
+                  await createTeam(nm, members);
+                }
+              }}
+            />
+          ) : reviewMember && reviewTeam ? (
+            <ArenaReviewMon
+              member={reviewMember}
+              teamName={reviewTeam.name}
+              pokemonList={pokemonList}
+              moveList={moveList}
+              onBack={() => setReviewTarget(null)}
+              onSave={handleSaveReviewedMon}
+              onSendToCalc={() => navigate('/')}
+            />
+          ) : (
+            <ArenaTeamsLandscape
+              teams={teams} pokemonList={pokemonList} loading={teamsLoading} error={error}
+              onNew={() => setCreatingTeam(true)}
+              focusId={focusTeamId}
+              onScanPlayer={() => setIsPlayerScanOpen(true)}
+              onEdit={(id) => { setEditTeamId(id); setCreatingTeam(true); }}
+              onReviewMon={(teamId, memberId) => setReviewTarget({ teamId, memberId })}
+            />
+          )
+        ) : (
+          <ArenaTeams
+            teams={teams} loading={teamsLoading} error={error}
+            onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
+            onImport={() => setIsImportModalOpen(true)}
+            onScan={() => setIsScanModalOpen(true)}
+            onScanPlayer={() => setIsPlayerScanOpen(true)}
+            onOpen={(id) => navigate(`/teams/${id}`)}
+            onExport={(team) => setExportTeam(team)}
+            onDelete={handleDeleteTeam}
+          />
+        )}
         {exportTeam && (
           <TeamExportModal
             isOpen={!!exportTeam}
