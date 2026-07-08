@@ -7,8 +7,8 @@ import TierSection from '@/components/organisms/TierSection';
 import PokemonDetailModal, { FullPokemonDetail } from '@/components/organisms/PokemonDetailModal';
 import { useFormat } from '@/features/formats/FormatContext';
 import { useViewportMode } from '@/hooks/useViewportMode';
-import { RotateToPortrait } from '@/components/RotateToPortrait';
 import { ArenaSpeedTiers } from './ArenaSpeedTiers';
+import { ArenaSpeedTiersLandscape } from './ArenaSpeedTiersLandscape';
 
 export interface PokemonWithSpeeds {
   id: number;
@@ -152,7 +152,15 @@ const SpeedTierPage: React.FC = () => {
       }));
   }, [pokemonData]);
 
-  if (mode === 'arena-landscape') return <RotateToPortrait label="Speed tiers" />;
+  if (mode === 'arena-landscape') {
+    return (
+      <ArenaSpeedTiersLandscape
+        groups={groupedPokemon.map(g => ({ baseSpeed: g.baseSpeed, pokemon: g.pokemon }))}
+        isLoading={isLoading}
+        format={format}
+      />
+    );
+  }
 
   if (isMobile) {
     return (
