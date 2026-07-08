@@ -1,6 +1,8 @@
 import React from 'react';
 import type { CalcState, CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
+import type { DamageResult } from '@/components/organisms/ResultsPanel';
 import { Card, CardHeader, Sprite, TypeBadge, ItemIcon, SelectRow, StatField, StatGrid } from '@/design-system/arena';
+import { ArenaMoveList } from './ArenaMoveList';
 
 type SpKey = 'spHp' | 'spAtk' | 'spDef' | 'spSpa' | 'spSpd' | 'spSpe';
 const SP_FIELDS: { label: string; key: SpKey }[] = [
@@ -13,7 +15,7 @@ const SP_FIELDS: { label: string; key: SpKey }[] = [
  * defender HP bar, Move/Ability/Item/Nature rows, editable SP grid, and an
  * "Advanced" opener. Pickers/advanced sheets are owned by ArenaCalculator.
  */
-export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker, onOpenAdvanced, extra }: {
+export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker, onOpenAdvanced, extra, results }: {
   side: 'p1' | 'p2';
   role: 'Attacker' | 'Defender';
   state: CalcState;
@@ -23,6 +25,8 @@ export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker
   onOpenAdvanced: () => void;
   /** Optional slot rendered directly under the card header (e.g. the battle-roster chips). */
   extra?: React.ReactNode;
+  /** Per-move damage results, used by the attacker's move list. */
+  results: (DamageResult | null)[];
 }) {
   const s = state[side];
   const tone = role === 'Attacker' ? 'accent' : 'danger';
@@ -58,7 +62,16 @@ export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-        <SelectRow label="Move" value={activeMove?.nameEn ?? 'None'} leading={s.type1 ? <TypeBadge type={s.type1} size="sm" /> : null} onClick={() => onOpenPicker('move')} />
+        {role === 'Attacker' ? (
+          <ArenaMoveList
+            side={s}
+            results={results}
+            onSelect={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side, index } })}
+            onEdit={() => onOpenPicker('move')}
+          />
+        ) : (
+          <SelectRow label="Move" value={activeMove?.nameEn ?? 'None'} leading={s.type1 ? <TypeBadge type={s.type1} size="sm" /> : null} onClick={() => onOpenPicker('move')} />
+        )}
         <SelectRow label="Ability" value={s.activeAbility ?? 'None'} onClick={() => onOpenPicker('ability')} />
         <SelectRow label="Item" value={s.item ?? 'None'} leading={<ItemIcon item={s.item} size={18} />} onClick={() => onOpenPicker('item')} />
         <SelectRow label="Nature" value={s.nature} onClick={() => onOpenPicker('nature')} />
