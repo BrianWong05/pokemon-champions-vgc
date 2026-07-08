@@ -13,6 +13,8 @@ interface RosterChipRowProps {
   label: string;
   tone: 'danger' | 'accent';
   entries: ChipEntry[];
+  /** Dashed `?` placeholder tiles rendered after the entry chips, for unrevealed roster slots. */
+  unknownCount?: number;
   activeId?: number | null;
   onPick: (id: number) => void;
   onClear: () => void;
@@ -20,7 +22,7 @@ interface RosterChipRowProps {
   clearAriaLabel: string;
 }
 
-const RosterChipRow: React.FC<RosterChipRowProps> = ({ label, tone, entries, activeId, onPick, onClear, pickAriaLabel, clearAriaLabel }) => (
+const RosterChipRow: React.FC<RosterChipRowProps> = ({ label, tone, entries, unknownCount, activeId, onPick, onClear, pickAriaLabel, clearAriaLabel }) => (
   <div className="mb-3 flex items-center gap-1 overflow-x-auto rounded-lg border border-line-2 bg-inset p-1">
     <span className={`px-1 text-[10px] font-semibold ${tone === 'danger' ? 'text-danger' : 'text-accent'}`}>{label}</span>
     {entries.map((e) => (
@@ -34,6 +36,15 @@ const RosterChipRow: React.FC<RosterChipRowProps> = ({ label, tone, entries, act
       >
         <PokemonImage id={e.id} name={e.name} className="w-8 h-8" />
       </button>
+    ))}
+    {Array.from({ length: unknownCount ?? 0 }).map((_, i) => (
+      <div
+        key={`unknown-${i}`}
+        aria-label="Unrevealed opponent slot"
+        className="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-dashed border-line-2 text-ink-4 font-display text-xs font-bold"
+      >
+        ?
+      </div>
     ))}
     <button
       type="button"

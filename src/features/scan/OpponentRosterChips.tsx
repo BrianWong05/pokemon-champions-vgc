@@ -18,6 +18,7 @@ const OpponentRosterChips: React.FC<OpponentRosterChipsProps> = ({ roster, byId,
     label="Opp"
     tone="danger"
     entries={roster.map((id) => ({ id, name: byId.get(id)?.nameEn ?? `#${id}` }))}
+    unknownCount={Math.max(0, 6 - roster.length)}
     activeId={activeId}
     onPick={onPick}
     onClear={onClear}
