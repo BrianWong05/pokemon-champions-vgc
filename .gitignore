@@ -30,7 +30,9 @@ dist-ssr
 # Python
 .venv/*
 
-official-artwork/*
+# High-resolution artwork is fetched/generated on demand.
+official-artwork/
+public/images/pokemon/official-artwork/
 # scan crop debug output
 training/.crop-preview/
 training/sprite-net-checkpoint.pt
@@ -76,3 +78,6 @@ training/.player-crop-preview/
 # browser-decoded player stats fixtures (regenerate: python3 scripts/capture-player-browser-fixtures.py)
 training/player-fixtures/
 training/panel-crops/
+
+# Local ML checkpoints
+training/*.pt
