@@ -92,6 +92,7 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
 
   const evParts = STATS.filter((s) => convertSpToEv(sp[s.spKey as string]) > 0).map((s) => `${convertSpToEv(sp[s.spKey as string])} ${s.ev}`);
   const evTotal = STATS.reduce((a, s) => a + convertSpToEv(sp[s.spKey as string]), 0);
+  const spTotal = STATS.reduce((a, s) => a + sp[s.spKey as string], 0);
 
   const exportShowdown = () => {
     const text = formatShowdownSet(buildConfig(), species?.nameEn ?? 'Pokemon');
@@ -185,9 +186,9 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
             })}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, paddingTop: 9, borderTop: '1px solid var(--line-1)' }}>
-            <span style={{ ...micro, letterSpacing: '0.04em' }}>EVs</span>
+            <span style={{ ...micro, letterSpacing: '0.04em' }}>SPs</span>
             <span style={{ flex: 1 }} />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: evTotal > 508 ? 'var(--danger)' : 'var(--ink-1)' }}>{evTotal} / 508</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12.5, fontWeight: 700, color: spTotal > 66 ? 'var(--danger)' : 'var(--ink-1)' }}>{spTotal} / 66</span>
           </div>
           <div style={{ marginTop: 11, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
