@@ -5,12 +5,18 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 interface PokemonImagePickerProps {
   pokemonList: PokemonBaseStats[];
   selectedId: number | null;
+  disabledIds?: ReadonlySet<number>;
   onSelect: (id: number) => void;
 }
 
 const MAX_RESULTS = 60;
 
-const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({ pokemonList, selectedId, onSelect }) => {
+const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({
+  pokemonList,
+  selectedId,
+  disabledIds,
+  onSelect,
+}) => {
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -35,26 +41,34 @@ const PokemonImagePicker: React.FC<PokemonImagePickerProps> = ({ pokemonList, se
         onChange={(e) => setQuery(e.target.value)}
       />
       <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-2 max-h-72 overflow-y-auto">
-        {filtered.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onSelect(p.id)}
-            title={`${p.nameEn}${p.nameZh ? ` · ${p.nameZh}` : ''}`}
-            className={`flex flex-col items-center gap-1 rounded-lg p-1.5 ${
-              selectedId === p.id ? 'bg-accent-soft ring-2 ring-accent' : 'hover:bg-raise'
-            }`}
-          >
-            <PokemonImage id={p.id} name={p.nameEn} className="w-16 h-16" />
-            <span
-              className={`w-full text-[11px] leading-tight text-center truncate ${
-                selectedId === p.id ? 'text-accent' : 'text-ink-3'
+        {filtered.map((p) => {
+          const disabled = disabledIds?.has(p.id) ?? false;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(p.id)}
+              title={`${p.nameEn}${p.nameZh ? ` · ${p.nameZh}` : ''}${disabled ? ' · Already selected' : ''}`}
+              className={`flex flex-col items-center gap-1 rounded-lg p-1.5 ${
+                disabled
+                  ? 'cursor-not-allowed opacity-40'
+                  : selectedId === p.id
+                    ? 'bg-accent-soft ring-2 ring-accent'
+                    : 'hover:bg-raise'
               }`}
             >
-              {p.nameEn}
-            </span>
-          </button>
-        ))}
+              <PokemonImage id={p.id} name={p.nameEn} className="w-16 h-16" />
+              <span
+                className={`w-full text-[11px] leading-tight text-center truncate ${
+                  selectedId === p.id ? 'text-accent' : 'text-ink-3'
+                }`}
+              >
+                {p.nameEn}
+              </span>
+            </button>
+          );
+        })}
       </div>
       {filtered.length === MAX_RESULTS && (
         <p className="text-xs text-ink-4 mt-2">Showing first {MAX_RESULTS} — refine your search.</p>
