@@ -72,6 +72,24 @@ describe('detectOpponentTiles', () => {
     });
   });
 
+  it('anchors cards to the band bottom when the trainer banner merges into the first card', () => {
+    // Photographed screens read the "black" gap between the banner and the
+    // first card as dark crimson, merging banner + gap + card into one band
+    // of ~1.5 tile heights. An even top-anchored split minted a banner box
+    // and shifted card 1 off its card, pushing the 6th card past the 6-slot
+    // cap (IMG_5560 regression).
+    const img = blank(800, 1400);
+    fillRect(img, 500, 110, 260, 75, 230, 60, 110);   // trainer banner (half card tall)
+    fillRect(img, 500, 185, 260, 15, 120, 25, 30);    // photo black-level gap: dark crimson
+    for (let k = 0; k < 6; k++) fillRect(img, 500, 200 + k * 165, 260, 150, 220, 30, 40);
+    const boxes = detectOpponentTiles(img);
+    expect(boxes.length).toBe(6);
+    // first box sits on card 1 (y=200), not on the banner (y=110)
+    expect(Math.abs(boxes[0].y - 200)).toBeLessThanOrEqual(8);
+    // last box is the 6th card, not dropped by the slot cap
+    expect(Math.abs(boxes[5].y - (200 + 5 * 165))).toBeLessThanOrEqual(8);
+  });
+
   it('prefers the narrower right opponent column over wider left player panels', () => {
     const img = blank(1254, 700);
     for (let k = 0; k < 6; k++) {

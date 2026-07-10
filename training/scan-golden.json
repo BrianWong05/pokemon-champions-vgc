@@ -155,6 +155,12 @@
       "mode": "team",
       "opponentPlates": 0,
       "playerPlates": 0
+    },
+    {
+      "file": "opponent-panel-photo-portrait_heic.png",
+      "mode": "team",
+      "opponentPlates": 0,
+      "playerPlates": 0
     }
   ]
 }
