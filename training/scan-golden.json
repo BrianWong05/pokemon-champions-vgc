@@ -149,6 +149,12 @@
       "mode": "team",
       "opponentPlates": 0,
       "playerPlates": 0
+    },
+    {
+      "file": "opponent-panel-video-crop_jpg.png",
+      "mode": "team",
+      "opponentPlates": 0,
+      "playerPlates": 0
     }
   ]
 }

@@ -216,6 +216,37 @@ describe('refineSpriteBox (via sprite box helpers)', () => {
     }
   });
 
+  it('does not let a wide icon cluster near the right bound beat the sprite', () => {
+    // Video-frame regression (tight opponent-panel crop): the type-icon +
+    // gender cluster merged into a run WIDER than the sprite with its center
+    // still left of the old 0.65 bound, stealing the box from the sprite.
+    const img = blank(1400, 700);
+    for (let k = 0; k < 6; k++) {
+      const y = 60 + k * 95;
+      fillRect(img, 900, y, 300, 80, 220, 30, 40);       // card
+      fillRect(img, 950, y + 10, 60, 60, 60, 120, 220);  // sprite (rel ~0.27)
+      fillRect(img, 1040, y + 20, 100, 40, 60, 200, 90); // icon cluster (wider, rel ~0.63)
+    }
+    const boxes = detectOpponentSpriteBoxes(img);
+    expect(boxes.length).toBe(6);
+    for (const b of boxes) expect(Math.abs(b.x + b.w / 2 - 980)).toBeLessThanOrEqual(6);
+  });
+
+  it('does not let a bright streak at the card left edge beat the sprite', () => {
+    // Same regression, other slot: an arena light streak crossing the card's
+    // left edge forms a full-height bright run that out-widths the sprite.
+    const img = blank(1400, 700);
+    for (let k = 0; k < 6; k++) {
+      const y = 60 + k * 95;
+      fillRect(img, 900, y, 300, 80, 220, 30, 40);       // card
+      fillRect(img, 900, y + 8, 50, 64, 0, 200, 255);    // streak hugging the edge
+      fillRect(img, 990, y + 15, 50, 50, 60, 120, 220);  // sprite (rel ~0.38)
+    }
+    const boxes = detectOpponentSpriteBoxes(img);
+    expect(boxes.length).toBe(6);
+    for (const b of boxes) expect(Math.abs(b.x + b.w / 2 - 1015)).toBeLessThanOrEqual(6);
+  });
+
   it('falls back to the anchor box when the card has no distinct content', () => {
     const img = blank(1200, 700);
     for (let k = 0; k < 6; k++) fillRect(img, 900, 60 + k * 95, 260, 72, 220, 30, 40);
