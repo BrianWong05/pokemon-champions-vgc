@@ -211,6 +211,27 @@ function boxesFromPanelColumn(
   for (const band of eligible) {
     const bandH = band.y2 - band.y1 + 1;
     if (bandH < minTileH) continue;
+    // The trainer/name banner sits half a card tall directly ABOVE the first
+    // card, and on photographed screens the "black" gap between them reads as
+    // dark crimson (elevated black levels), merging banner + gap + card into
+    // one band. Its height is then k + ~0.5 tiles; an evenly-split rounding
+    // would mint a banner box AND shift every card box off its card. Cards
+    // occupy the BOTTOM of such a band, so split bottom-anchored with floor
+    // count. First band only — the banner is structurally the topmost element.
+    const frac = bandH / tileH;
+    const remnant = frac - Math.floor(frac);
+    if (band === eligible[0] && frac >= 1.3 && remnant >= 0.3 && remnant <= 0.7) {
+      const count = Math.floor(frac);
+      for (let i = 0; i < count; i++) {
+        boxes.push({
+          x: expandedX,
+          y: band.y2 + 1 - (count - i) * tileH,
+          w: expandedRight - expandedX + 1,
+          h: tileH,
+        });
+      }
+      continue;
+    }
     const count = Math.max(1, Math.round(bandH / tileH));
     if (count === 1) {
       boxes.push({ x: expandedX, y: band.y1, w: expandedRight - expandedX + 1, h: bandH });
