@@ -12,18 +12,16 @@ import CropStep from '@/features/scan/CropStep';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
-import type { Candidate } from '@/features/scan/types';
+import {
+  assignUniqueCandidates,
+  availableCandidatesFor,
+  opponentIdsFromEntries,
+  unavailableIdsFor,
+  updateEntryId,
+  type ScanEntry,
+} from './roster';
 
-/** One editable roster slot, decoupled from the raw scan so it can be re-picked. */
-export interface ScanEntry {
-  id: number | null;
-  candidates: Candidate[];
-}
-
-/** The opponent species ids to persist: unique, non-null. */
-export function opponentIdsFromEntries(entries: ScanEntry[]): number[] {
-  return [...new Set(entries.map((e) => e.id).filter((id): id is number => id != null))];
-}
+export { opponentIdsFromEntries, type ScanEntry } from './roster';
 
 const LOW_CONFIDENCE = 0.9;
 
@@ -92,8 +90,12 @@ const ScanOpponentPage: React.FC = () => {
   useEffect(() => {
     if (status !== 'done') return;
     const opp = slots.filter((s) => s.side !== 'player');
-    setRoster(opp.map((s) => ({ id: s.candidates[0]?.id ?? null, candidates: s.candidates })));
-    const flagged = opp.findIndex((s) => (s.candidates[0]?.score ?? 0) < LOW_CONFIDENCE);
+    const nextRoster = assignUniqueCandidates(opp);
+    setRoster(nextRoster);
+    const flagged = nextRoster.findIndex((entry) => {
+      const score = entry.candidates.find((candidate) => candidate.id === entry.id)?.score ?? 0;
+      return score < LOW_CONFIDENCE;
+    });
     setSelected(flagged >= 0 ? flagged : 0);
     setPickerOpen(false);
   }, [status, slots]);
@@ -116,8 +118,17 @@ const ScanOpponentPage: React.FC = () => {
     if (file) void runScan(file);
   };
 
-  const setEntryId = (i: number, id: number | null) =>
-    setRoster((r) => r.map((e, idx) => (idx === i ? { ...e, id } : e)));
+  const setEntryId = (index: number, id: number | null) =>
+    setRoster((entries) => updateEntryId(entries, index, id));
+
+  const selectedCandidates = useMemo(
+    () => availableCandidatesFor(roster, selected),
+    [roster, selected],
+  );
+  const disabledPickerIds = useMemo(
+    () => unavailableIdsFor(roster, selected),
+    [roster, selected],
+  );
 
   const confirmAndSave = () => {
     const ids = opponentIdsFromEntries(roster);
@@ -283,10 +294,10 @@ const ScanOpponentPage: React.FC = () => {
 
               <div style={micro}>Top candidates</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {(roster[selected]?.candidates ?? []).length === 0 && (
+                {selectedCandidates.length === 0 && (
                   <div style={{ fontSize: 11.5, color: 'var(--ink-4)' }}>No suggestions — type a name below.</div>
                 )}
-                {(roster[selected]?.candidates ?? []).map((c) => {
+                {selectedCandidates.map((c) => {
                   const on = roster[selected]?.id === c.id;
                   return (
                     <button
@@ -312,6 +323,7 @@ const ScanOpponentPage: React.FC = () => {
                 <PokemonImagePicker
                   pokemonList={pokemonList}
                   selectedId={roster[selected]?.id ?? null}
+                  disabledIds={disabledPickerIds}
                   onSelect={(id) => { setEntryId(selected, id); setPickerOpen(false); }}
                 />
               ) : (
