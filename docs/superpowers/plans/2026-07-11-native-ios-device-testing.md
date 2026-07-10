@@ -156,7 +156,7 @@ Run:
 git status --short
 git diff --check
 git diff -- android
-! rg -n 'DEVELOPMENT_TEAM = [A-Z0-9]+|PROVISIONING_PROFILE_SPECIFIER = "[^"]+"|PROVISIONING_PROFILE = "[^"]+"' ios
+! rg -n 'CODE_SIGN_IDENTITY = "[^"]+"|DEVELOPMENT_TEAM = [A-Z0-9]+|PROVISIONING_PROFILE_SPECIFIER = "[^"]+"|PROVISIONING_PROFILE = "[^"]+"' ios
 ```
 
 Expected: status shows only `package.json`, `package-lock.json`, and `ios/`; `git diff --check` and `git diff -- android` print nothing; the signing-data search prints nothing.
