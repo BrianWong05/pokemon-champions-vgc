@@ -70,11 +70,13 @@ function isPlatePairRow(panels: TileBox[]): boolean {
 // require a CLUSTER: >=4 cards within 0.5*meanW of the MEDIAN x. Battle-frame
 // magenta noise (shiny models, facecam, arena tint) also reaches the >=4 count
 // but scatters horizontally (measured 1.9-6.9x meanW), landing only ~2 cards in
-// the cluster, so it still can't steal battle mode.
+// the cluster, so it still can't steal battle mode. Cards vote with their
+// `vote` geometry (the pick rule this threshold was measured against) when
+// present — crop boxes may sit elsewhere (see detectOpponentSpriteBoxes).
 function isCardColumn(cards: TileBox[]): boolean {
   if (cards.length < 4) return false;
-  const xs = cards.map((c) => c.x).sort((a, b) => a - b);
-  const meanW = cards.reduce((s, c) => s + c.w, 0) / cards.length;
+  const xs = cards.map((c) => c.vote?.x ?? c.x).sort((a, b) => a - b);
+  const meanW = cards.reduce((s, c) => s + (c.vote?.w ?? c.w), 0) / cards.length;
   const medX = xs[Math.floor(xs.length / 2)];
   const tol = meanW * 0.5;
   return xs.filter((x) => Math.abs(x - medX) <= tol).length >= 4;

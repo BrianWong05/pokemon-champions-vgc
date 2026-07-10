@@ -495,11 +495,26 @@ export function detectOpponentSpriteBoxes(img: RgbaImage): TileBox[] {
   return detectOpponentTiles(img).map((tile) => {
     const scan = scanCard(img, tile, isOpponentCardPixel);
     if (!scan || scan.candidates.length === 0) return spriteBoxFromTile(tile, bounds, 'left');
-    // Opponent cards NEVER put the sprite at the right end (that's the
-    // type-icon/gender zone in every opponent layout) — widest run outside it.
-    const rightZone = scan.x0 + (scan.x1 - scan.x0) * 0.65;
-    const pick = widest(scan.candidates.filter((r) => r.center < rightZone));
-    return pick ? runBox(pick, tile, bounds) : spriteBoxFromTile(tile, bounds, 'left');
+    // The opponent sprite sits at a near-fixed offset (~0.3 of the card span);
+    // the right end is the type-icon/gender zone in every opponent layout.
+    // Bound the zone on BOTH sides: the icon cluster can merge into a run
+    // WIDER than the sprite with its center just left of a loose right bound,
+    // and background junk (neon streaks over the card edge) forms full-height
+    // runs hugging the left edge — either can out-width the sprite, and
+    // JPEG-decode noise flips those near-ties between browsers and tools
+    // (video-frame crop: Basculegion -> icons, Torkoal -> left streak).
+    const span = scan.x1 - scan.x0;
+    const zoneL = scan.x0 + span * 0.1;
+    const zoneR = scan.x0 + span * 0.55;
+    const pick = widest(scan.candidates.filter((r) => r.center > zoneL && r.center < zoneR));
+    const box = pick ? runBox(pick, tile, bounds) : spriteBoxFromTile(tile, bounds, 'left');
+    // The team-vs-battle card-column vote was tuned on the looser pre-zone
+    // rule, where junk picks scatter and genuine-frame fallbacks align — both
+    // load-bearing. Keep feeding the vote that exact geometry so crop
+    // improvements can never flip a mode decision.
+    const votePick = widest(scan.candidates.filter((r) => r.center < scan.x0 + span * 0.65));
+    const voteBox = votePick ? runBox(votePick, tile, bounds) : spriteBoxFromTile(tile, bounds, 'left');
+    return { ...box, vote: { x: voteBox.x, w: voteBox.w } };
   });
 }
 

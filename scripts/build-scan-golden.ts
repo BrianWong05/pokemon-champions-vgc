@@ -28,6 +28,10 @@ const TEAM_FRAMES = [
   'Xnip2026-04-23_04-17-17.png',
   'Xnip2026-04-23_00-32-20.png',
   'Xnip2026-04-23_00-28-40.png',
+  // 2026-07-11 regression guard: tight video-frame crop of just the opponent
+  // panel (no player column, arena light streaks over the cards) — the
+  // sprite-run zone bug misplaced 2 of 6 crops. Force-added jpg (~158KB).
+  'opponent-panel-video-crop_jpg.png',
 ];
 
 // Frames excluded from the zero-wrong-modes floor (still reported by the CLI).
