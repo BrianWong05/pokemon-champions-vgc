@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {
   convertedPngName,
+  defaultImageConverter,
   isSupportedScreenshotFile,
   listSupportedScreenshotNames,
   resolveScreenshotInput,
@@ -61,5 +62,20 @@ describe('image input helpers', () => {
     });
     expect(converted).toEqual([[path.join(dir, 'screen.jpeg'), path.join(convertedDir, 'screen_jpeg.png')]]);
     expect(convertedPngName('screen.jpeg')).toBe('screen_jpeg.png');
+  });
+
+  // macOS-only like the converter itself (sips/qlmanage). Guards the rotation
+  // contract: portrait iPhone captures store landscape pixels + rotation
+  // metadata that a bare sips conversion drops — detection then sees the
+  // panel lying on its side (2026-07-11 user report).
+  it.runIf(process.platform === 'darwin')('bakes rotation metadata into converted portrait photos', () => {
+    const heic = path.resolve('training/screenshots/opponent-panel-photo-portrait.heic');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'label-inputs-'));
+    const pngPath = path.join(dir, 'out.png');
+    defaultImageConverter(heic, pngPath);
+    const buf = fs.readFileSync(pngPath);
+    const w = buf.readUInt32BE(16);
+    const h = buf.readUInt32BE(20);
+    expect({ w, h }).toEqual({ w: 3024, h: 4032 }); // upright portrait, not stored 4032x3024
   });
 });

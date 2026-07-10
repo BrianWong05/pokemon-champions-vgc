@@ -32,6 +32,11 @@ const TEAM_FRAMES = [
   // panel (no player column, arena light streaks over the cards) — the
   // sprite-run zone bug misplaced 2 of 6 crops. Force-added jpg (~158KB).
   'opponent-panel-video-crop_jpg.png',
+  // 2026-07-11 regression guard: portrait iPhone HEIC photo of the screen —
+  // sips-only conversion dropped the rotation metadata, so detection saw the
+  // panel lying on its side (defaultImageConverter now renders via qlmanage).
+  // Force-added heic (~0.9MB).
+  'opponent-panel-photo-portrait_heic.png',
 ];
 
 // Frames excluded from the zero-wrong-modes floor (still reported by the CLI).
