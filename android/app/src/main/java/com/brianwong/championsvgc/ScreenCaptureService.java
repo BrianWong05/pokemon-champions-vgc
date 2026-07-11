@@ -20,8 +20,14 @@ import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.WindowManager;
-import android.widget.Button;
+import android.widget.ImageView;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.graphics.Bitmap;
 import android.media.Image;
 import android.util.Base64;
@@ -43,7 +49,7 @@ public class ScreenCaptureService extends Service {
     ImageReader imageReader;
     int width, height, densityDpi;
     private WindowManager windowManager;
-    private Button floatingButton;
+    private View floatingButton;
     private DisplayManager displayManager;
     private DisplayManager.DisplayListener displayListener;
 
@@ -128,22 +134,69 @@ public class ScreenCaptureService extends Service {
 
     private void addFloatingButton() {
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        floatingButton = new Button(this);
-        floatingButton.setText("Scan");
-        floatingButton.setOnClickListener(v -> { if (tapListener != null) tapListener.onTap(); });
+        float density = getResources().getDisplayMetrics().density;
+        int size = (int) (52 * density);
+
+        // Arena-styled FAB: --accent circle, white scan-line glyph, ripple on press.
+        ImageView btn = new ImageView(this);
+        btn.setImageResource(R.drawable.ic_scan_line);
+        int pad = (int) (14 * density);
+        btn.setPadding(pad, pad, pad, pad);
+        GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setColor(0xFF4F7DFF);
+        circle.setStroke((int) (1.5f * density), 0x59FFFFFF);
+        btn.setBackground(new RippleDrawable(ColorStateList.valueOf(0x40FFFFFF), circle, null));
+        btn.setAlpha(0.92f);
+        btn.setContentDescription("Scan");
+        floatingButton = btn;
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                size,
+                size,
                 type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.x = 24;
         lp.y = 240;
+
+        // Drag to reposition; a near-stationary press still counts as a tap.
+        int touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        btn.setOnTouchListener(new View.OnTouchListener() {
+            int startX, startY;
+            float rawX, rawY;
+            boolean dragging;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startX = lp.x; startY = lp.y;
+                        rawX = e.getRawX(); rawY = e.getRawY();
+                        dragging = false;
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        int dx = (int) (e.getRawX() - rawX);
+                        int dy = (int) (e.getRawY() - rawY);
+                        if (!dragging && Math.hypot(dx, dy) > touchSlop) dragging = true;
+                        if (dragging) {
+                            lp.x = startX + dx;
+                            lp.y = startY + dy;
+                            windowManager.updateViewLayout(v, lp);
+                        }
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        if (!dragging) v.performClick();
+                        return true;
+                }
+                return false;
+            }
+        });
+        btn.setOnClickListener(v -> { if (tapListener != null) tapListener.onTap(); });
         windowManager.addView(floatingButton, lp);
     }
 
