@@ -9,6 +9,7 @@ import { Icon } from '@/design-system/arena';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import PokemonImagePicker from '@/features/scan/PokemonImagePicker';
 import CropStep from '@/features/scan/CropStep';
+import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
@@ -100,7 +101,7 @@ const ScanOpponentPage: React.FC = () => {
     setPickerOpen(false);
   }, [status, slots]);
 
-  const runScan = async (blob: Blob) => { setPendingBlob(blob); await scan(blob); };
+  const runScan = async (blob: Blob) => { setPendingBlob(blob); setSaved(false); await scan(blob); };
   const pickFile = async () => { const f = await filePickerSource.capture(); if (f) await runScan(f.blob); };
   const pickCamera = async () => { const f = await cameraSource.capture(); if (f) await runScan(f.blob); };
   const pasteImage = async () => {
@@ -341,6 +342,7 @@ const ScanOpponentPage: React.FC = () => {
             <Icon name="chevron-right" size={15} color="var(--ink-2)" style={{ transform: 'scaleX(-1)' }} />Back
           </button>
         )}
+        <OneTapCaptureToggle onCaptured={(frame) => void runScan(frame.blob)} />
         <span style={{ flex: 1 }} />
         {saved ? (
           <button onClick={() => navigate('/')} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 18px', borderRadius: 'var(--r-sm)', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: '#0a0f1a', background: 'var(--safe)' }}>
