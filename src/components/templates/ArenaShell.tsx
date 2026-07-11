@@ -77,7 +77,10 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
                landscape: beside the rail's bottom corner where the pill lives */
             ...(landscape
               ? { left: 64, bottom: 10 }
-              : { top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)', right: 'var(--gutter)' }),
+              : {
+                  top: 'calc(env(safe-area-inset-top, 0px) + (var(--appbar-h) + 34px) / 2 + 2px)',
+                  right: 'var(--gutter)',
+                }),
             zIndex: 40,
             minWidth: 180,
             background: 'var(--surface-card)',

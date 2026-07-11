@@ -14,7 +14,7 @@ export function NavRail({ active = 'calc', onChange, tabs = ARENA_TABS, bottom }
     <nav
       aria-label="Primary"
       style={{
-        width: 56,
+        width: 'calc(56px + env(safe-area-inset-left, 0px))',
         flex: '0 0 auto',
         zIndex: 30,
         display: 'flex',

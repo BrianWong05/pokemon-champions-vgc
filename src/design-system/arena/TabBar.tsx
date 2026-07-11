@@ -23,7 +23,7 @@ export function TabBar({ active = 'calc', onChange, tabs = ARENA_TABS, style = {
         position: 'sticky',
         bottom: 0,
         zIndex: 30,
-        height: 'var(--tabbar-h)',
+        height: 'calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px))',
         display: 'grid',
         gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
         background: 'var(--bg-appbar)',
