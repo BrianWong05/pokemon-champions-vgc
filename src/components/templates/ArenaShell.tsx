@@ -76,7 +76,10 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
             /* portrait: 2px below the 34px RegPill centered in the app bar;
                landscape: beside the rail's bottom corner where the pill lives */
             ...(landscape
-              ? { left: 'calc(64px + env(safe-area-inset-left, 0px))', bottom: 10 }
+              ? {
+                  left: 'calc(64px + env(safe-area-inset-left, 0px))',
+                  bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+                }
               : {
                   top: 'calc(env(safe-area-inset-top, 0px) + (var(--appbar-h) + 34px) / 2 + 2px)',
                   right: 'var(--gutter)',

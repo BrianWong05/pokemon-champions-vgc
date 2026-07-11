@@ -21,6 +21,8 @@ Keep mobile chrome backgrounds full-bleed behind the device cutouts while placin
 - Add `viewport-fit=cover` to the viewport meta tag so iOS reports the physical safe-area insets.
 - Set the landscape rail width to `calc(56px + env(safe-area-inset-left, 0px))`.
 - Keep the rail's left padding equal to `env(safe-area-inset-left, 0px)` so the original 56px control column begins after the unsafe region.
+- Set the rail's bottom padding to `calc(10px + env(safe-area-inset-bottom, 0px))` so its bottom controls retain the original spacing above the unsafe region.
+- Anchor the landscape regulation menu on both safe-area axes: `left: calc(64px + env(safe-area-inset-left, 0px))` and `bottom: calc(10px + env(safe-area-inset-bottom, 0px))`, keeping it beside the regulation pill.
 - Set the portrait app bar height to `calc(var(--appbar-h) + env(safe-area-inset-top, 0px))` and add top padding equal to the top inset, preserving a 56px control row below the Dynamic Island.
 - Add the top inset to the portrait regulation menu's anchor calculation so it remains directly below its pill.
 - Set the portrait tab bar height to `calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px))` while retaining its bottom-inset padding, preserving a 64px control row above the home-indicator area.
@@ -32,7 +34,7 @@ The rail, app-bar, and tab-bar backgrounds intentionally extend under the unsafe
 
 - Add server-rendered markup regression tests for the rail, app bar, and tab bar declarations. SSR is required because jsdom 29.1.1 corrupts valid `env(..., fallback)` values when reading them through CSSOM.
 - Add a document-level regression test asserting that the viewport meta tag includes `viewport-fit=cover`.
-- Guard the regulation menu's safe-area-aware top anchor.
+- Guard the regulation menu's portrait top anchor and landscape two-axis anchor.
 - Run the focused tests, full Vitest suite, type-check, and production build.
 - In iOS Simulator, verify portrait controls sit below the Dynamic Island and above the home-indicator area, then verify landscape rail controls sit to the right of a left-side notch.
 

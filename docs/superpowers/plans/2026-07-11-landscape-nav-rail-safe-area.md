@@ -12,6 +12,8 @@
 
 - Mobile chrome backgrounds extend behind the adjacent iPhone unsafe regions.
 - Landscape rail controls begin after `env(safe-area-inset-left, 0px)` and retain a 56px usable column.
+- Landscape rail bottom controls retain 10px spacing above `env(safe-area-inset-bottom, 0px)`.
+- The landscape regulation menu remains beside its trigger with safe-area-aware left and bottom anchors.
 - Portrait app-bar controls begin after `env(safe-area-inset-top, 0px)` and retain a 56px usable row.
 - Portrait tab-bar controls sit above `env(safe-area-inset-bottom, 0px)` and retain a 64px usable row.
 - The portrait regulation menu remains anchored directly below the regulation pill after the top inset is added.
@@ -23,10 +25,10 @@
 ## File Structure
 
 - Modify `index.html`: opt the viewport into edge-to-edge safe-area reporting.
-- Modify `src/design-system/arena/NavRail.tsx`: add the left inset outside the 56px rail control column.
+- Modify `src/design-system/arena/NavRail.tsx`: add the left inset outside the 56px rail control column and the bottom inset below its original 10px spacing.
 - Modify `src/design-system/arena/AppBar.tsx`: add the top inset outside the 56px app-bar control row.
 - Modify `src/design-system/arena/TabBar.tsx`: add the bottom inset outside the 64px tab-bar control row.
-- Modify `src/components/templates/ArenaShell.tsx`: add the top inset to the regulation-menu anchor.
+- Modify `src/components/templates/ArenaShell.tsx`: add the top inset to the portrait regulation-menu anchor and left/bottom insets to its landscape anchor.
 - Create `src/app-shell-safe-area.test.tsx`: guard viewport metadata, exact server-rendered chrome declarations, and the menu-anchor source declaration.
 - Restore `src/design-system/arena/nav-rail.test.tsx` to its pre-task tests by removing the abandoned jsdom safe-area assertion; the replacement SSR test owns this regression.
 
@@ -44,7 +46,13 @@
 
 **Interfaces:**
 - Consumes: CSS environment variables `safe-area-inset-left`, `safe-area-inset-top`, and `safe-area-inset-bottom`.
-- Produces: additive rail/app-bar/tab-bar dimensions, safe-area padding, a safe-area-aware regulation-menu anchor, and `viewport-fit=cover` metadata.
+- Produces: additive rail/app-bar/tab-bar dimensions, safe-area padding, two-axis landscape and top-inset portrait regulation-menu anchors, and `viewport-fit=cover` metadata.
+
+### Completed landscape anchoring follow-up
+
+- `NavRail` uses `paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))'`.
+- The landscape regulation menu uses `left: 'calc(64px + env(safe-area-inset-left, 0px))'` and `bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))'`.
+- The landscape integration test opens the rendered menu and asserts both the base spacing and safe-area inset on each axis.
 
 - [ ] **Step 1: Replace the abandoned jsdom regression with an SSR/source regression test**
 

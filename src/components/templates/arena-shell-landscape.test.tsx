@@ -40,5 +40,7 @@ describe('ArenaShell landscape', () => {
     const menu = screen.getByRole('menu', { name: 'Regulation' });
     expect(menu.style.left).toContain('64px');
     expect(menu.style.left).toContain('safe-area-inset-left');
+    expect(menu.style.bottom).toContain('10px');
+    expect(menu.style.bottom).toContain('safe-area-inset-bottom');
   });
 });
