@@ -64,7 +64,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
           }
         />
       )}
-      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', paddingRight: 'var(--safe-right)' }}>
         <Outlet />
       </main>
       {!landscape && <TabBar active={active} tabs={ARENA_TABS} onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')} />}
@@ -77,7 +77,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
                landscape: beside the rail's bottom corner where the pill lives */
             ...(landscape
               ? {
-                  left: 'calc(64px + env(safe-area-inset-left, 0px))',
+                  left: 'calc(64px + var(--safe-left))',
                   bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
                 }
               : {

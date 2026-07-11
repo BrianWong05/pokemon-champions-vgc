@@ -8,6 +8,11 @@
 /* ---- colors ---- */
 :root {
   color-scheme: dark; /* native selects/checkboxes/scrollbars */
+  /* Island-aware landscape insets: iOS reports symmetric left/right env()
+     values, so island.ts tags <html data-island> with the real island side
+     and the opposite var collapses to 0 (overrides at end of file). */
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   /* --- Raw surface ramp (near-black navy -> raised) --- */
   --navy-900: #0B0E14; /* page background */
   --navy-850: #10141C;
@@ -210,3 +215,10 @@
   --shadow-chrome: 0 -6px 20px rgba(23,33,52,0.10);
   --shadow-hud: 0 6px 20px rgba(23,33,52,0.12);
 }
+
+/* ====================================================================
+   Island-aware insets — zero the safe-area var on the side AWAY from the
+   Dynamic Island (iOS reports both sides as inset; see island.ts).
+   ==================================================================== */
+:root[data-island='left'] { --safe-right: 0px; }
+:root[data-island='right'] { --safe-left: 0px; }

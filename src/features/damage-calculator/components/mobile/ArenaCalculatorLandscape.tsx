@@ -55,11 +55,17 @@ function Panel({ side, badge, onCollapse, children }: {
 }) {
   return (
     <div style={{
-      width: 'clamp(228px, 25%, 300px)', flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
+      // ponytail: --safe-right is the island-aware right inset (zeroed when the island
+      // sits left; see island.ts) — the surface bleeds under it, content stays clear.
+      width: side === 'right'
+        ? 'calc(clamp(228px, 25%, 300px) + var(--safe-right))'
+        : 'clamp(228px, 25%, 300px)',
+      marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined,
+      flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
       background: 'var(--surface-sticky)',
       borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
       borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
-      padding: '10px 12px 12px',
+      padding: side === 'right' ? '10px calc(12px + var(--safe-right)) 12px 12px' : '10px 12px 12px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
         <Micro style={{ letterSpacing: '0.07em' }}>{side === 'left' ? 'Attacker' : 'Defender'}</Micro>
@@ -83,10 +89,13 @@ function Rail({ side, name, dex, tone, item, hpPercent, subline, onExpand }: {
 }) {
   return (
     <aside style={{
-      width: 88, flex: 'none', background: 'var(--surface-sticky)',
+      width: side === 'right' ? 'calc(88px + var(--safe-right))' : 88,
+      marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined,
+      flex: 'none', background: 'var(--surface-sticky)',
       borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
       borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '12px 8px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+      padding: side === 'right' ? '12px calc(8px + var(--safe-right)) 12px 8px' : '12px 8px',
     }}>
       <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: tone === 'accent' ? 'var(--ink-3)' : 'var(--danger)' }}>
         {side === 'left' ? 'You' : 'Opp'}
