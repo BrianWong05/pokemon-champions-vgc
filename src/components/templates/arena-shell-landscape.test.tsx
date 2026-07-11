@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import ArenaShell from './ArenaShell';
@@ -30,5 +31,22 @@ describe('ArenaShell landscape', () => {
     expect(screen.queryByText('Teams')).toBeNull(); // no TabBar text label
     expect(screen.queryByRole('heading', { name: 'Calculator' })).toBeNull(); // no AppBar title
     expect(screen.getByText('M-B')).toBeTruthy(); // compact RegPill in rail
+  });
+
+  it('pads the content region for the island-aware right inset', () => {
+    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={['/']}><ArenaShell landscape /></MemoryRouter>);
+    expect(markup).toContain('padding-right:var(--safe-right)');
+  });
+
+  it('opens the landscape regulation menu beside the inset rail', () => {
+    render(<MemoryRouter initialEntries={['/']}><ArenaShell landscape /></MemoryRouter>);
+
+    fireEvent.click(screen.getByText('M-B'));
+
+    const menu = screen.getByRole('menu', { name: 'Regulation' });
+    expect(menu.style.left).toContain('64px');
+    expect(menu.style.left).toContain('--safe-left');
+    expect(menu.style.bottom).toContain('10px');
+    expect(menu.style.bottom).toContain('safe-area-inset-bottom');
   });
 });

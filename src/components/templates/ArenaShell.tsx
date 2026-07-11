@@ -64,7 +64,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
           }
         />
       )}
-      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', paddingRight: 'var(--safe-right)' }}>
         <Outlet />
       </main>
       {!landscape && <TabBar active={active} tabs={ARENA_TABS} onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')} />}
@@ -76,8 +76,14 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
             /* portrait: 2px below the 34px RegPill centered in the app bar;
                landscape: beside the rail's bottom corner where the pill lives */
             ...(landscape
-              ? { left: 64, bottom: 10 }
-              : { top: 'calc((var(--appbar-h) + 34px) / 2 + 2px)', right: 'var(--gutter)' }),
+              ? {
+                  left: 'calc(64px + var(--safe-left))',
+                  bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+                }
+              : {
+                  top: 'calc(env(safe-area-inset-top, 0px) + (var(--appbar-h) + 34px) / 2 + 2px)',
+                  right: 'var(--gutter)',
+                }),
             zIndex: 40,
             minWidth: 180,
             background: 'var(--surface-card)',

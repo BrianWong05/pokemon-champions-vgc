@@ -1,37 +1,44 @@
-# Landscape Nav Rail Safe-Area Fix
+# Mobile Chrome Safe-Area Fix
 
 **Date:** 2026-07-11  
 **Status:** approved for implementation
 
 ## Problem
 
-The Arena landscape shell places its 56px navigation rail against the left viewport edge. On an iPhone with a landscape notch, the rail's controls can overlap the unsafe region.
+The Arena shell does not consistently reserve iPhone safe areas. In landscape, the 56px navigation rail can sit under the notch. Enabling `viewport-fit=cover` exposes the correct landscape inset, but it also makes the existing portrait app bar render beneath the Dynamic Island because the app bar does not reserve the top inset.
 
 The rail currently applies `env(safe-area-inset-left, 0px)` as padding, but two details prevent that from protecting the controls reliably:
 
 - `index.html` does not opt into edge-to-edge safe-area values with `viewport-fit=cover`.
 - The rail remains 56px wide, so under border-box sizing the inset consumes part of the control column instead of adding protected space beside it.
+- The portrait app bar has a fixed 56px height and no `safe-area-inset-top` padding.
+- The bottom tab bar applies bottom padding inside a fixed 64px height, shrinking its usable control area when the inset is non-zero.
 
 ## Design
 
-Keep the navigation rail background full-bleed behind the notch, while placing every interactive rail control inside the safe area.
+Keep mobile chrome backgrounds full-bleed behind the device cutouts while placing interactive controls inside the safe area.
 
 - Add `viewport-fit=cover` to the viewport meta tag so iOS reports the physical safe-area insets.
 - Set the landscape rail width to `calc(56px + env(safe-area-inset-left, 0px))`.
 - Keep the rail's left padding equal to `env(safe-area-inset-left, 0px)` so the original 56px control column begins after the unsafe region.
-- Leave portrait and desktop layout branches unchanged. With a zero inset, the rail remains exactly 56px wide.
+- Set the rail's bottom padding to `calc(10px + env(safe-area-inset-bottom, 0px))` so its bottom controls retain the original spacing above the unsafe region.
+- Anchor the landscape regulation menu on both safe-area axes: `left: calc(64px + env(safe-area-inset-left, 0px))` and `bottom: calc(10px + env(safe-area-inset-bottom, 0px))`, keeping it beside the regulation pill.
+- Set the portrait app bar height to `calc(var(--appbar-h) + env(safe-area-inset-top, 0px))` and add top padding equal to the top inset, preserving a 56px control row below the Dynamic Island.
+- Add the top inset to the portrait regulation menu's anchor calculation so it remains directly below its pill.
+- Set the portrait tab bar height to `calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px))` while retaining its bottom-inset padding, preserving a 64px control row above the home-indicator area.
+- Leave the desktop layout branch and calculator content unchanged. With zero insets, all chrome retains its existing dimensions.
 
-The rail background intentionally extends under the notch so it remains visually continuous with the app chrome.
+The rail, app-bar, and tab-bar backgrounds intentionally extend under the unsafe regions so the app chrome remains visually continuous.
 
 ## Testing
 
-- Add a component regression test asserting that the rail includes the safe-area padding and additive width.
+- Add server-rendered markup regression tests for the rail, app bar, and tab bar declarations. SSR is required because jsdom 29.1.1 corrupts valid `env(..., fallback)` values when reading them through CSSOM.
 - Add a document-level regression test asserting that the viewport meta tag includes `viewport-fit=cover`.
+- Guard the regulation menu's portrait top anchor and landscape two-axis anchor.
 - Run the focused tests, full Vitest suite, type-check, and production build.
-- When an iOS landscape runtime is available, confirm that the icons, theme toggle, and regulation pill all sit to the right of the notch.
+- In iOS Simulator, verify portrait controls sit below the Dynamic Island and above the home-indicator area, then verify landscape rail controls sit to the right of a left-side notch.
 
 ## Non-goals
 
-- Changing portrait safe-area behavior.
 - Insetting the calculator panels or the entire application shell.
-- Redesigning the navigation rail or changing its 56px usable control width.
+- Redesigning the chrome or changing its 56px app-bar/rail and 64px tab-bar usable control dimensions.

@@ -14,7 +14,7 @@ export function NavRail({ active = 'calc', onChange, tabs = ARENA_TABS, bottom }
     <nav
       aria-label="Primary"
       style={{
-        width: 56,
+        width: 'calc(56px + var(--safe-left))',
         flex: '0 0 auto',
         zIndex: 30,
         display: 'flex',
@@ -22,7 +22,8 @@ export function NavRail({ active = 'calc', onChange, tabs = ARENA_TABS, bottom }
         alignItems: 'center',
         gap: 6,
         padding: '10px 0',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingLeft: 'var(--safe-left)',
+        paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
         background: 'var(--bg-appbar)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
