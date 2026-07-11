@@ -20,6 +20,13 @@ describe('app shell safe areas', () => {
     expect(markup).toContain('padding-left:env(safe-area-inset-left, 0px)');
   });
 
+  it('keeps the landscape rail bottom controls above the bottom inset', () => {
+    const markup = renderToStaticMarkup(<NavRail active="calc" />);
+    expect(markup).toContain(
+      'padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px))',
+    );
+  });
+
   it('keeps the portrait app-bar control row below the top inset', () => {
     const markup = renderToStaticMarkup(<AppBar title="Calculator" />);
     expect(markup).toContain(

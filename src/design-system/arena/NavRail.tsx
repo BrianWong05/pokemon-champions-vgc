@@ -23,6 +23,7 @@ export function NavRail({ active = 'calc', onChange, tabs = ARENA_TABS, bottom }
         gap: 6,
         padding: '10px 0',
         paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
         background: 'var(--bg-appbar)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',

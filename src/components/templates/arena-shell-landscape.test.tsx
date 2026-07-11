@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import ArenaShell from './ArenaShell';
@@ -30,5 +30,15 @@ describe('ArenaShell landscape', () => {
     expect(screen.queryByText('Teams')).toBeNull(); // no TabBar text label
     expect(screen.queryByRole('heading', { name: 'Calculator' })).toBeNull(); // no AppBar title
     expect(screen.getByText('M-B')).toBeTruthy(); // compact RegPill in rail
+  });
+
+  it('opens the landscape regulation menu beside the inset rail', () => {
+    render(<MemoryRouter initialEntries={['/']}><ArenaShell landscape /></MemoryRouter>);
+
+    fireEvent.click(screen.getByText('M-B'));
+
+    const menu = screen.getByRole('menu', { name: 'Regulation' });
+    expect(menu.style.left).toContain('64px');
+    expect(menu.style.left).toContain('safe-area-inset-left');
   });
 });
