@@ -25,7 +25,10 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.getcapacitor.Bridge;
@@ -40,6 +43,7 @@ public class ScreenCaptureService extends Service {
     private OverlayPanelController panelController;
     private View bubbleView;
     private TextView bubbleTagView;
+    private WindowManager.LayoutParams bubbleLp;
 
     static final String EXTRA_RESULT_CODE = "resultCode";
     static final String EXTRA_DATA = "data";
@@ -126,7 +130,7 @@ public class ScreenCaptureService extends Service {
         Notification n = new Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Champions VGC capture active")
                 .setContentText("Tap the floating button to scan the screen.")
-                .setSmallIcon(android.R.drawable.ic_menu_camera)
+                .setSmallIcon(R.drawable.ic_bubble_scan)
                 .setOngoing(true)
                 .build();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -147,13 +151,16 @@ public class ScreenCaptureService extends Service {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        View circle = new View(this);
-        GradientDrawable face = new GradientDrawable();
-        face.setShape(GradientDrawable.OVAL);
-        face.setColor(0xEE10141C);
-        face.setStroke(dp(2), 0xFF5A85FF);
-        circle.setBackground(face);
-        box.addView(circle, dp(46), dp(46));
+        // FloatFace 'scan' look: rounded-square dark tile with the scan glyph.
+        ImageView faceView = new ImageView(this);
+        faceView.setImageResource(R.drawable.ic_bubble_scan);
+        faceView.setPadding(dp(11), dp(11), dp(11), dp(11));
+        GradientDrawable face = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xFF1C2433, 0xFF10151F});
+        face.setCornerRadius(dp(14));
+        face.setStroke(dp(1), 0xFF2E3A52);
+        faceView.setBackground(face);
+        box.addView(faceView, dp(46), dp(46));
 
         bubbleTagView = new TextView(this);
         bubbleTagView.setText("SCAN");
@@ -175,16 +182,54 @@ public class ScreenCaptureService extends Service {
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+        bubbleLp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 type,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
-        lp.gravity = Gravity.TOP | Gravity.START;
-        lp.x = 24;
-        lp.y = 240;
-        windowManager.addView(box, lp);
+        bubbleLp.gravity = Gravity.TOP | Gravity.START;
+        bubbleLp.x = 24;
+        bubbleLp.y = 240;
+
+        // Drag to move; a sub-slop release counts as a tap (performClick).
+        final int slop = ViewConfiguration.get(this).getScaledTouchSlop();
+        box.setOnTouchListener(new View.OnTouchListener() {
+            private int startX, startY;
+            private float downX, downY;
+            private boolean dragging;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dragging = false;
+                        startX = bubbleLp.x;
+                        startY = bubbleLp.y;
+                        downX = e.getRawX();
+                        downY = e.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        int dx = (int) (e.getRawX() - downX);
+                        int dy = (int) (e.getRawY() - downY);
+                        if (!dragging && (Math.abs(dx) > slop || Math.abs(dy) > slop)) dragging = true;
+                        if (dragging) {
+                            bubbleLp.x = startX + dx;
+                            bubbleLp.y = startY + dy;
+                            windowManager.updateViewLayout(box, bubbleLp);
+                        }
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP:
+                        if (!dragging) v.performClick();
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+
+        windowManager.addView(box, bubbleLp);
         bubbleView = box;
     }
 
