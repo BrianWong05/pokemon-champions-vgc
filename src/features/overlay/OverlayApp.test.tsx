@@ -83,4 +83,20 @@ describe('OverlayApp', () => {
     await act(async () => { (globalThis as any).__tap(); });
     expect(await screen.findByText(/Couldn't read the screen/)).toBeTruthy();
   });
+
+  it('hold-to-peek hides the calc panel while pressed and restores it on release', async () => {
+    localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
+    scanFrameMock.mockResolvedValue({
+      mode: 'battle',
+      slots: [{ box: { x: 100, y: 0, w: 1, h: 1 }, side: 'opponent', candidates: [{ id: 445, score: 0.9 }], hpPercent: 56 }],
+    });
+    const { container } = render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    const peek = await screen.findByRole('button', { name: /Hold to peek/ });
+    const panel = container.querySelector('.rounded-2xl') as HTMLElement;
+    fireEvent.pointerDown(peek);
+    expect(panel.style.opacity).toBe('0');
+    fireEvent.pointerUp(peek);
+    expect(panel.style.opacity).toBe('1');
+  });
 });

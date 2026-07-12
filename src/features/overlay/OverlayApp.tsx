@@ -8,6 +8,7 @@ import { usePokemonList } from './usePokemonList';
 import StripView from './StripView';
 import ConfirmRosterView from './ConfirmRosterView';
 import DamageCalculatorPage, { type OverlayDefender } from '@/pages/DamageCalculator';
+import { Icon } from '@/design-system/arena';
 import { useFormat } from '../formats/FormatContext';
 import { useBattleRoster } from '../scan/useBattleRoster';
 import { formFamilyIds, buildLegalIdsResolver, readBattleRoster } from '../scan/battleRoster';
@@ -26,6 +27,8 @@ const OverlayApp: React.FC = () => {
   const [confirmSlots, setConfirmSlots] = useState<SlotResult[]>([]);
   const [scanSeq, setScanSeq] = useState(0);
   const [overlayDefender, setOverlayDefender] = useState<OverlayDefender | null>(null);
+  // Hold-to-peek: the calc panel goes fully transparent while the button is held.
+  const [peeking, setPeeking] = useState(false);
   const pendingBlob = useRef<Blob | null>(null);
   const seqRef = useRef(0); // monotonic key/remount counter; no setState inside updaters
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
@@ -136,7 +139,7 @@ const OverlayApp: React.FC = () => {
   if (view === 'confirm') {
     return (
       <div className="w-full h-screen flex p-2" onClick={closePanel}>
-        <div className="w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl" style={{ border: '1px solid var(--line-2)', opacity: 0.97 }} onClick={(e) => e.stopPropagation()}>
+        <div className="w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl" style={{ border: '1px solid var(--line-2)' }} onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
@@ -155,7 +158,7 @@ const OverlayApp: React.FC = () => {
       <div className="w-full h-screen p-2" onClick={closePanel}>
         <div
           className="w-full h-full flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)', opacity: 0.92 }}
+          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)', opacity: peeking ? 0 : 1 }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>
@@ -166,6 +169,17 @@ const OverlayApp: React.FC = () => {
                 Read · {overlayDefender.hpPercent}% HP
               </span>
             ) : null}
+            <button
+              aria-label="Hold to peek at the game"
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); setPeeking(true); }}
+              onPointerUp={() => setPeeking(false)}
+              onPointerCancel={() => setPeeking(false)}
+              onContextMenu={(e) => e.preventDefault()}
+              className="text-[11px] px-2 py-1 rounded inline-flex items-center gap-1"
+              style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)', touchAction: 'none' }}
+            >
+              <Icon name="eye" size={12} color="var(--ink-2)" />Peek
+            </button>
             <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
               Scan active + HP
             </button>
