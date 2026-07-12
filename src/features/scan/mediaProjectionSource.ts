@@ -17,7 +17,7 @@ export function isAndroidNative(): boolean {
   return Capacitor.getPlatform() === 'android' && Capacitor.isNativePlatform();
 }
 
-function base64ToBlob(b64: string, type = 'image/png'): Blob {
+export function base64ToBlob(b64: string, type = 'image/png'): Blob {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);

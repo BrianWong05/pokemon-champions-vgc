@@ -29,7 +29,7 @@ import { useBattleRoster } from '@/features/scan/useBattleRoster';
 import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
 import MyTeamChips from '@/features/scan/MyTeamChips';
 import { useMyTeam } from '@/features/scan/useMyTeam';
-import type { CapturedFrame } from '@/features/scan/captureSource';
+import { readLastScanHp } from '@/features/scan/lastScanHp';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
@@ -51,7 +51,15 @@ const isDefaultBuild = (side: SideState) =>
   side.spHp === 0 && side.spAtk === 0 && side.spDef === 0 && side.spSpa === 0 && side.spSpd === 0 && side.spSpe === 0
   && side.nature === 'Hardy' && side.item == null;
 
-const DamageCalculatorPage: React.FC = () => {
+export interface OverlayDefender { id: number; hpPercent: number | null; seq: number }
+interface DamageCalculatorPageProps {
+  /** Overlay mode: defender to load (re-applied whenever seq changes). */
+  overlayDefender?: OverlayDefender | null;
+  /** Overlay mode: replaces the mobile calculators' navigate('/scan'). */
+  onOpenScanOverride?: () => void;
+}
+
+const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefender, onOpenScanOverride }) => {
   const navigate = useNavigate();
   const { state, dispatch } = useCalculatorState();
   const { format } = useFormat();
@@ -59,7 +67,6 @@ const DamageCalculatorPage: React.FC = () => {
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [efficacyMap, setEfficacyMap] = useState<TypeEfficacyMap>({});
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
-  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const { teams, createTeam } = useTeams();
   const actions = useCalculatorActions(dispatch, pokemonList, moveList);
   const { toast } = useToast();
@@ -72,11 +79,6 @@ const DamageCalculatorPage: React.FC = () => {
     () => (myTeam ? myTeam.members.map((m) => m.configuration.selectedId).filter((n): n is number => n != null) : null),
     [myTeam],
   );
-
-  const handleCaptured = React.useCallback((frame: CapturedFrame) => {
-    setCapturedBlob(frame.blob);
-    setIsScanModalOpen(true);
-  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -137,6 +139,13 @@ const DamageCalculatorPage: React.FC = () => {
     dispatch({ type: 'SET_SCAN_LOADED', payload: { side: 'p1', val: true } });
   };
 
+  // Overlay scan result: (re)apply the detected defender + HP once data is up.
+  useEffect(() => {
+    if (!overlayDefender || pokemonList.length === 0) return;
+    void handleLoadDefender(overlayDefender.id, { hpPercent: overlayDefender.hpPercent });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overlayDefender?.seq, pokemonList.length]);
+
   const persistIfScanLoaded = (side: SideState) => {
     if (!side.loadedFromScan || isDefaultBuild(side)) return;
     const species = speciesNameOf(side, pokemonList);
@@ -156,7 +165,7 @@ const DamageCalculatorPage: React.FC = () => {
       roster={battleRoster}
       byId={pokemonById}
       activeId={state.p2.selectedId}
-      onPick={(id) => void handleLoadDefender(id)}
+      onPick={(id) => void handleLoadDefender(id, { hpPercent: readLastScanHp()[id] ?? null })}
       onClear={clearRoster}
     />
   ) : null;
@@ -316,18 +325,17 @@ const DamageCalculatorPage: React.FC = () => {
           actions={actions}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
-          onOpenScan={() => navigate('/scan')}
+          onOpenScan={onOpenScanOverride ?? (() => navigate('/scan'))}
           defenderExtra={rosterChips}
           attackerExtra={myTeamChips}
         />
         <ScanTeamModal
           isOpen={isScanModalOpen}
-          onClose={() => { setIsScanModalOpen(false); setCapturedBlob(null); }}
+          onClose={() => setIsScanModalOpen(false)}
           pokemonList={pokemonList}
           onLoadPokemon={handleLoadDefender}
           onLoadAttacker={handleLoadAttacker}
           onSaveTeam={handleSaveOppTeam}
-          externalBlob={capturedBlob}
           battleRoster={battleRoster}
           onConfirmRoster={confirmRoster}
           myTeamIds={myTeamIds}
@@ -376,7 +384,7 @@ const DamageCalculatorPage: React.FC = () => {
       defenderPanel={
         <div className="space-y-3">
           <div className="flex justify-end gap-2">
-            <OneTapCaptureToggle onCaptured={handleCaptured} />
+            <OneTapCaptureToggle />
             <button
               onClick={() => setIsScanModalOpen(true)}
               className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 text-sm font-semibold hover:bg-raise transition-colors"
@@ -398,12 +406,11 @@ const DamageCalculatorPage: React.FC = () => {
     />
     <ScanTeamModal
       isOpen={isScanModalOpen}
-      onClose={() => { setIsScanModalOpen(false); setCapturedBlob(null); }}
+      onClose={() => setIsScanModalOpen(false)}
       pokemonList={pokemonList}
       onLoadPokemon={handleLoadDefender}
       onLoadAttacker={handleLoadAttacker}
       onSaveTeam={handleSaveOppTeam}
-      externalBlob={capturedBlob}
       battleRoster={battleRoster}
       onConfirmRoster={confirmRoster}
       myTeamIds={myTeamIds}

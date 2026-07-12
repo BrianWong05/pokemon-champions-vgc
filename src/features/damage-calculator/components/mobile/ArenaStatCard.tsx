@@ -7,7 +7,7 @@ const natureMult = (s: SideState, stat: string) =>
   s.boostedStat === stat ? 1.1 : s.hinderedStat === stat ? 0.9 : 1.0;
 
 /** Computed stat rows laid out H/C, A/D, B/S (design order). */
-function computeRows(s: SideState): { l1: string; v1: number; l2: string; v2: number }[] {
+export function computeStatRows(s: SideState): { l1: string; v1: number; l2: string; v2: number }[] {
   const hp = calculateHP(s.baseHp, s.spHp);
   const atk = calculateStat(s.baseAtk, s.spAtk, natureMult(s, 'atk'), s.stages.atk || 0);
   const def = calculateStat(s.baseDef, s.spDef, natureMult(s, 'def'), s.stages.def || 0);
@@ -25,7 +25,7 @@ export function ArenaStatCard({ side, name, tone, onOpenSpecies }: {
   side: SideState; name: string; tone: 'accent' | 'danger'; onOpenSpecies: () => void;
 }) {
   const types = [side.type1, side.type2].filter(Boolean) as string[];
-  const rows = side.selectedId ? computeRows(side) : [];
+  const rows = side.selectedId ? computeStatRows(side) : [];
   return (
     <div style={{ border: '1px solid var(--line-1)', background: 'var(--surface-card)', borderRadius: 'var(--r-md)', padding: 10, display: 'flex', flexDirection: 'column', gap: 9 }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

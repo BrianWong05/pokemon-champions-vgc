@@ -208,6 +208,11 @@ const ScanOpponentPage: React.FC = () => {
                   </div>
                 ))}
               </div>
+              {/* Android only (renders null elsewhere): starts the floating-bubble
+                  overlay session — the mobile UI's sole path to the toggle. */}
+              <div style={{ marginTop: 14 }}>
+                <OneTapCaptureToggle />
+              </div>
             </div>
           </div>
         ) : step === 'detect' ? (
@@ -342,7 +347,6 @@ const ScanOpponentPage: React.FC = () => {
             <Icon name="chevron-right" size={15} color="var(--ink-2)" style={{ transform: 'scaleX(-1)' }} />Back
           </button>
         )}
-        <OneTapCaptureToggle onCaptured={(frame) => void runScan(frame.blob)} />
         <span style={{ flex: 1 }} />
         {saved ? (
           <button onClick={() => navigate('/')} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 40, padding: '0 18px', borderRadius: 'var(--r-sm)', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: '#0a0f1a', background: 'var(--safe)' }}>

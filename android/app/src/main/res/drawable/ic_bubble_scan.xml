@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scan glyph from the FloatFace design (dir='scan'): four viewfinder
+     corners + a center scan line, accent blue. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,8 V6 A2,2 0 0 1 6,4 H8"
+        android:strokeColor="#5A85FF"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M16,4 H18 A2,2 0 0 1 20,6 V8"
+        android:strokeColor="#5A85FF"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M20,16 V18 A2,2 0 0 1 18,20 H16"
+        android:strokeColor="#5A85FF"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M8,20 H6 A2,2 0 0 1 4,18 V16"
+        android:strokeColor="#5A85FF"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M4.5,12 H19.5"
+        android:strokeColor="#5A85FF"
+        android:strokeWidth="2.1"
+        android:strokeLineCap="round" />
+</vector>

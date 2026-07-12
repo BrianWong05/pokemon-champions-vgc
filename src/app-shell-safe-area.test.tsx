@@ -60,10 +60,11 @@ describe('app shell safe areas', () => {
       'utf8',
     );
     // surface extends under the island (negative margin into the shell's inset padding)…
-    expect(calc).toContain("marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined");
-    // …while the expanded panel's and collapsed rail's content stay inset
-    expect(calc).toContain('calc(12px + var(--safe-right))');
-    expect(calc).toContain('calc(8px + var(--safe-right))');
+    expect(calc).toContain("marginRight: 'calc(-1 * var(--safe-right, 0px))'");
+    // …the panel widens by the same inset so only the surface bleeds, not the content…
+    expect(calc).toContain("width: 'calc(clamp(224px, 30%, 280px) + var(--safe-right, 0px))'");
+    // …and the defender content stays inset via right padding that includes the inset
+    expect(calc).toContain('calc(10px + var(--safe-right, 0px))');
   });
 
   it('adds the top inset to the portrait regulation-menu anchor', () => {
