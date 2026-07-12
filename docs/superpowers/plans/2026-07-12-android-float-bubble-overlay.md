@@ -1516,11 +1516,11 @@ and in `stopSession` replace `ScreenCaptureService.tapListener = null;` with `Sc
 - [ ] **Step 4: Build the web bundle and the APK**
 
 ```bash
-npm run build && npx cap sync android
+npm run sync:android
 cd android && ./gradlew assembleDebug && cd ..
 ```
 
-Expected: `BUILD SUCCESSFUL` for both.
+Expected: `BUILD SUCCESSFUL` for both. Use `npm run sync:android` (builds with base `/`), NOT plain `npm run build` (base `/pokemon-champions-vgc/` white-screens the app).
 
 - [ ] **Step 5: Commit**
 
@@ -1605,23 +1605,24 @@ git commit -m "refactor(scan): retire tap->bring-to-front flow; overlay panel ow
 - [ ] **Step 1: Full web verification**
 
 ```bash
-npx tsc --noEmit && npx vitest run && npm run build
+npx tsc --noEmit && npx vitest run
 ```
 
-Expected: all PASS / BUILD SUCCESSFUL.
+Expected: all PASS.
 
 - [ ] **Step 2: Android build**
 
 ```bash
-npx cap sync android && cd android && ./gradlew assembleDebug && cd ..
+npm run sync:android && cd android && ./gradlew assembleDebug && cd ..
 ```
 
-Expected: BUILD SUCCESSFUL.
+Expected: BUILD SUCCESSFUL. `npm run sync:android` builds with base `/` (capacitor mode); plain `npm run build` bakes base `/pokemon-champions-vgc/` and white-screens the app.
 
 - [ ] **Step 3: On-device manual checklist (from the spec)**
 
 Install the debug APK on the Android device, then verify each item and record pass/fail:
 
+0. Build/sync with `npm run sync:android` (NOT plain `npm run build`) — the Capacitor bundle must be built with base `/`.
 1. Enable capture in the app, grant overlay + projection permissions → bubble appears with SCAN tag.
 2. Open the game at team preview, tap bubble → confirm panel opens with 6 detected mons; the game's opponent column stays visible to the right.
 3. Fix one low-confidence slot via candidates; Confirm & lock → panel collapses to the docked strip; bubble tag flips to CALC.

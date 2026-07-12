@@ -25,16 +25,22 @@ import com.getcapacitor.BridgeWebViewClient;
  */
 public class OverlayPanelController {
     private final ScreenCaptureService service;
+    private final Bridge bridge;
     private final WindowManager wm;
     private final Handler main = new Handler(Looper.getMainLooper());
     private WebView webView;
-    private String state = "hidden";
     private boolean attached = false;
     private volatile String pendingFrame;
 
     public OverlayPanelController(ScreenCaptureService service, Bridge bridge) {
         this.service = service;
+        this.bridge = bridge;
         wm = (WindowManager) service.getSystemService(Context.WINDOW_SERVICE);
+        createWebView();
+    }
+
+    /** Builds (or rebuilds after a renderer crash) the panel WebView. Main thread only. */
+    private void createWebView() {
         webView = new WebView(service);
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
@@ -55,12 +61,20 @@ public class OverlayPanelController {
             return false;
         });
         String base = bridge.getAppUrl().replaceAll("/+$", "");
+        // The bundle must be built with `--mode capacitor` (Vite base `/`) — use
+        // `npm run sync:android` — or neither the app nor `/overlay` resolves.
         webView.loadUrl(base + "/overlay");
     }
 
     /** Bubble tap: capture BEFORE any window changes so the frame is clean. */
     public void onBubbleTap() {
+        // Recreate the panel WebView if a prior renderer crash destroyed it. State
+        // stays "hidden"; the web layer drives the window state after it loads.
+        if (webView == null) createWebView();
         pendingFrame = service.captureLatestPng();
+        // evaluateJavascript on a just-rebuilt, still-loading page can drop this
+        // call — acceptable: the overlay's mount effect restores window/tag state
+        // and the next tap works.
         eval("window.__overlayBubbleTap && window.__overlayBubbleTap();");
     }
 
@@ -101,7 +115,6 @@ public class OverlayPanelController {
 
     private void applyWindowState(String s) {
         if (webView == null) return;
-        state = s;
         if (attached) { try { wm.removeView(webView); } catch (Exception ignored) {} attached = false; }
         if (!"hidden".equals(s)) {
             wm.addView(webView, paramsFor(s));

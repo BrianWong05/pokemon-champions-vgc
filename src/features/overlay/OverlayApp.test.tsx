@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 
 const mon = (id: number, nameEn: string) => ({ id, nameEn, identifier: nameEn.toLowerCase() } as PokemonBaseStats);
@@ -66,6 +66,15 @@ describe('OverlayApp', () => {
     await act(async () => { (globalThis as any).__tap(); });
     expect((await screen.findByTestId('calc')).textContent).toBe('445:56');
     expect(JSON.parse(localStorage.getItem('scan.lastScanHp')!)).toEqual({ 445: 56, 823: 100 });
+  });
+
+  it('strip pick opens the calc with the picked defender and stored HP', async () => {
+    localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
+    localStorage.setItem('scan.lastScanHp', JSON.stringify({ 823: 41 }));
+    render(<OverlayApp />);
+    fireEvent.click(screen.getByRole('button', { name: /Corviknight/ }));
+    expect((await screen.findByTestId('calc')).textContent).toBe('823:41');
+    expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
   });
 
   it('unreadable frame shows the error card', async () => {

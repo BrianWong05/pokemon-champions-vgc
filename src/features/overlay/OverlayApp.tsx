@@ -27,6 +27,7 @@ const OverlayApp: React.FC = () => {
   const [scanSeq, setScanSeq] = useState(0);
   const [overlayDefender, setOverlayDefender] = useState<OverlayDefender | null>(null);
   const pendingBlob = useRef<Blob | null>(null);
+  const seqRef = useRef(0); // monotonic key/remount counter; no setState inside updaters
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
 
   // Mount: reflect persisted roster state to the native bubble/window.
@@ -58,14 +59,14 @@ const OverlayApp: React.FC = () => {
       const route = routeScan(mode, slots);
       if (route.view === 'confirm') {
         setConfirmSlots(route.slots);
-        setScanSeq((s) => s + 1);
+        seqRef.current += 1;
+        setScanSeq(seqRef.current);
         setView('confirm');
       } else if (route.view === 'calc') {
         saveScanHp(route.hpEntries);
-        setScanSeq((s) => {
-          setOverlayDefender({ id: route.defenderId, hpPercent: route.hpPercent, seq: s + 1 });
-          return s + 1;
-        });
+        seqRef.current += 1;
+        setOverlayDefender({ id: route.defenderId, hpPercent: route.hpPercent, seq: seqRef.current });
+        setScanSeq(seqRef.current);
         setView('calc');
       } else {
         setErrorReason(route.reason);
@@ -100,10 +101,11 @@ const OverlayApp: React.FC = () => {
   }, [confirmRoster]);
 
   const handleStripPick = useCallback((id: number) => {
-    setScanSeq((s) => {
-      setOverlayDefender({ id, hpPercent: readLastScanHp()[id] ?? null, seq: s + 1 });
-      return s + 1;
-    });
+    seqRef.current += 1;
+    setOverlayDefender({ id, hpPercent: readLastScanHp()[id] ?? null, seq: seqRef.current });
+    setScanSeq(seqRef.current);
+    setView('calc');
+    overlayBridge.setWindowState('panel');
   }, []);
 
   if (view === 'idle') {
