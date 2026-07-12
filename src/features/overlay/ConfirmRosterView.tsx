@@ -89,10 +89,12 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
         </button>
       </div>
 
-      <div className="ac-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 14 }}>
+      <div style={{ flex: 1, minHeight: 0, padding: '12px 14px' }}>
+        {/* Each column scrolls on its own — reviewing candidates on the right
+            must not move the detected-team grid on the left. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 14, height: '100%', minHeight: 0 }}>
           {/* LEFT: detected team */}
-          <div>
+          <div className="ac-scroll" style={{ overflowY: 'auto', minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
               <div style={micro}>Detected team</div>
               <span style={{ flex: 1 }} />
@@ -137,7 +139,7 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
           </div>
 
           {/* RIGHT: fix detection */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0 }}>
+          <div className="ac-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0, overflowY: 'auto', minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Icon name="replace" size={15} color="var(--accent)" />
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>Fix detection</span>
