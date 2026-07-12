@@ -29,11 +29,11 @@ Three layers. Native captures and hosts windows; web owns all logic and UI.
 
 ### Bridge (thin JS interface on the panel WebView)
 
-- `captureFrame(): base64 PNG` — returns the frame captured at bubble-tap time (see Capture mechanics).
+- `captureFrame(): base64 PNG` — returns the frame native captured and stored at bubble-tap time.
 - `blinkAndCapture(): base64 PNG` — hide panel → capture (~200 ms) → restore; for re-scans.
 - `setWindowState('hidden' | 'strip' | 'panel')`.
 - `setBubbleTag('scan' | 'calc')`.
-- Event: bubble tap → notifies the overlay WebView with the fresh frame.
+- Event: bubble tap → notifies the overlay WebView; the web layer then pulls the stored frame via `captureFrame()`.
 
 Nothing else crosses the bridge.
 
@@ -46,12 +46,12 @@ A lean overlay shell that renders one of: **ConfirmRoster**, **Calculator**, **S
 **Single bubble behavior:** tap → native captures the frame *at tap time* (screen is unobstructed — the scan source is always clean) → panel opens → overlay route scans the frame → routes by detected mode:
 
 1. **Team preview detected → ConfirmRoster view** (~70% width, left; the game's opponent column stays visible on the right as the scan source). Grid of 6 detected Pokemon with confidence badges; tap a card to fix it from top-3 candidates (existing candidate UI, amber flag for low confidence). Chrome bar: title, *Re-scan* (blink-capture), minimize. **Confirm & lock roster** → `saveBattleRoster` → window → `strip`, bubble tag → **Calc**.
-2. **Battle detected → Calculator view** (near-fullscreen). The existing landscape calculator with a chrome bar: title, *Scan active + HP* re-scan button or "Read · N% HP" chip after a scan, minimize. Scan results are applied on open: defender = first detected on-field opponent with its HP%; both on-field mons' HP are stored in `lastScanHp`; roster chips inside the calculator switch defenders, applying stored HP. Battle scans are masked to the locked roster (existing behavior).
+2. **Battle detected → Calculator view** (near-fullscreen). The existing landscape calculator with a chrome bar: title, *Scan active + HP* re-scan button or "Read · N% HP" chip after a scan, minimize. Scan results are applied on open: defender = left-most detected on-field opponent with its HP%; both on-field mons' HP are stored in `lastScanHp`; roster chips inside the calculator switch defenders, applying stored HP. Battle scans are masked to the locked roster (existing behavior).
 3. **Neither detected → ScanError card:** "Couldn't read the screen" + Retry (blink-capture) / Close.
 
 **Strip state** (docked bar, panel closed, roster locked): the 6 locked opponent sprites, scanned-HP badges where known, active defender highlighted. Tap a mon → set as defender (with stored HP) for the next calculator open.
 
-**Transitions:** minimize / tap-outside / Back → `strip` if a roster is locked, else `hidden`. Roster cleared (existing flows) → `hidden`, bubble tag → Scan. Confirmed roster is visible to the main app via shared storage next time it opens.
+**Transitions:** minimize / tap-outside / Back → `strip` if a roster is locked, else `hidden`. Roster cleared (existing flows) → `hidden`, bubble tag → Scan. Confirmed roster is visible to the main app via shared storage next time it opens. The overlay re-reads roster state on every bubble tap, so changes made in the main app while the service is running self-correct at the next tap.
 
 ## Data & state
 
