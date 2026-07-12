@@ -70,6 +70,13 @@ public class ScreenCapturePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void isSessionActive(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("active", ScreenCaptureService.instance != null);
+        call.resolve(ret);
+    }
+
+    @PluginMethod
     public void stopSession(PluginCall call) {
         ScreenCaptureService.pendingBridge = null;
         getContext().stopService(new Intent(getContext(), ScreenCaptureService.class));

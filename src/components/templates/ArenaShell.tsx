@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppBar, RegPill, TabBar, ARENA_TABS, ThemeToggle, NavRail } from '@/design-system/arena';
+import { CaptureToggleButton } from '@/features/scan/CaptureToggleButton';
 import { useFormat } from '@/features/formats/FormatContext';
 
 const ROUTE_BY_TAB: Record<string, string> = {
@@ -48,6 +49,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
           onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')}
           bottom={
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <CaptureToggleButton />
               <ThemeToggle />
               <RegPill compact value={format} onClick={() => setRegOpen(true)} />
             </div>
@@ -58,6 +60,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
           title={TITLE_BY_TAB[active]}
           right={
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <CaptureToggleButton />
               <ThemeToggle />
               <RegPill value={format} onClick={() => setRegOpen(true)} />
             </div>
