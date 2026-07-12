@@ -13,7 +13,7 @@ interface StripViewProps {
 }
 
 const StripView: React.FC<StripViewProps> = ({ roster, byId, hpById, activeId, onPick }) => (
-  <div className="w-full h-full flex items-end justify-center gap-2 pb-1 bg-gradient-to-t from-black/80 to-transparent">
+  <div className="w-full h-screen flex items-end justify-center gap-2 pb-1 bg-gradient-to-t from-black/80 to-transparent">
     {roster.map((id) => {
       const name = byId.get(id)?.nameEn ?? `#${id}`;
       const active = id === activeId;

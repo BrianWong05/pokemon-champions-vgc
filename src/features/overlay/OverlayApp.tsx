@@ -125,7 +125,7 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'scanning') {
     return (
-      <div className="w-full h-full grid place-items-center bg-slate-950/70">
+      <div className="w-full h-screen grid place-items-center bg-slate-950/70">
         <div className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-sm font-semibold animate-pulse">
           Scanning…
         </div>
@@ -135,8 +135,8 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'confirm') {
     return (
-      <div className="w-full h-full flex" onClick={closePanel}>
-        <div className="w-2/3 h-full" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full h-screen flex" onClick={closePanel}>
+        <div className="w-2/3 h-screen" onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
@@ -152,7 +152,7 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'calc') {
     return (
-      <div className="w-full h-full flex flex-col bg-slate-950">
+      <div className="w-full h-screen flex flex-col bg-slate-950">
         <div className="flex items-center gap-2 px-3 h-8 border-b border-slate-800 text-slate-100 shrink-0">
           <span className="text-xs font-bold">Damage · floating over battle</span>
           <span className="flex-1" />
@@ -176,7 +176,7 @@ const OverlayApp: React.FC = () => {
   }
 
   return (
-    <div className="w-full h-full grid place-items-center" onClick={closePanel}>
+    <div className="w-full h-screen grid place-items-center" onClick={closePanel}>
       <div className="w-72 p-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-100" onClick={(e) => e.stopPropagation()}>
         <div className="text-sm font-bold mb-1">Couldn't read the screen</div>
         <div className="text-xs text-slate-400 mb-3">

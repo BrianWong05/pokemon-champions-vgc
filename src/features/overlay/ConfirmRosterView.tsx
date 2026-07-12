@@ -73,6 +73,17 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
         <button aria-label="Re-scan team" onClick={onRescan} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
           <Icon name="rotate-ccw" size={12} color="var(--ink-2)" />Re-scan team
         </button>
+        <button
+          disabled={ids.length === 0}
+          onClick={() => onConfirm(ids)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 'var(--r-sm)', border: 'none',
+            cursor: ids.length === 0 ? 'default' : 'pointer', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap',
+            color: 'var(--navy-900)', background: 'var(--accent)', opacity: ids.length === 0 ? 0.4 : 1,
+          }}
+        >
+          <Icon name="check" size={13} color="var(--navy-900)" />Confirm &amp; save
+        </button>
         <button aria-label="Minimize" onClick={onClose} style={{ width: 26, height: 26, display: 'grid', placeItems: 'center', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', cursor: 'pointer' }}>
           <Icon name="chevron-down" size={14} color="var(--ink-2)" />
         </button>
@@ -217,22 +228,6 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
             </div>
           </div>
         </div>
-      </div>
-
-      {/* pinned footer */}
-      <div style={{ flex: 'none', padding: '9px 14px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ flex: 1 }} />
-        <button
-          disabled={ids.length === 0}
-          onClick={() => onConfirm(ids)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 18px', borderRadius: 'var(--r-sm)', border: 'none',
-            cursor: ids.length === 0 ? 'default' : 'pointer', fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-            color: 'var(--navy-900)', background: 'var(--accent)', opacity: ids.length === 0 ? 0.4 : 1,
-          }}
-        >
-          <Icon name="check" size={15} color="var(--navy-900)" />Confirm &amp; save
-        </button>
       </div>
     </div>
   );
