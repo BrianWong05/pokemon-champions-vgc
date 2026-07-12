@@ -23,25 +23,31 @@ const SIDES: Record<BattleSide, SideConfig> = {
   },
 };
 
+// Fallback band for dim sources (video screenshots, color-filtered screens)
+// where the bright magenta predicate finds nothing. Keeps b meaningfully
+// above g so crimson card bodies (b ~ g) stay excluded. Used ONLY when the
+// primary mask yields zero panels, so tuned frames are untouched.
+const isDarkOpponentPlatePixel = (r: number, g: number, b: number) =>
+  r > 95 && r > g + 55 && r > b + 12 && b > g + 12 && b > 40;
+
 // Exposed for game-rect inference, which sweeps the whole image for anchors.
 export const isOpponentPlatePixel = SIDES.opponent.isPanelPixel;
 
-function panelMask(img: RgbaImage, cfg: SideConfig): Uint8Array {
+function panelMask(img: RgbaImage, isPanelPixel: SideConfig['isPanelPixel'], inRegion: SideConfig['inRegion']): Uint8Array {
   const mask = new Uint8Array(img.width * img.height);
   for (let y = 0; y < img.height; y++) {
     for (let x = 0; x < img.width; x++) {
-      if (!cfg.inRegion(x, y, img)) continue;
+      if (!inRegion(x, y, img)) continue;
       const i = (y * img.width + x) * 4;
-      if (cfg.isPanelPixel(img.data[i], img.data[i + 1], img.data[i + 2])) mask[y * img.width + x] = 1;
+      if (isPanelPixel(img.data[i], img.data[i + 1], img.data[i + 2])) mask[y * img.width + x] = 1;
     }
   }
   return mask;
 }
 
-export function detectBattlePanels(img: RgbaImage, side: BattleSide): TileBox[] {
-  const cfg = SIDES[side];
+function panelsFor(img: RgbaImage, isPanelPixel: SideConfig['isPanelPixel'], inRegion: SideConfig['inRegion']): TileBox[] {
   const minArea = Math.max(150, Math.floor(img.width * img.height * 0.0008));
-  return connectedComponents(panelMask(img, cfg), img.width, img.height, minArea)
+  return connectedComponents(panelMask(img, isPanelPixel, inRegion), img.width, img.height, minArea)
     .filter((b) =>
       b.w > img.width * 0.07 &&
       b.w < img.width * 0.3 &&
@@ -52,6 +58,13 @@ export function detectBattlePanels(img: RgbaImage, side: BattleSide): TileBox[] 
     )
     .sort((a, b) => a.x - b.x)
     .slice(0, 2);
+}
+
+export function detectBattlePanels(img: RgbaImage, side: BattleSide): TileBox[] {
+  const cfg = SIDES[side];
+  const primary = panelsFor(img, cfg.isPanelPixel, cfg.inRegion);
+  if (primary.length > 0 || side !== 'opponent') return primary;
+  return panelsFor(img, isDarkOpponentPlatePixel, cfg.inRegion);
 }
 
 function clampBox(box: TileBox, img: RgbaImage): TileBox {
@@ -155,7 +168,7 @@ export function detectBattleIcons(
   side: BattleSide,
   panels: TileBox[] = detectBattlePanels(img, side),
 ): TileBox[] {
-  const mask = panelMask(img, SIDES[side]);
+  const mask = panelMask(img, SIDES[side].isPanelPixel, SIDES[side].inRegion);
   const minArea = Math.max(40, Math.floor(img.width * img.height * 0.0001));
   const blobs = connectedComponents(mask, img.width, img.height, minArea);
   return panels.map((panel) => {

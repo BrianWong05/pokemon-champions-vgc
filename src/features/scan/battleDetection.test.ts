@@ -34,6 +34,28 @@ describe('detectBattlePanels', () => {
     fillRect(img, 720, 30, 160, 40, 220, 40, 120); // opponent-colored, opponent region
     expect(detectBattlePanels(img, 'player').length).toBe(0);
   });
+
+  it('falls back to the dark-magenta band when the bright mask finds nothing (video screenshots)', () => {
+    const img = blank(1250, 700);
+    fillRect(img, 720, 30, 160, 40, 144, 52, 91); // dark plate, fails r > 150
+    fillRect(img, 960, 30, 160, 40, 144, 52, 91);
+    expect(detectBattlePanels(img, 'opponent').length).toBe(2);
+  });
+
+  it('bright plates win before the dark fallback runs (no mask widening on tuned frames)', () => {
+    const img = blank(1250, 700);
+    fillRect(img, 720, 30, 160, 40, 220, 40, 120); // bright plate
+    fillRect(img, 960, 30, 160, 40, 144, 52, 91); // dark blob nearby must NOT join in
+    const panels = detectBattlePanels(img, 'opponent');
+    expect(panels.length).toBe(1);
+    expect(panels[0].x).toBe(720);
+  });
+
+  it('dark fallback still rejects crimson card bodies (b ~ g)', () => {
+    const img = blank(1250, 700);
+    fillRect(img, 720, 30, 160, 40, 140, 45, 50); // crimson: blue not above green
+    expect(detectBattlePanels(img, 'opponent').length).toBe(0);
+  });
 });
 
 describe('detectBattleIcons', () => {

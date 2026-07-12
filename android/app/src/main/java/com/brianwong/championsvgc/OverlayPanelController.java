@@ -71,6 +71,18 @@ public class OverlayPanelController {
         // Recreate the panel WebView if a prior renderer crash destroyed it. State
         // stays "hidden"; the web layer drives the window state after it loads.
         if (webView == null) createWebView();
+        if (attached) {
+            // The docked strip is inside the mirrored display: its sprite tiles can
+            // pollute team-preview detection. Blink it away for the tap capture.
+            main.post(() -> { if (webView != null) webView.setVisibility(View.INVISIBLE); });
+            new Thread(() -> {
+                try { Thread.sleep(280); } catch (InterruptedException ignored) {}
+                pendingFrame = service.captureLatestPng();
+                main.post(() -> { if (webView != null) webView.setVisibility(View.VISIBLE); });
+                eval("window.__overlayBubbleTap && window.__overlayBubbleTap();");
+            }).start();
+            return;
+        }
         pendingFrame = service.captureLatestPng();
         // evaluateJavascript on a just-rebuilt, still-loading page can drop this
         // call — acceptable: the overlay's mount effect restores window/tag state
