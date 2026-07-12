@@ -135,6 +135,20 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                 Slot {fixing + 1}
               </span>
             </div>
+            <div style={{ ...micro, marginTop: 2 }}>Or type a name</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyTyped(); }}
+                placeholder="Amoonguss…"
+                aria-label="Type a name"
+                style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, outline: 'none' }}
+              />
+              <button aria-label="Apply" onClick={applyTyped} style={{ flex: 'none', padding: '0 13px', minHeight: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Apply
+              </button>
+            </div>
             {q ? (
               <>
                 <div style={micro}>Matches</div>
@@ -195,20 +209,6 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                 </div>
               </>
             )}
-            <div style={{ ...micro, marginTop: 2 }}>Or type a name</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') applyTyped(); }}
-                placeholder="Amoonguss…"
-                aria-label="Type a name"
-                style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, outline: 'none' }}
-              />
-              <button aria-label="Apply" onClick={applyTyped} style={{ flex: 'none', padding: '0 13px', minHeight: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                Apply
-              </button>
-            </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 'auto', padding: '9px 10px', borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' }}>
               <Icon name="shield-check" size={14} color="var(--accent)" />
               <span style={{ fontSize: 11, color: 'var(--ink-2)', lineHeight: 1.35 }}>
