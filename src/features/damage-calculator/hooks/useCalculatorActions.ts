@@ -34,6 +34,24 @@ export function useCalculatorActions(
     }
   };
 
+  // Mega evolve / revert: swap species fields but keep the side's build
+  // (moves, SP, nature, ranks, item, HP) — only the abilities refresh.
+  const handleSwapForm = async (side: 'p1' | 'p2', p: PokemonBaseStats) => {
+    dispatch({ type: 'SWAP_FORM', payload: { side, pokemon: p } });
+    try {
+      const db = await getDb();
+      const abilityResult = await db.select({ name: abilities.nameEn })
+        .from(pokemonAbilities)
+        .innerJoin(abilities, eq(pokemonAbilities.abilityId, abilities.id))
+        .where(eq(pokemonAbilities.pokemonId, p.id))
+        .orderBy(pokemonAbilities.slot);
+      const abilityNames = abilityResult.map(a => a.name).filter((name): name is string => !!name);
+      dispatch({ type: 'SET_ABILITIES', payload: { side, abilities: abilityNames } });
+    } catch (error) {
+      console.error('Failed to fetch abilities:', error);
+    }
+  };
+
   const handleSelectPreset = async (side: 'p1' | 'p2', preset: PokemonPreset) => {
     const p = pokemonList.find(p => p.nameEn === preset.pokemonName);
     if (!p) return;
@@ -205,5 +223,5 @@ export function useCalculatorActions(
     });
   };
 
-  return { handleSelectPokemon, handleSelectPreset, handleImportShowdown, handleLoadConfig };
+  return { handleSelectPokemon, handleSwapForm, handleSelectPreset, handleImportShowdown, handleLoadConfig };
 }

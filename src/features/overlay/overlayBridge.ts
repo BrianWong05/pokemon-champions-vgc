@@ -7,7 +7,6 @@ export type WindowState = 'hidden' | 'strip' | 'panel';
 export type BubbleTag = 'scan' | 'calc';
 
 interface NativeOverlayBridge {
-  captureFrame(): string | null;
   blinkAndCapture(): string | null;
   setWindowState(state: string): void;
   setBubbleTag(tag: string): void;
@@ -26,7 +25,7 @@ const toBlob = (b64: string | null | undefined) => (b64 ? base64ToBlob(b64) : nu
 
 export const overlayBridge = {
   isAvailable: (): boolean => !!native(),
-  captureFrame: (): Blob | null => toBlob(native()?.captureFrame()),
+  /** Hides the strip (when docked), captures a clean frame, restores it. */
   blinkAndCapture: (): Blob | null => toBlob(native()?.blinkAndCapture()),
   setWindowState(state: WindowState): void { native()?.setWindowState(state); },
   setBubbleTag(tag: BubbleTag): void { native()?.setBubbleTag(tag); },

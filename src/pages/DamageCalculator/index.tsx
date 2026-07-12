@@ -29,7 +29,6 @@ import { useBattleRoster } from '@/features/scan/useBattleRoster';
 import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
 import MyTeamChips from '@/features/scan/MyTeamChips';
 import { useMyTeam } from '@/features/scan/useMyTeam';
-import { readLastScanHp } from '@/features/scan/lastScanHp';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useTeams } from '@/features/teams/hooks/useTeams';
@@ -55,11 +54,11 @@ export interface OverlayDefender { id: number; hpPercent: number | null; seq: nu
 interface DamageCalculatorPageProps {
   /** Overlay mode: defender to load (re-applied whenever seq changes). */
   overlayDefender?: OverlayDefender | null;
-  /** Overlay mode: replaces the mobile calculators' navigate('/scan'). */
-  onOpenScanOverride?: () => void;
+  /** Hosted in the floating overlay: hides the in-app scan-page entry points. */
+  overlayHosted?: boolean;
 }
 
-const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefender, onOpenScanOverride }) => {
+const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefender, overlayHosted }) => {
   const navigate = useNavigate();
   const { state, dispatch } = useCalculatorState();
   const { format } = useFormat();
@@ -165,7 +164,7 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
       roster={battleRoster}
       byId={pokemonById}
       activeId={state.p2.selectedId}
-      onPick={(id) => void handleLoadDefender(id, { hpPercent: readLastScanHp()[id] ?? null })}
+      onPick={(id) => void handleLoadDefender(id)}
       onClear={clearRoster}
     />
   ) : null;
@@ -325,7 +324,7 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
           actions={actions}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
-          onOpenScan={onOpenScanOverride ?? (() => navigate('/scan'))}
+          onOpenScan={overlayHosted ? undefined : () => navigate('/scan')}
           defenderExtra={rosterChips}
           attackerExtra={myTeamChips}
         />

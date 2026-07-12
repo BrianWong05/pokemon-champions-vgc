@@ -1,9 +1,8 @@
 // Battle-session opponent roster: the 1-6 species ids the user confirmed
 // from a team-preview scan, persisted until cleared or replaced. Species
-// only — scanned HP lives in the separate lastScanHp store (2026-07-12 overlay spec).
+// only — no HP memory (spec decision).
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { LegalIdsBySide } from './scanFrame';
-import { clearLastScanHp } from './lastScanHp';
 
 const KEY = 'scan.battleRoster';
 
@@ -31,7 +30,6 @@ export function saveBattleRoster(ids: number[]): void {
 
 export function clearBattleRoster(): void {
   try { localStorage.removeItem(KEY); } catch { /* storage unavailable */ }
-  clearLastScanHp();
 }
 
 // Base identifiers that embed a default-form suffix (palafin-zero,

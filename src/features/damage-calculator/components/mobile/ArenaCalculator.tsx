@@ -33,7 +33,8 @@ export function ArenaCalculator({
   actions: Actions;
   onApplySpread: (side: Side, spread: Spread) => void;
   onResetBuild: (side: Side) => void;
-  onOpenScan: () => void;
+  /** Omitted in the overlay, where the chrome bar's "Scan active + HP" covers it. */
+  onOpenScan?: () => void;
   /** Optional slot rendered under the Defender card's header (battle-roster chips). */
   defenderExtra?: React.ReactNode;
   /** Optional slot rendered under the Attacker card's header (my-team chips). */
@@ -95,12 +96,14 @@ export function ArenaCalculator({
           <ArenaMonCard side="p1" role="Attacker" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p1')} onOpenAdvanced={() => setAdvancedSide('p1')} extra={attackerExtra} results={p1Results} />
           <ArenaMonCard side="p2" role="Defender" state={state} dispatch={dispatch} nameOf={nameOf} onOpenPicker={openPicker('p2')} onOpenAdvanced={() => setAdvancedSide('p2')} extra={defenderExtra} results={p2Results} />
 
-          <button
-            onClick={onOpenScan}
-            style={{ minHeight: 44, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
-          >
-            Scan opponent
-          </button>
+          {onOpenScan && (
+            <button
+              onClick={onOpenScan}
+              style={{ minHeight: 44, borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', color: 'var(--accent-hover)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Scan opponent
+            </button>
+          )}
 
           <ArenaFieldConditions state={state} dispatch={dispatch} />
 
