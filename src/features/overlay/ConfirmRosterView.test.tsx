@@ -60,6 +60,26 @@ describe('ConfirmRosterView', () => {
     expect(onConfirm).toHaveBeenCalledWith([149]);
   });
 
+  it('typing replaces top candidates with live dex matches; tapping one picks it', () => {
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmRosterView
+        slots={[slot([{ id: 445, score: 0.61 }, { id: 149, score: 0.26 }])]}
+        pokemonList={list}
+        onConfirm={onConfirm}
+        onRescan={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: /Type a name/ }), { target: { value: 'corv' } });
+    expect(screen.queryByRole('button', { name: /Use Dragonite/ })).toBeNull(); // candidates hidden
+    fireEvent.click(screen.getByRole('button', { name: /Use Corviknight/ }));
+    // picking clears the query, so candidates return
+    expect(screen.getByRole('button', { name: /Use Dragonite/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
+    expect(onConfirm).toHaveBeenCalledWith([823]);
+  });
+
   it('applies a typed name to the selected slot', () => {
     const onConfirm = vi.fn();
     render(

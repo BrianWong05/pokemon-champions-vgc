@@ -39,15 +39,22 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
   const setPick = (slotIdx: number, id: number) => setPicks((prev) => prev.map((p, i) => (i === slotIdx ? id : p)));
   const ids = picks.filter((p): p is number => p != null);
 
-  const applyTyped = () => {
-    const q = query.trim().toLowerCase();
-    if (!q) return;
-    const match =
-      pokemonList.find((p) => p.nameEn.toLowerCase() === q) ??
-      pokemonList.find((p) => p.nameEn.toLowerCase().startsWith(q)) ??
-      pokemonList.find((p) => p.nameEn.toLowerCase().includes(q) || (p.nameZh ?? '').includes(query.trim()) || p.identifier.includes(q));
-    if (match) { setPick(fixing, match.id); setQuery(''); }
-  };
+  // Live dex matches while typing: startsWith hits first, then contains.
+  const q = query.trim().toLowerCase();
+  const matches = useMemo(() => {
+    if (!q) return [];
+    const starts: PokemonBaseStats[] = [];
+    const contains: PokemonBaseStats[] = [];
+    for (const p of pokemonList) {
+      const en = p.nameEn.toLowerCase();
+      if (en.startsWith(q)) starts.push(p);
+      else if (en.includes(q) || (p.nameZh ?? '').includes(query.trim()) || p.identifier.includes(q)) contains.push(p);
+    }
+    return [...starts, ...contains].slice(0, 12);
+  }, [q, query, pokemonList]);
+
+  const pickAndClear = (id: number) => { setPick(fixing, id); setQuery(''); };
+  const applyTyped = () => { if (matches.length > 0) pickAndClear(matches[0].id); };
 
   const slotState = (i: number) => {
     const top = shown[i].candidates[0];
@@ -128,33 +135,66 @@ const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonLis
                 Slot {fixing + 1}
               </span>
             </div>
-            <div style={micro}>Top candidates</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {shown[fixing]?.candidates.slice(0, 3).map((c) => {
-                const on = picks[fixing] === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    aria-label={`Use ${nameOf(c.id)}`}
-                    onClick={() => setPick(fixing, c.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
-                      background: on ? 'var(--accent-soft)' : 'var(--surface-inset)',
-                      border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
-                    }}
-                  >
-                    <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 999, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--accent)' : 'var(--line-3)'}` }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 999, background: on ? 'var(--accent)' : 'transparent' }} />
-                    </span>
-                    <span style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
-                      <PokemonImage id={c.id} name={nameOf(c.id)} className="w-8 h-8" />
-                    </span>
-                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'left' }}>{nameOf(c.id)}</span>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: c.score >= 0.6 ? 'var(--safe)' : c.score >= 0.2 ? 'var(--field)' : 'var(--ink-4)' }}>{pct(c.score)}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {q ? (
+              <>
+                <div style={micro}>Matches</div>
+                <div className="ac-scroll" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 190, overflowY: 'auto' }}>
+                  {matches.map((p) => {
+                    const on = picks[fixing] === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        aria-label={`Use ${p.nameEn}`}
+                        onClick={() => pickAndClear(p.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                          background: on ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                          border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
+                        }}
+                      >
+                        <span style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
+                          <PokemonImage id={p.id} name={p.nameEn} className="w-8 h-8" />
+                        </span>
+                        <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'left' }}>{p.nameEn}</span>
+                      </button>
+                    );
+                  })}
+                  {matches.length === 0 && (
+                    <div style={{ fontSize: 11, color: 'var(--ink-4)', padding: '6px 2px' }}>No Pokémon match “{query.trim()}”</div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={micro}>Top candidates</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {shown[fixing]?.candidates.slice(0, 3).map((c) => {
+                    const on = picks[fixing] === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        aria-label={`Use ${nameOf(c.id)}`}
+                        onClick={() => setPick(fixing, c.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                          background: on ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                          border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
+                        }}
+                      >
+                        <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 999, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--accent)' : 'var(--line-3)'}` }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 999, background: on ? 'var(--accent)' : 'transparent' }} />
+                        </span>
+                        <span style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
+                          <PokemonImage id={c.id} name={nameOf(c.id)} className="w-8 h-8" />
+                        </span>
+                        <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'left' }}>{nameOf(c.id)}</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: c.score >= 0.6 ? 'var(--safe)' : c.score >= 0.2 ? 'var(--field)' : 'var(--ink-4)' }}>{pct(c.score)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             <div style={{ ...micro, marginTop: 2 }}>Or type a name</div>
             <div style={{ display: 'flex', gap: 6 }}>
               <input
