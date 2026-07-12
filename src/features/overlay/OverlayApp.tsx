@@ -135,8 +135,8 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'confirm') {
     return (
-      <div className="w-full h-screen flex" onClick={closePanel}>
-        <div className="w-2/3 h-screen" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full h-screen flex p-2" onClick={closePanel}>
+        <div className="w-2/3 h-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
@@ -152,24 +152,26 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'calc') {
     return (
-      <div className="w-full h-screen flex flex-col bg-slate-950">
-        <div className="flex items-center gap-2 px-3 h-8 border-b border-slate-800 text-slate-100 shrink-0">
-          <span className="text-xs font-bold">Damage · floating over battle</span>
-          <span className="flex-1" />
-          {overlayDefender?.hpPercent != null ? (
-            <span className="text-[11px] px-2 py-0.5 rounded border border-emerald-500/50 text-emerald-400">
-              Read · {overlayDefender.hpPercent}% HP
-            </span>
-          ) : null}
-          <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
-            Scan active + HP
-          </button>
-          <button aria-label="Minimize" onClick={closePanel} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
-            ▾
-          </button>
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <DamageCalculatorPage overlayDefender={overlayDefender} onOpenScanOverride={rescan} />
+      <div className="w-full h-screen p-2" onClick={closePanel}>
+        <div className="w-full h-full flex flex-col bg-slate-950 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2 px-3 h-8 border-b border-slate-800 text-slate-100 shrink-0">
+            <span className="text-xs font-bold">Damage · floating over battle</span>
+            <span className="flex-1" />
+            {overlayDefender?.hpPercent != null ? (
+              <span className="text-[11px] px-2 py-0.5 rounded border border-emerald-500/50 text-emerald-400">
+                Read · {overlayDefender.hpPercent}% HP
+              </span>
+            ) : null}
+            <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
+              Scan active + HP
+            </button>
+            <button aria-label="Minimize" onClick={closePanel} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
+              ▾
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <DamageCalculatorPage overlayDefender={overlayDefender} onOpenScanOverride={rescan} />
+          </div>
         </div>
       </div>
     );
