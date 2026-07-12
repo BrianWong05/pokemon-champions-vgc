@@ -58,8 +58,8 @@ function Panel({ side, badge, onCollapse, children }: {
       // ponytail: --safe-right is the island-aware right inset (zeroed when the island
       // sits left; see island.ts) — the surface bleeds under it, content stays clear.
       width: side === 'right'
-        ? 'calc(clamp(228px, 25%, 300px) + var(--safe-right))'
-        : 'clamp(228px, 25%, 300px)',
+        ? 'calc(clamp(240px, 30%, 340px) + var(--safe-right))'
+        : 'clamp(240px, 30%, 340px)',
       marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined,
       flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
       background: 'var(--surface-sticky)',

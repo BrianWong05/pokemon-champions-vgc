@@ -125,8 +125,8 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'scanning') {
     return (
-      <div className="w-full h-screen grid place-items-center bg-slate-950/70">
-        <div className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-sm font-semibold animate-pulse">
+      <div className="w-full h-screen grid place-items-center" style={{ background: 'rgba(0,0,0,0.45)' }}>
+        <div className="px-4 py-2 rounded-lg text-sm font-semibold animate-pulse" style={{ background: 'var(--surface-card)', border: '1px solid var(--line-2)', color: 'var(--ink-1)' }}>
           Scanning…
         </div>
       </div>
@@ -136,7 +136,7 @@ const OverlayApp: React.FC = () => {
   if (view === 'confirm') {
     return (
       <div className="w-full h-screen flex p-2" onClick={closePanel}>
-        <div className="w-2/3 h-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl" style={{ border: '1px solid var(--line-2)' }} onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
@@ -153,19 +153,23 @@ const OverlayApp: React.FC = () => {
   if (view === 'calc') {
     return (
       <div className="w-full h-screen p-2" onClick={closePanel}>
-        <div className="w-full h-full flex flex-col bg-slate-950 rounded-2xl overflow-hidden border border-slate-700 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-2 px-3 h-8 border-b border-slate-800 text-slate-100 shrink-0">
+        <div
+          className="w-full h-full flex flex-col rounded-2xl overflow-hidden shadow-2xl"
+          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>
             <span className="text-xs font-bold">Damage · floating over battle</span>
             <span className="flex-1" />
             {overlayDefender?.hpPercent != null ? (
-              <span className="text-[11px] px-2 py-0.5 rounded border border-emerald-500/50 text-emerald-400">
+              <span className="text-[11px] px-2 py-0.5 rounded" style={{ border: '1px solid var(--safe-line)', color: 'var(--safe)', background: 'var(--safe-soft)' }}>
                 Read · {overlayDefender.hpPercent}% HP
               </span>
             ) : null}
-            <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
+            <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
               Scan active + HP
             </button>
-            <button aria-label="Minimize" onClick={closePanel} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
+            <button aria-label="Minimize" onClick={closePanel} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
               ▾
             </button>
           </div>
@@ -179,16 +183,16 @@ const OverlayApp: React.FC = () => {
 
   return (
     <div className="w-full h-screen grid place-items-center" onClick={closePanel}>
-      <div className="w-72 p-4 rounded-xl bg-slate-900 border border-slate-700 text-slate-100" onClick={(e) => e.stopPropagation()}>
+      <div className="w-72 p-4 rounded-xl shadow-2xl" style={{ background: 'var(--surface-card)', border: '1px solid var(--line-2)', color: 'var(--ink-1)' }} onClick={(e) => e.stopPropagation()}>
         <div className="text-sm font-bold mb-1">Couldn't read the screen</div>
-        <div className="text-xs text-slate-400 mb-3">
+        <div className="text-xs mb-3" style={{ color: 'var(--ink-3)' }}>
           {errorReason === 'no-roster-match'
             ? 'Nothing on screen matched the locked roster — re-scan the team preview next game.'
             : 'Point at the team-select screen or an active battle and retry.'}
         </div>
         <div className="flex gap-2">
-          <button onClick={rescan} className="flex-1 h-9 rounded-lg font-bold text-sm bg-blue-500 text-slate-950">Retry</button>
-          <button onClick={closePanel} className="flex-1 h-9 rounded-lg font-bold text-sm border border-slate-700">Close</button>
+          <button onClick={rescan} className="flex-1 h-9 rounded-lg font-bold text-sm" style={{ background: 'var(--accent)', color: 'var(--navy-900)' }}>Retry</button>
+          <button onClick={closePanel} className="flex-1 h-9 rounded-lg font-bold text-sm" style={{ border: '1px solid var(--line-2)', color: 'var(--ink-2)' }}>Close</button>
         </div>
       </div>
     </div>
