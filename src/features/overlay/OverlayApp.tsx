@@ -136,7 +136,7 @@ const OverlayApp: React.FC = () => {
   if (view === 'confirm') {
     return (
       <div className="w-full h-screen flex p-2" onClick={closePanel}>
-        <div className="w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl" style={{ border: '1px solid var(--line-2)' }} onClick={(e) => e.stopPropagation()}>
+        <div className="w-2/3 h-full rounded-2xl overflow-hidden shadow-2xl" style={{ border: '1px solid var(--line-2)', opacity: 0.97 }} onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
@@ -155,7 +155,7 @@ const OverlayApp: React.FC = () => {
       <div className="w-full h-screen p-2" onClick={closePanel}>
         <div
           className="w-full h-full flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)' }}
+          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)', opacity: 0.92 }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>

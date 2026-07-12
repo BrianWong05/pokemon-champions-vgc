@@ -325,7 +325,7 @@ const DamageCalculatorPage: React.FC<DamageCalculatorPageProps> = ({ overlayDefe
           actions={actions}
           onApplySpread={handleApplySpread}
           onResetBuild={handleResetBuild}
-          onOpenScan={onOpenScanOverride ?? (() => navigate('/scan'))}
+          onOpenScan={onOpenScanOverride ? undefined : () => navigate('/scan')}
           defenderExtra={rosterChips}
           attackerExtra={myTeamChips}
         />

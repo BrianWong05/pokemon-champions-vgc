@@ -182,7 +182,8 @@ export function ArenaCalculatorLandscape({
   actions: Actions;
   onApplySpread: (side: Side, spread: Spread) => void;
   onResetBuild: (side: Side) => void;
-  onOpenScan: () => void;
+  /** Omitted in the overlay, where the chrome bar's "Scan active + HP" covers it. */
+  onOpenScan?: () => void;
   defenderExtra?: React.ReactNode;
   attackerExtra?: React.ReactNode;
 }) {
@@ -410,10 +411,12 @@ export function ArenaCalculatorLandscape({
       }}>
         <SideHeader side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" badge="Opp" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
 
-        <button onClick={onOpenScan} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', minHeight: 24, borderRadius: 8, background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
-          <Icon name="scan-line" size={12} color="var(--danger)" />
-          Scan opponent team
-        </button>
+        {onOpenScan && (
+          <button onClick={onOpenScan} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', minHeight: 24, borderRadius: 8, background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+            <Icon name="scan-line" size={12} color="var(--danger)" />
+            Scan opponent team
+          </button>
+        )}
 
         {defenderExtra}
 
