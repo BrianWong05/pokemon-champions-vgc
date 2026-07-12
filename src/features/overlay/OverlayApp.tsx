@@ -37,6 +37,15 @@ const OverlayApp: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The native panel window is transparent; the page background must be too,
+  // so the game stays visible around partial-width panels (confirm view).
+  useEffect(() => {
+    document.documentElement.style.background = 'transparent';
+    document.body.style.background = 'transparent';
+    const root = document.getElementById('root');
+    if (root) root.style.background = 'transparent';
+  }, []);
+
   const closePanel = useCallback(() => {
     setView('idle');
     // Fresh read (spec): roster changes made in the main app self-correct here.
@@ -127,7 +136,7 @@ const OverlayApp: React.FC = () => {
   if (view === 'confirm') {
     return (
       <div className="w-full h-full flex" onClick={closePanel}>
-        <div className="w-[70%] h-full" onClick={(e) => e.stopPropagation()}>
+        <div className="w-2/3 h-full" onClick={(e) => e.stopPropagation()}>
           <ConfirmRosterView
             key={scanSeq}
             slots={confirmSlots}
