@@ -1,26 +1,17 @@
 import React from 'react';
-import { ScreenCapture, isAndroidNative } from './mediaProjectionSource';
+import { useOneTapCapture } from './useOneTapCapture';
 
-// Enable/disable the floating overlay session. Bubble taps are handled
-// entirely by the native overlay panel (#/overlay route), not this app view.
+// Enable/disable the floating overlay session (scan-page entry point; the
+// app chrome's CaptureToggleButton is the primary one). Bubble taps are
+// handled entirely by the native overlay panel (#/overlay route).
 const OneTapCaptureToggle: React.FC = () => {
-  const [active, setActive] = React.useState(false);
+  const { supported, active, toggle } = useOneTapCapture();
 
-  if (!isAndroidNative()) return null;
-
-  const enable = async () => {
-    if (!(await ScreenCapture.hasOverlayPermission()).granted) {
-      await ScreenCapture.requestOverlayPermission();
-      return; // user returns from settings, taps again
-    }
-    await ScreenCapture.startSession();
-    setActive(true);
-  };
-  const disable = async () => { await ScreenCapture.stopSession(); setActive(false); };
+  if (!supported) return null;
 
   return (
     <button
-      onClick={active ? disable : enable}
+      onClick={() => void toggle()}
       className="px-4 py-2 rounded bg-safe-soft text-safe border border-safe-line text-sm font-semibold hover:bg-safe-soft-hover transition-colors"
     >
       {active ? 'Stop one-tap capture' : 'Enable one-tap capture'}

@@ -5,6 +5,7 @@ export interface ScreenCapturePlugin {
   hasOverlayPermission(): Promise<{ granted: boolean }>;
   requestOverlayPermission(): Promise<void>;
   startSession(): Promise<{ started: boolean }>;
+  isSessionActive(): Promise<{ active: boolean }>;
   stopSession(): Promise<void>;
   capture(): Promise<{ pngBase64: string; width: number; height: number }>;
   bringToFront(): Promise<void>;
