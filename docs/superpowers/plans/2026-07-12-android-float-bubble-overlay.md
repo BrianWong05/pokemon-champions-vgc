@@ -1629,11 +1629,12 @@ Install the debug APK on the Android device, then verify each item and record pa
 4. In battle, tap bubble → calculator opens with the left-most opponent as defender and its HP applied ("Read · N% HP" chip).
 5. Tap "Scan active + HP" → panel blinks, fresh HP applied; the captured frame must NOT contain the panel.
 6. Tap the second on-field mon in the roster chips → it loads as defender with its scanned HP.
-7. Minimize → strip; tap another strip mon → reopen calc via bubble → that mon is defender.
+7. Minimize → strip; tap another strip mon → the calculator reopens directly with that mon as defender (and its stored HP).
 8. Rotate the device → bubble, strip, and captures still correct.
 9. Text input inside the calculator panel works (panel window is focusable); system Back closes the panel.
 10. Revoke screen capture from the notification → bubble, strip, and panel all disappear.
 11. Open the main app afterwards → the locked roster shows in the calculator's roster chips.
+12. Kill the overlay renderer while the panel is open (or wait for an OOM kill) → bubble reappears; the next tap rebuilds the panel and scans normally.
 
 - [ ] **Step 4: Record results and finish**
 

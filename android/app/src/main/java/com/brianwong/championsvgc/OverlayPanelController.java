@@ -126,6 +126,9 @@ public class OverlayPanelController {
     public void destroy() {
         if (attached) { try { wm.removeView(webView); } catch (Exception ignored) {} attached = false; }
         if (webView != null) { webView.destroy(); webView = null; }
+        // A renderer crash in panel state leaves the bubble hidden; restore it
+        // so the next tap can rebuild the WebView (teardown removes it anyway).
+        service.setBubbleVisible(true);
     }
 
     private class JsBridge {
