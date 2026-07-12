@@ -182,4 +182,30 @@ describe('OverlayApp', () => {
     expect(bridgeMock.setBubbleTag).toHaveBeenCalledWith('scan');
     expect(screen.getByTestId('player-scan')).toBeTruthy();
   });
+
+  it('double-tapping save creates the team exactly once', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    const save = screen.getByRole('button', { name: 'save-stub' });
+    await act(async () => { fireEvent.click(save); fireEvent.click(save); });
+    expect(createTeamMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed save shows an error and leaves the scan open for retry', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    createTeamMock.mockRejectedValueOnce(new Error('quota'));
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'save-stub' })); });
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByTestId('player-scan')).toBeTruthy(); // still open for retry
+    // retry succeeds
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'save-stub' })); });
+    expect(await screen.findByText('Team saved')).toBeTruthy();
+    errSpy.mockRestore();
+  });
 });

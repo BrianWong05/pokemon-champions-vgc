@@ -40,6 +40,8 @@ const OverlayApp: React.FC = () => {
   const [overlayDefender, setOverlayDefender] = useState<OverlayDefender | null>(null);
   // Hold-to-peek: the calc panel goes fully transparent while the button is held.
   const [peeking, setPeeking] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const savingRef = useRef(false);
   const pendingBlob = useRef<Blob | null>(null);
   const seqRef = useRef(0); // monotonic key/remount counter; no setState inside updaters
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
@@ -78,11 +80,15 @@ const OverlayApp: React.FC = () => {
 
   const cancelPlayerScan = useCallback(() => {
     setPlayerFrame(null);
+    setSaveError(false);
     closePanel();
   }, [closePanel]);
 
   const handlePlayerSave = useCallback(async (members: PokemonConfig[]) => {
+    if (savingRef.current) return;
     if (members.length === 0) return;
+    savingRef.current = true;
+    setSaveError(false);
     const first = pokemonList.find((p) => p.id === members[0].selectedId);
     try {
       await createTeam(`${first?.nameEn ?? 'Scanned'}'s Team`, members);
@@ -90,6 +96,9 @@ const OverlayApp: React.FC = () => {
       setView('playerSaved');
     } catch (e) {
       console.error('[overlay] save team failed', e);
+      setSaveError(true);
+    } finally {
+      savingRef.current = false;
     }
   }, [pokemonList, createTeam]);
 
@@ -213,6 +222,7 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'playerScan' || view === 'playerSaved') {
     return (
+      /* Backdrop tap MINIMIZES during a scan (state must survive the two-screen flow) — unlike calc, where it closes. */
       <div className="w-full h-screen p-2" onClick={view === 'playerScan' ? minimizePlayerScan : cancelPlayerScan}>
         <div
           className="w-full h-full flex flex-col rounded-2xl overflow-hidden shadow-2xl"
@@ -239,6 +249,12 @@ const OverlayApp: React.FC = () => {
                 </div>
               </div>
             ) : (
+              <>
+              {saveError && (
+                <p className="text-sm mb-2" style={{ color: 'var(--danger)' }} role="alert">
+                  Saving failed — try again.
+                </p>
+              )}
               <PlayerScanPanel
                 pokemonList={pokemonList}
                 moveList={moveList}
@@ -252,6 +268,7 @@ const OverlayApp: React.FC = () => {
                 onSave={(members) => void handlePlayerSave(members)}
                 onCancel={cancelPlayerScan}
               />
+              </>
             )}
           </div>
         </div>
