@@ -1,34 +1,10 @@
 import React from 'react';
-import { ScreenCapture, mediaProjectionSource, isAndroidNative } from './mediaProjectionSource';
-import type { CapturedFrame } from './captureSource';
+import { ScreenCapture, isAndroidNative } from './mediaProjectionSource';
 
-interface Props {
-  onCaptured: (frame: CapturedFrame) => void;
-}
-
-const OneTapCaptureToggle: React.FC<Props> = ({ onCaptured }) => {
+// Enable/disable the floating overlay session. Bubble taps are handled
+// entirely by the native overlay panel (#/overlay route), not this app view.
+const OneTapCaptureToggle: React.FC = () => {
   const [active, setActive] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!active) return;
-    let removeFn: (() => Promise<void>) | null = null;
-    let cancelled = false;
-    void ScreenCapture.addListener('overlayTap', async () => {
-      try {
-        const frame = await mediaProjectionSource.capture();
-        if (frame) {
-          await ScreenCapture.bringToFront();
-          onCaptured(frame);
-        }
-      } catch (e) {
-        console.error('[capture] failed', e);
-      }
-    }).then((h) => {
-      if (cancelled) void h.remove();
-      else removeFn = h.remove;
-    });
-    return () => { cancelled = true; if (removeFn) void removeFn(); };
-  }, [active, onCaptured]);
 
   if (!isAndroidNative()) return null;
 
