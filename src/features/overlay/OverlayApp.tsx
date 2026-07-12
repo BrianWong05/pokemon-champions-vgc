@@ -1,6 +1,7 @@
 // Overlay shell (#/overlay): the only page the panel WebView renders.
-// Owns the tap -> capture -> scan -> route state machine; native only
-// captures frames and moves windows.
+// Bubble tap: roster locked -> open the calculator directly; otherwise
+// capture + scan for a team preview. Native only captures frames and
+// moves windows.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { overlayBridge } from './overlayBridge';
 import { routeScan } from './overlayScan';
@@ -12,7 +13,6 @@ import { Icon } from '@/design-system/arena';
 import { useFormat } from '../formats/FormatContext';
 import { useBattleRoster } from '../scan/useBattleRoster';
 import { formFamilyIds, buildLegalIdsResolver, readBattleRoster } from '../scan/battleRoster';
-import { readLastScanHp, saveScanHp } from '../scan/lastScanHp';
 import { scanFrame, DEFAULT_DEPS } from '../scan/scanFrame';
 import type { SlotResult } from '../scan/types';
 
@@ -23,7 +23,7 @@ const OverlayApp: React.FC = () => {
   const pokemonList = usePokemonList(format);
   const { roster, confirmRoster } = useBattleRoster();
   const [view, setView] = useState<View>('idle');
-  const [errorReason, setErrorReason] = useState<'empty' | 'no-roster-match'>('empty');
+  const [errorReason, setErrorReason] = useState<'empty' | 'battle'>('empty');
   const [confirmSlots, setConfirmSlots] = useState<SlotResult[]>([]);
   const [scanSeq, setScanSeq] = useState(0);
   const [overlayDefender, setOverlayDefender] = useState<OverlayDefender | null>(null);
@@ -74,12 +74,6 @@ const OverlayApp: React.FC = () => {
         seqRef.current += 1;
         setScanSeq(seqRef.current);
         setView('confirm');
-      } else if (route.view === 'calc') {
-        saveScanHp(route.hpEntries);
-        seqRef.current += 1;
-        setOverlayDefender({ id: route.defenderId, hpPercent: route.hpPercent, seq: seqRef.current });
-        setScanSeq(seqRef.current);
-        setView('calc');
       } else {
         setErrorReason(route.reason);
         setView('error');
@@ -100,7 +94,17 @@ const OverlayApp: React.FC = () => {
     }
   }, [pokemonList, runScan]);
 
-  useEffect(() => overlayBridge.onBubbleTap(() => void runScan(overlayBridge.captureFrame())), [runScan]);
+  // Roster locked -> the bubble is a calculator shortcut: open instantly, no
+  // capture. In-battle scanning (species + HP) was removed — not accurate
+  // enough (2026-07-12). No roster -> scan for a team preview.
+  useEffect(() => overlayBridge.onBubbleTap(() => {
+    if (readBattleRoster()) {
+      setView('calc');
+      overlayBridge.setWindowState('panel');
+    } else {
+      void runScan(overlayBridge.blinkAndCapture());
+    }
+  }), [runScan]);
   useEffect(() => overlayBridge.onBack(closePanel), [closePanel]);
 
   const rescan = useCallback(() => void runScan(overlayBridge.blinkAndCapture()), [runScan]);
@@ -114,7 +118,7 @@ const OverlayApp: React.FC = () => {
 
   const handleStripPick = useCallback((id: number) => {
     seqRef.current += 1;
-    setOverlayDefender({ id, hpPercent: readLastScanHp()[id] ?? null, seq: seqRef.current });
+    setOverlayDefender({ id, hpPercent: null, seq: seqRef.current });
     setScanSeq(seqRef.current);
     setView('calc');
     overlayBridge.setWindowState('panel');
@@ -122,7 +126,7 @@ const OverlayApp: React.FC = () => {
 
   if (view === 'idle') {
     return roster ? (
-      <StripView roster={roster} byId={byId} hpById={readLastScanHp()} activeId={overlayDefender?.id ?? null} onPick={handleStripPick} />
+      <StripView roster={roster} byId={byId} activeId={overlayDefender?.id ?? null} onPick={handleStripPick} />
     ) : null;
   }
 
@@ -164,11 +168,6 @@ const OverlayApp: React.FC = () => {
           <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>
             <span className="text-xs font-bold">Damage · floating over battle</span>
             <span className="flex-1" />
-            {overlayDefender?.hpPercent != null ? (
-              <span className="text-[11px] px-2 py-0.5 rounded" style={{ border: '1px solid var(--safe-line)', color: 'var(--safe)', background: 'var(--safe-soft)' }}>
-                Read · {overlayDefender.hpPercent}% HP
-              </span>
-            ) : null}
             <button
               aria-label="Hold to peek at the game"
               onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); setPeeking(true); }}
@@ -180,15 +179,12 @@ const OverlayApp: React.FC = () => {
             >
               <Icon name="eye" size={12} color="var(--ink-2)" />Peek
             </button>
-            <button aria-label="Scan active + HP" onClick={rescan} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
-              Scan active + HP
-            </button>
             <button aria-label="Minimize" onClick={closePanel} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
               ▾
             </button>
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
-            <DamageCalculatorPage overlayDefender={overlayDefender} onOpenScanOverride={rescan} />
+            <DamageCalculatorPage overlayDefender={overlayDefender} overlayHosted />
           </div>
         </div>
       </div>
@@ -200,9 +196,9 @@ const OverlayApp: React.FC = () => {
       <div className="w-72 p-4 rounded-xl shadow-2xl" style={{ background: 'var(--surface-card)', border: '1px solid var(--line-2)', color: 'var(--ink-1)' }} onClick={(e) => e.stopPropagation()}>
         <div className="text-sm font-bold mb-1">Couldn't read the screen</div>
         <div className="text-xs mb-3" style={{ color: 'var(--ink-3)' }}>
-          {errorReason === 'no-roster-match'
-            ? 'Nothing on screen matched the locked roster — re-scan the team preview next game.'
-            : 'Point at the team-select screen or an active battle and retry.'}
+          {errorReason === 'battle'
+            ? 'That looks like a battle — scanning works on the team-select screen at the start of a game.'
+            : 'Point at the team-select screen and retry.'}
         </div>
         <div className="flex gap-2">
           <button onClick={rescan} className="flex-1 h-9 rounded-lg font-bold text-sm" style={{ background: 'var(--accent)', color: 'var(--navy-900)' }}>Retry</button>

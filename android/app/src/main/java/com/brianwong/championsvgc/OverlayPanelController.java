@@ -30,7 +30,6 @@ public class OverlayPanelController {
     private final Handler main = new Handler(Looper.getMainLooper());
     private WebView webView;
     private boolean attached = false;
-    private volatile String pendingFrame;
 
     public OverlayPanelController(ScreenCaptureService service, Bridge bridge) {
         this.service = service;
@@ -66,24 +65,15 @@ public class OverlayPanelController {
         webView.loadUrl(base + "/overlay");
     }
 
-    /** Bubble tap: capture BEFORE any window changes so the frame is clean. */
+    /**
+     * Bubble tap: just notify the web layer. It decides whether a frame is
+     * needed (team-preview scan) and pulls one via blinkAndCapture — with the
+     * roster locked the calculator opens with no capture at all.
+     */
     public void onBubbleTap() {
         // Recreate the panel WebView if a prior renderer crash destroyed it. State
         // stays "hidden"; the web layer drives the window state after it loads.
         if (webView == null) createWebView();
-        if (attached) {
-            // The docked strip is inside the mirrored display: its sprite tiles can
-            // pollute team-preview detection. Blink it away for the tap capture.
-            main.post(() -> { if (webView != null) webView.setVisibility(View.INVISIBLE); });
-            new Thread(() -> {
-                try { Thread.sleep(280); } catch (InterruptedException ignored) {}
-                pendingFrame = service.captureLatestPng();
-                main.post(() -> { if (webView != null) webView.setVisibility(View.VISIBLE); });
-                eval("window.__overlayBubbleTap && window.__overlayBubbleTap();");
-            }).start();
-            return;
-        }
-        pendingFrame = service.captureLatestPng();
         // evaluateJavascript on a just-rebuilt, still-loading page can drop this
         // call — acceptable: the overlay's mount effect restores window/tag state
         // and the next tap works.
@@ -146,16 +136,15 @@ public class OverlayPanelController {
 
     private class JsBridge {
         @JavascriptInterface
-        public String captureFrame() { return pendingFrame; }
-
-        @JavascriptInterface
         public String blinkAndCapture() {
-            // Runs on the WebView's JS-bridge thread, never the UI thread.
+            // Runs on the WebView's JS-bridge thread, never the UI thread. The
+            // blink only matters when our window (the docked strip) is on
+            // screen — otherwise capture immediately.
+            if (!attached) return service.captureLatestPng();
             main.post(() -> { if (webView != null) webView.setVisibility(View.INVISIBLE); });
             try { Thread.sleep(300); } catch (InterruptedException ignored) {}
             String png = service.captureLatestPng();
             main.post(() -> { if (webView != null) webView.setVisibility(View.VISIBLE); });
-            pendingFrame = png;
             return png;
         }
 

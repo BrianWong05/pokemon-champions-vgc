@@ -14,13 +14,13 @@ describe('overlayBridge', () => {
 
   it('is unavailable and inert without the native interface', () => {
     expect(overlayBridge.isAvailable()).toBe(false);
-    expect(overlayBridge.captureFrame()).toBeNull();
+    expect(overlayBridge.blinkAndCapture()).toBeNull();
     expect(() => overlayBridge.setWindowState('strip')).not.toThrow();
   });
 
   it('converts captured base64 to a png Blob', () => {
-    window.OverlayBridge = { captureFrame: () => PNG_B64 };
-    const blob = overlayBridge.captureFrame();
+    window.OverlayBridge = { blinkAndCapture: () => PNG_B64 };
+    const blob = overlayBridge.blinkAndCapture();
     expect(blob).toBeInstanceOf(Blob);
     expect(blob!.type).toBe('image/png');
     expect(blob!.size).toBeGreaterThan(0);

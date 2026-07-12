@@ -2,6 +2,14 @@
 
 **Date:** 2026-07-12
 **Status:** Approved (brainstorm with Brian)
+
+> **Amendment (2026-07-12, post-implementation):** in-battle scanning (on-field
+> species classification + HP reads) was removed after on-device testing — not
+> accurate enough. With a roster locked, the bubble now opens the calculator
+> directly (no capture); the defender is picked from the docked strip or the
+> roster chips, always at editable full HP. Team-preview scanning is unchanged.
+> The `lastScanHp` store, battle scan-routing, and the "Scan active + HP"
+> chrome button no longer exist.
 **Design reference:** Claude Design project "Pokémon Champion Damage Calculator" (`6824e3f6-e49b-45fd-8833-c080661e7dd1`), file `FloatFlow.dc.html`. `FloatMenu`, `FloatOn`, `FloatFace` animation states, and the Arena-DS calculator restyle (`Landscape Calculator.dc.html` options 1a/1b/1c) are explicitly **out of scope** for this iteration.
 
 ## Problem

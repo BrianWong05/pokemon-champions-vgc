@@ -7,7 +7,6 @@ const mon = (id: number, nameEn: string) => ({ id, nameEn, identifier: nameEn.to
 
 const bridgeMock = vi.hoisted(() => ({
   isAvailable: () => true,
-  captureFrame: vi.fn((): Blob | null => new Blob(['x'], { type: 'image/png' })),
   blinkAndCapture: vi.fn((): Blob | null => new Blob(['x'], { type: 'image/png' })),
   setWindowState: vi.fn(),
   setBubbleTag: vi.fn(),
@@ -29,7 +28,7 @@ vi.mock('../scan/scanFrame', async (importOriginal) => {
   };
 });
 vi.mock('@/pages/DamageCalculator', () => ({
-  default: ({ overlayDefender }: any) => <div data-testid="calc">{overlayDefender?.id}:{String(overlayDefender?.hpPercent)}</div>,
+  default: ({ overlayDefender }: any) => <div data-testid="calc">{overlayDefender ? `${overlayDefender.id}:${String(overlayDefender.hpPercent)}` : 'no-defender'}</div>,
 }));
 
 import OverlayApp from './OverlayApp';
@@ -53,27 +52,32 @@ describe('OverlayApp', () => {
     expect(await screen.findByText(/Confirm opponent roster/)).toBeTruthy();
   });
 
-  it('bubble tap on a battle frame opens the calc with defender + hp and stores hp', async () => {
+  it('bubble tap with the roster locked opens the calc instantly — no capture, no scan', async () => {
     localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    expect(await screen.findByTestId('calc')).toBeTruthy();
+    expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
+    expect(bridgeMock.blinkAndCapture).not.toHaveBeenCalled();
+    expect(scanFrameMock).not.toHaveBeenCalled();
+  });
+
+  it('battle frames are no longer scan-routed: no roster + battle frame -> error card', async () => {
     scanFrameMock.mockResolvedValue({
       mode: 'battle',
-      slots: [
-        { box: { x: 100, y: 0, w: 1, h: 1 }, side: 'opponent', candidates: [{ id: 445, score: 0.9 }], hpPercent: 56 },
-        { box: { x: 500, y: 0, w: 1, h: 1 }, side: 'opponent', candidates: [{ id: 823, score: 0.8 }], hpPercent: 100 },
-      ],
+      slots: [{ box: { x: 100, y: 0, w: 1, h: 1 }, side: 'opponent', candidates: [{ id: 445, score: 0.9 }], hpPercent: 56 }],
     });
     render(<OverlayApp />);
     await act(async () => { (globalThis as any).__tap(); });
-    expect((await screen.findByTestId('calc')).textContent).toBe('445:56');
-    expect(JSON.parse(localStorage.getItem('scan.lastScanHp')!)).toEqual({ 445: 56, 823: 100 });
+    expect(await screen.findByText(/That looks like a battle/)).toBeTruthy();
+    expect(localStorage.getItem('scan.lastScanHp')).toBeNull();
   });
 
-  it('strip pick opens the calc with the picked defender and stored HP', async () => {
+  it('strip pick opens the calc with the picked defender (no HP memory)', async () => {
     localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
-    localStorage.setItem('scan.lastScanHp', JSON.stringify({ 823: 41 }));
     render(<OverlayApp />);
     fireEvent.click(screen.getByRole('button', { name: /Corviknight/ }));
-    expect((await screen.findByTestId('calc')).textContent).toBe('823:41');
+    expect((await screen.findByTestId('calc')).textContent).toBe('823:null');
     expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
   });
 
@@ -86,10 +90,6 @@ describe('OverlayApp', () => {
 
   it('hold-to-peek hides the calc panel while pressed and restores it on release', async () => {
     localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
-    scanFrameMock.mockResolvedValue({
-      mode: 'battle',
-      slots: [{ box: { x: 100, y: 0, w: 1, h: 1 }, side: 'opponent', candidates: [{ id: 445, score: 0.9 }], hpPercent: 56 }],
-    });
     const { container } = render(<OverlayApp />);
     await act(async () => { (globalThis as any).__tap(); });
     const peek = await screen.findByRole('button', { name: /Hold to peek/ });
