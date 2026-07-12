@@ -1,0 +1,139 @@
+package com.brianwong.championsvgc;
+
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.RenderProcessGoneDetail;
+import android.webkit.WebView;
+
+import com.getcapacitor.Bridge;
+import com.getcapacitor.BridgeWebViewClient;
+
+/**
+ * Second overlay window hosting the app's /overlay route. Window states:
+ * hidden (removed), strip (short docked bottom bar, not focusable),
+ * panel (fullscreen, focusable). The web layer drives all transitions.
+ */
+public class OverlayPanelController {
+    private final ScreenCaptureService service;
+    private final WindowManager wm;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private WebView webView;
+    private String state = "hidden";
+    private boolean attached = false;
+    private volatile String pendingFrame;
+
+    public OverlayPanelController(ScreenCaptureService service, Bridge bridge) {
+        this.service = service;
+        wm = (WindowManager) service.getSystemService(Context.WINDOW_SERVICE);
+        webView = new WebView(service);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.setBackgroundColor(Color.TRANSPARENT);
+        webView.setWebViewClient(new BridgeWebViewClient(bridge) {
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                main.post(OverlayPanelController.this::destroy);
+                return true;
+            }
+        });
+        webView.addJavascriptInterface(new JsBridge(), "OverlayBridge");
+        webView.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                eval("window.__overlayBack && window.__overlayBack();");
+                return true;
+            }
+            return false;
+        });
+        String base = bridge.getAppUrl().replaceAll("/+$", "");
+        webView.loadUrl(base + "/overlay");
+    }
+
+    /** Bubble tap: capture BEFORE any window changes so the frame is clean. */
+    public void onBubbleTap() {
+        pendingFrame = service.captureLatestPng();
+        eval("window.__overlayBubbleTap && window.__overlayBubbleTap();");
+    }
+
+    private void eval(String js) {
+        main.post(() -> { if (webView != null) webView.evaluateJavascript(js, null); });
+    }
+
+    private int dp(float v) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
+                service.getResources().getDisplayMetrics());
+    }
+
+    private WindowManager.LayoutParams paramsFor(String s) {
+        int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                : WindowManager.LayoutParams.TYPE_PHONE;
+        if ("panel".equals(s)) {
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    type,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                            | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    PixelFormat.TRANSLUCENT);
+            lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
+            return lp;
+        }
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                dp(64),
+                type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.BOTTOM;
+        return lp;
+    }
+
+    private void applyWindowState(String s) {
+        if (webView == null) return;
+        state = s;
+        if (attached) { try { wm.removeView(webView); } catch (Exception ignored) {} attached = false; }
+        if (!"hidden".equals(s)) {
+            wm.addView(webView, paramsFor(s));
+            attached = true;
+        }
+        service.setBubbleVisible(!"panel".equals(s));
+    }
+
+    public void destroy() {
+        if (attached) { try { wm.removeView(webView); } catch (Exception ignored) {} attached = false; }
+        if (webView != null) { webView.destroy(); webView = null; }
+    }
+
+    private class JsBridge {
+        @JavascriptInterface
+        public String captureFrame() { return pendingFrame; }
+
+        @JavascriptInterface
+        public String blinkAndCapture() {
+            // Runs on the WebView's JS-bridge thread, never the UI thread.
+            main.post(() -> { if (webView != null) webView.setVisibility(View.INVISIBLE); });
+            try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+            String png = service.captureLatestPng();
+            main.post(() -> { if (webView != null) webView.setVisibility(View.VISIBLE); });
+            pendingFrame = png;
+            return png;
+        }
+
+        @JavascriptInterface
+        public void setWindowState(String s) { main.post(() -> applyWindowState(s)); }
+
+        @JavascriptInterface
+        public void setBubbleTag(String tag) { main.post(() -> service.setBubbleTag(tag)); }
+    }
+}

@@ -55,7 +55,7 @@ public class ScreenCapturePlugin extends Plugin {
             call.reject("screen capture consent denied");
             return;
         }
-        ScreenCaptureService.tapListener = () -> notifyListeners("overlayTap", new JSObject());
+        ScreenCaptureService.pendingBridge = getBridge();
         Intent svc = new Intent(getContext(), ScreenCaptureService.class);
         svc.putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, result.getResultCode());
         svc.putExtra(ScreenCaptureService.EXTRA_DATA, result.getData());
@@ -71,7 +71,7 @@ public class ScreenCapturePlugin extends Plugin {
 
     @PluginMethod
     public void stopSession(PluginCall call) {
-        ScreenCaptureService.tapListener = null;
+        ScreenCaptureService.pendingBridge = null;
         getContext().stopService(new Intent(getContext(), ScreenCaptureService.class));
         call.resolve();
     }

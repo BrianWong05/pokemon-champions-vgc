@@ -21,8 +21,14 @@ import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.util.TypedValue;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import com.getcapacitor.Bridge;
 import android.media.Image;
 import android.util.Base64;
 import java.io.ByteArrayOutputStream;
@@ -30,8 +36,10 @@ import java.nio.ByteBuffer;
 
 public class ScreenCaptureService extends Service {
     public static ScreenCaptureService instance;
-    public interface TapListener { void onTap(); }
-    public static TapListener tapListener;
+    public static Bridge pendingBridge; // set by the plugin right before startService
+    private OverlayPanelController panelController;
+    private View bubbleView;
+    private TextView bubbleTagView;
 
     static final String EXTRA_RESULT_CODE = "resultCode";
     static final String EXTRA_DATA = "data";
@@ -43,7 +51,6 @@ public class ScreenCaptureService extends Service {
     ImageReader imageReader;
     int width, height, densityDpi;
     private WindowManager windowManager;
-    private Button floatingButton;
     private DisplayManager displayManager;
     private DisplayManager.DisplayListener displayListener;
 
@@ -72,7 +79,10 @@ public class ScreenCaptureService extends Service {
                 imageReader.getSurface(), null, null);
         registerDisplayListener();
 
-        addFloatingButton();
+        addFloatingBubble();
+        if (pendingBridge != null) {
+            panelController = new OverlayPanelController(this, pendingBridge);
+        }
         instance = this;
         return START_NOT_STICKY;
     }
@@ -126,11 +136,41 @@ public class ScreenCaptureService extends Service {
         }
     }
 
-    private void addFloatingButton() {
+    private int dp(float v) {
+        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v,
+                getResources().getDisplayMetrics());
+    }
+
+    private void addFloatingBubble() {
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        floatingButton = new Button(this);
-        floatingButton.setText("Scan");
-        floatingButton.setOnClickListener(v -> { if (tapListener != null) tapListener.onTap(); });
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        View circle = new View(this);
+        GradientDrawable face = new GradientDrawable();
+        face.setShape(GradientDrawable.OVAL);
+        face.setColor(0xEE10141C);
+        face.setStroke(dp(2), 0xFF5A85FF);
+        circle.setBackground(face);
+        box.addView(circle, dp(46), dp(46));
+
+        bubbleTagView = new TextView(this);
+        bubbleTagView.setText("SCAN");
+        bubbleTagView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+        bubbleTagView.setTextColor(0xFF0A0F1A);
+        bubbleTagView.setTypeface(null, android.graphics.Typeface.BOLD);
+        GradientDrawable pill = new GradientDrawable();
+        pill.setCornerRadius(dp(9));
+        pill.setColor(0xFF5A85FF);
+        bubbleTagView.setBackground(pill);
+        bubbleTagView.setPadding(dp(7), dp(1), dp(7), dp(1));
+        LinearLayout.LayoutParams tagLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tagLp.topMargin = -dp(7);
+        box.addView(bubbleTagView, tagLp);
+
+        box.setOnClickListener(v -> { if (panelController != null) panelController.onBubbleTap(); });
 
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -144,7 +184,23 @@ public class ScreenCaptureService extends Service {
         lp.gravity = Gravity.TOP | Gravity.START;
         lp.x = 24;
         lp.y = 240;
-        windowManager.addView(floatingButton, lp);
+        windowManager.addView(box, lp);
+        bubbleView = box;
+    }
+
+    /** Called from the overlay web layer via OverlayPanelController. */
+    public void setBubbleTag(String tag) {
+        if (bubbleTagView == null) return;
+        boolean calc = "calc".equals(tag);
+        bubbleTagView.setText(calc ? "CALC" : "SCAN");
+        GradientDrawable pill = new GradientDrawable();
+        pill.setCornerRadius(dp(9));
+        pill.setColor(calc ? 0xFF36C281 : 0xFF5A85FF);
+        bubbleTagView.setBackground(pill);
+    }
+
+    public void setBubbleVisible(boolean visible) {
+        if (bubbleView != null) bubbleView.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     /** Grab the latest mirrored frame as a base64 PNG. Runs on the caller's thread. */
@@ -177,9 +233,11 @@ public class ScreenCaptureService extends Service {
             displayManager.unregisterDisplayListener(displayListener);
             displayListener = null;
         }
-        if (floatingButton != null && windowManager != null) {
-            try { windowManager.removeView(floatingButton); } catch (Exception ignored) {}
-            floatingButton = null;
+        if (panelController != null) { panelController.destroy(); panelController = null; }
+        if (bubbleView != null && windowManager != null) {
+            try { windowManager.removeView(bubbleView); } catch (Exception ignored) {}
+            bubbleView = null;
+            bubbleTagView = null;
         }
         if (virtualDisplay != null) { virtualDisplay.release(); virtualDisplay = null; }
         if (imageReader != null) { imageReader.close(); imageReader = null; }
