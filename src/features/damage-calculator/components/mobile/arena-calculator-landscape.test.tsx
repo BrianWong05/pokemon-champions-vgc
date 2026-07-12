@@ -102,7 +102,7 @@ describe('ArenaCalculatorLandscape', () => {
   it('renders both side panels and per-move damage ranges', () => {
     setup();
     expect(screen.getByText('You')).toBeTruthy();
-    expect(screen.getByText('Opponent')).toBeTruthy();
+    expect(screen.getByText('Opp')).toBeTruthy();
     // name also appears in the center readout's "X vs Y" line, so allow multiple
     expect(screen.getAllByText('Flutter Mane').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Dragapult').length).toBeGreaterThanOrEqual(1);
@@ -196,14 +196,11 @@ describe('ArenaCalculatorLandscape', () => {
     expect(screen.getByText('Pick a move')).toBeTruthy();
   });
 
-  it('collapsing the attacker side shows a rail with a chevron-to-expand and hides its move list', () => {
+  it('each side panel surfaces its ability as a tappable pill', () => {
+    // 7a dense-sheet layout has no collapse rails; ability shows as a pill per side.
     setup();
-    // both panels show an "Ability" row before collapsing
-    expect(screen.getAllByText('Ability').length).toBe(2);
-    fireEvent.click(screen.getByLabelText('Collapse attacker'));
-    expect(screen.getByLabelText('Expand attacker')).toBeTruthy();
-    // the attacker panel's Ability select row is gone; only the defender's remains
-    expect(screen.getAllByText('Ability').length).toBe(1);
+    expect(screen.getAllByText('Protosynthesis').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Infiltrator').length).toBeGreaterThanOrEqual(1);
   });
 
   it('a scenario with a real KO chance shows a matching verdict badge', () => {
@@ -234,12 +231,12 @@ describe('ArenaCalculatorLandscape', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: 40 } });
   });
 
-  it('panels show computed stats and per-side chips; speed view has mode buttons', () => {
+  it('panels show computed stats; side effects live in Advanced; speed view has mode buttons', () => {
     setup();
-    // ArenaStatCard: the 'S' (Spe) label appears in both stat cards
+    // stat block: the 'S' (Spe) label appears in the mono stat blocks
     expect(screen.getAllByText('S').length).toBeGreaterThanOrEqual(1);
-    // ArenaSideConditions on the attacker side
-    expect(screen.getByText('Helping Hand')).toBeTruthy();
+    // side-effect toggles relocated to the (always-mounted) Advanced sheet — label "Helping hand"
+    expect(screen.getAllByText('Helping hand').length).toBeGreaterThanOrEqual(1);
     // switching to speed exposes ArenaSpeedCompareView's mode buttons
     fireEvent.click(screen.getByText('Speed'));
     expect(screen.getByText('Scarf')).toBeTruthy();

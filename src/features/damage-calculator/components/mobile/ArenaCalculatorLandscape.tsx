@@ -8,113 +8,143 @@ import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalc
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
 import { buildSpeedCompare, speedFormula, fmtStage } from '@/features/damage-calculator/utils/speed';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { Sprite, SelectRow, ItemIcon, KOVerdict, koVerdictFromText, Icon, Badge, TypeBadge } from '@/design-system/arena';
+import { Sprite, KOVerdict, koVerdictFromText, Icon, TypeBadge } from '@/design-system/arena';
+import type { KoTone } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
-import { ArenaBattlefieldRow } from './ArenaBattlefieldRow';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
 import { ArenaAdvancedSheet } from './ArenaAdvancedSheet';
-import { ArenaStatCard } from './ArenaStatCard';
-import { ArenaMoveList } from './ArenaMoveList';
-import { ArenaSideConditions } from './ArenaSideConditions';
+import { ArenaBattlefieldRow } from './ArenaBattlefieldRow';
 import { ArenaSpeedCompareView } from './ArenaSpeedCompareView';
+import { computeStatRows } from './ArenaStatCard';
 import ShowdownImportModal from '@/components/organisms/ShowdownImportModal';
 
 type Side = 'p1' | 'p2';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
 const STAT_LABEL: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
+const EV_STEP = 4;
+const EV_MAX = 252;
+const KO_COLOR: Record<KoTone, string> = { safe: 'var(--safe)', danger: 'var(--danger)', field: 'var(--field)' };
+
+/* ---------- shared inline styles (from the 7a design tokens) ---------- */
+
+const tuneBox: React.CSSProperties = { padding: '4px 6px', borderRadius: 8, background: 'var(--surface-inset)', border: '1px solid var(--line-1)', minWidth: 0, textAlign: 'left', cursor: 'pointer' };
+const tuneBoxOn: React.CSSProperties = { ...tuneBox, background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' };
+const tuneLabel: React.CSSProperties = { fontSize: 8.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const microBtn: React.CSSProperties = { width: 18, height: 18, flex: 'none', borderRadius: 5, background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, cursor: 'pointer', lineHeight: 1, display: 'grid', placeItems: 'center', padding: 0 };
+const metaPill: React.CSSProperties = { flex: '1 1 0', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 999, background: 'var(--surface-inset)', border: '1px solid var(--line-1)', color: 'var(--ink-2)', fontSize: 9.5, fontWeight: 600, cursor: 'pointer' };
+const addBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', minHeight: 24, borderRadius: 8, background: 'transparent', border: '1px dashed var(--line-2)', color: 'var(--ink-3)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden' };
+const microHdr: React.CSSProperties = { fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+
+const moveRowStyle = (active: boolean): React.CSSProperties => ({
+  display: 'flex', alignItems: 'center', gap: 6, width: '100%', minHeight: 28, textAlign: 'left', padding: '2px 7px',
+  borderRadius: 8, cursor: 'pointer',
+  background: active ? 'var(--accent-soft)' : 'var(--surface-inset)',
+  border: `1px solid ${active ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
+});
 
 /* ---------- small presentational helpers ---------- */
 
-function Micro({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function SmallBadge({ tone, children }: { tone: 'accent' | 'danger'; children: React.ReactNode }) {
+  const c = tone === 'accent' ? 'var(--accent)' : 'var(--danger)';
+  const soft = tone === 'accent' ? 'var(--accent-soft)' : 'var(--danger-soft)';
+  const line = tone === 'accent' ? 'var(--accent-soft-line)' : 'var(--danger-line)';
   return (
-    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)', ...style }}>
+    <span style={{ flex: 'none', fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: c, background: soft, border: `1px solid ${line}`, borderRadius: 999, padding: '1px 6px' }}>
       {children}
+    </span>
+  );
+}
+
+function StatBlock({ side }: { side: SideState }) {
+  const rows = side.selectedId ? computeStatRows(side) : [];
+  if (!rows.length) return null;
+  return (
+    <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {rows.map((r, i) => (
+        <div key={i} style={{ display: 'flex', gap: 5, fontFamily: 'var(--font-mono)', fontSize: 9.5, lineHeight: 1.3 }}>
+          <span style={{ color: 'var(--ink-4)', width: 8 }}>{r.l1}</span>
+          <span style={{ color: 'var(--ink-1)', fontWeight: 700, width: 24, textAlign: 'right' }}>{r.v1}</span>
+          <span style={{ color: 'var(--ink-4)', width: 8 }}>{r.l2}</span>
+          <span style={{ color: 'var(--ink-1)', fontWeight: 700, width: 24, textAlign: 'right' }}>{r.v2}</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-function TuneBox({ label, value, active, onClick }: { label: string; value: React.ReactNode; active?: boolean; onClick: () => void }) {
+function SideHeader({ side, name, tone, badge, onOpenSpecies }: {
+  side: SideState; name: string; tone: 'accent' | 'danger'; badge: string; onOpenSpecies: () => void;
+}) {
+  const ring = tone === 'accent' ? 'var(--accent)' : 'var(--danger)';
+  const glow = tone === 'accent' ? 'var(--accent-soft)' : 'var(--danger-soft)';
+  const types = [side.type1, side.type2].filter(Boolean) as string[];
   return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 'var(--r-sm)', textAlign: 'left', cursor: 'pointer',
-        background: active ? 'var(--accent-soft)' : 'var(--surface-inset)',
-        border: `1px solid ${active ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
-      }}
-    >
-      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', marginTop: 1 }}>{value}</div>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <Sprite dex={side.selectedId} name={name} size={46} style={{ border: `2px solid ${ring}`, boxShadow: `0 0 0 2px ${glow}` }} />
+      <button onClick={onOpenSpecies} style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Select'}</span>
+          <SmallBadge tone={tone}>{badge}</SmallBadge>
+        </div>
+        <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>{types.map((t) => <TypeBadge key={t} type={t} size="sm" />)}</div>
+      </button>
+      <StatBlock side={side} />
+    </div>
+  );
+}
+
+function TuneStat({ label, value, active, onClick }: { label: string; value: React.ReactNode; active?: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={active ? tuneBoxOn : tuneBox}>
+      <div style={tuneLabel}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', marginTop: 2 }}>{value}</div>
     </button>
   );
 }
 
-function Panel({ side, badge, onCollapse, children }: {
-  side: 'left' | 'right'; badge: React.ReactNode; onCollapse: () => void; children: React.ReactNode;
-}) {
+function MicroStepper({ label, value, active, onDec, onInc }: { label: string; value: number; active?: boolean; onDec: () => void; onInc: () => void }) {
   return (
-    <div style={{
-      // ponytail: --safe-right is the island-aware right inset (zeroed when the island
-      // sits left; see island.ts) — the surface bleeds under it, content stays clear.
-      width: side === 'right'
-        ? 'calc(clamp(240px, 30%, 340px) + var(--safe-right))'
-        : 'clamp(240px, 30%, 340px)',
-      marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined,
-      flex: '0 0 auto', overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
-      background: 'var(--surface-sticky)',
-      borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
-      borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
-      padding: side === 'right' ? '10px calc(12px + var(--safe-right)) 12px 12px' : '10px 12px 12px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-        <Micro style={{ letterSpacing: '0.07em' }}>{side === 'left' ? 'Attacker' : 'Defender'}</Micro>
-        <button onClick={onCollapse} aria-label={`Collapse ${side === 'left' ? 'attacker' : 'defender'}`} style={{
-          width: 24, height: 24, marginLeft: 6, marginRight: 6, borderRadius: 6, background: 'transparent',
-          border: '1px solid var(--line-1)', color: 'var(--ink-3)', cursor: 'pointer', display: 'grid', placeItems: 'center',
-        }}>
-          <Icon name="chevron-right" size={14} color="var(--ink-3)" style={{ transform: side === 'left' ? 'scaleX(-1)' : undefined }} />
-        </button>
-        <span style={{ flex: 1 }} />
-        {badge}
+    <div style={active ? tuneBoxOn : tuneBox}>
+      <div style={tuneLabel}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
+        <button aria-label={`Lower ${label}`} onClick={onDec} style={microBtn}>−</button>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', flex: 1, textAlign: 'center' }}>{value}</span>
+        <button aria-label={`Raise ${label}`} onClick={onInc} style={microBtn}>+</button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </div>
   );
 }
 
-function Rail({ side, name, dex, tone, item, hpPercent, subline, onExpand }: {
-  side: 'left' | 'right'; name: string; dex: number | null; tone: 'accent' | 'danger';
-  item?: string | null; hpPercent?: number; subline?: React.ReactNode; onExpand: () => void;
-}) {
+function MetaPill({ icon, label, onClick }: { icon: 'sparkles' | 'shield'; label: string; onClick: () => void }) {
   return (
-    <aside style={{
-      width: side === 'right' ? 'calc(88px + var(--safe-right))' : 88,
-      marginRight: side === 'right' ? 'calc(-1 * var(--safe-right))' : undefined,
-      flex: 'none', background: 'var(--surface-sticky)',
-      borderRight: side === 'left' ? '1px solid var(--line-1)' : 'none',
-      borderLeft: side === 'right' ? '1px solid var(--line-1)' : 'none',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-      padding: side === 'right' ? '12px calc(8px + var(--safe-right)) 12px 8px' : '12px 8px',
-    }}>
-      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: tone === 'accent' ? 'var(--ink-3)' : 'var(--danger)' }}>
-        {side === 'left' ? 'You' : 'Opp'}
-      </div>
-      <Sprite dex={dex} name={name} size={46} ring tone={tone} />
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', lineHeight: 1.2 }}>{name || '—'}</div>
-      {hpPercent != null && (
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)' }}>{hpPercent}%</div>
-      )}
-      {item && <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.2 }}>{item}</div>}
-      {subline}
-      <span style={{ flex: 1 }} />
-      <button onClick={onExpand} aria-label={`Expand ${side === 'left' ? 'attacker' : 'defender'}`} style={{
-        width: 40, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)',
-        color: 'var(--ink-2)', cursor: 'pointer', display: 'grid', placeItems: 'center',
-      }}>
-        <Icon name="chevron-right" size={18} color="var(--ink-2)" style={{ transform: side === 'right' ? 'scaleX(-1)' : undefined }} />
+    <button onClick={onClick} style={metaPill}>
+      <Icon name={icon} size={10} color="var(--ink-3)" />
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+  );
+}
+
+function MoveRow({ move, result, active, showBp, onClick }: {
+  move: MoveData | null; result: DamageResult | null; active: boolean; showBp?: boolean; onClick: () => void;
+}) {
+  if (!move) {
+    return (
+      <button onClick={onClick} style={{ ...moveRowStyle(false), border: '1px dashed var(--line-2)', color: 'var(--ink-4)', justifyContent: 'center', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 600 }}>
+        Add move
       </button>
-    </aside>
+    );
+  }
+  const typeName = REVERSE_TYPE_IDS[result?.moveType ?? move.typeId];
+  return (
+    <button onClick={onClick} style={moveRowStyle(active)}>
+      {typeName && <TypeBadge type={typeName} size="sm" />}
+      <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, color: active ? 'var(--ink-1)' : 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{move.nameEn}</span>
+      {showBp && move.power != null && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-4)', flex: 'none' }}>{move.power}</span>}
+      <span style={{ flex: 'none', fontFamily: 'var(--font-display)', fontSize: 11.5, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', whiteSpace: 'nowrap' }}>
+        {result ? `${result.minPercent}–${result.maxPercent}%` : '—'}
+      </span>
+    </button>
   );
 }
 
@@ -124,25 +154,17 @@ function ScenarioRow({ label, range }: { label: string; range: ScenarioRange | n
   const ko = koVerdictFromText(range.koChanceText);
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span style={{ flex: 1, fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)' }}>{label}</span>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
-          {range.minPercent}–{range.maxPercent}%
-        </span>
-        {range.koChanceText && <Badge tone={ko.tone}>{ko.verdict}</Badge>}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ flex: 1, fontSize: 10.5, fontWeight: 700, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>{range.minPercent}–{range.maxPercent}%</span>
+        {range.koChanceText && <span style={{ fontSize: 9.5, fontWeight: 700, color: KO_COLOR[ko.tone], whiteSpace: 'nowrap' }}>{ko.verdict}</span>}
       </div>
-      <div style={{ marginTop: 4, height: 5, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
+      <div style={{ marginTop: 2, height: 4, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
         <div style={{ width: `${Math.min(100, range.maxPercent)}%`, height: '100%', background: danger ? 'var(--danger)' : 'var(--safe)', opacity: 0.85 }} />
       </div>
     </div>
   );
 }
-
-const hpStep: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)',
-  border: '1px solid var(--line-2)', color: 'var(--ink-2)',
-  fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
-};
 
 /* ---------- the screen ---------- */
 
@@ -170,8 +192,6 @@ export function ArenaCalculatorLandscape({
   const [movePickerSide, setMovePickerSide] = useState<Side | null>(null);
   const [advancedSide, setAdvancedSide] = useState<Side | null>(null);
   const [showdownSide, setShowdownSide] = useState<Side | null>(null);
-  const [collapsed, setCollapsed] = useState<{ p1: boolean; p2: boolean }>({ p1: false, p2: false });
-  const toggleCollapsed = (s: Side) => setCollapsed((c) => ({ ...c, [s]: !c[s] }));
 
   const defDir: Side = dir === 'p1' ? 'p2' : 'p1';
   const nameOf = (id: number | null) => pokemonList.find((p) => p.id === id)?.nameEn ?? '—';
@@ -197,78 +217,107 @@ export function ArenaCalculatorLandscape({
   const natureShort = (s: SideState) =>
     s.boostedStat ? `+${STAT_LABEL[s.boostedStat] ?? s.boostedStat}` : '—';
 
-  // Rank tune boxes: offensive stage for the attacker's active move category,
-  // defensive stage for the defender vs. that same category. Physical → atk/def,
-  // Special (or no active move) → spa/spd.
+  // Offensive/defensive stat that matters for the attacker's active move category:
+  // physical → atk/def, special (or no move) → spa/spd. Mirrors the portrait build.
   const p1ActiveMove = state.p1.moves[state.p1.activeMoveIndex] as MoveData | null;
   const p1MoveIsPhysical = p1ActiveMove?.damageClassId === 2;
+  const p1OffKey: keyof SideState = p1MoveIsPhysical ? 'spAtk' : 'spSpa';
+  const p1OffLabel = p1MoveIsPhysical ? 'Atk SP' : 'SpA SP';
   const p1RankStat = p1MoveIsPhysical ? 'atk' : 'spa';
+  const p2DefKey: keyof SideState = p1MoveIsPhysical ? 'spDef' : 'spSpd';
+  const p2DefLabel = p1MoveIsPhysical ? 'Def SP' : 'SpD SP';
   const p2RankStat = p1MoveIsPhysical ? 'def' : 'spd';
 
-  // Collapsed attacker rail shows the active move (type + name) instead of the item.
-  const p1ActiveMoveType = p1ActiveMove
-    ? REVERSE_TYPE_IDS[p1Results[state.p1.activeMoveIndex]?.moveType ?? p1ActiveMove.typeId]
-    : null;
-  const p1ActiveMoveSubline = p1ActiveMove ? (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-      {p1ActiveMoveType && <TypeBadge type={p1ActiveMoveType} size="sm" />}
-      <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.2 }}>{p1ActiveMove.nameEn}</div>
-    </div>
-  ) : undefined;
+  const stepSp = (side: Side, key: keyof SideState, cur: number, delta: number) =>
+    dispatch({ type: 'SET_SP', payload: { side, key: key as string, val: Math.max(0, Math.min(EV_MAX, cur + delta)) } });
+  const stepHp = (delta: number) =>
+    dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, Math.min(100, state.p2.hpPercent + delta)) } });
+
+  // Drag/scrub the defender HP bar → set HP% from pointer x within the bar.
+  const hpBarDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const bar = e.currentTarget;
+    const set = (clientX: number) => {
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.round(ratio * 100) } });
+    };
+    set(e.clientX);
+    const move = (ev: PointerEvent) => set(ev.clientX);
+    const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
+
+  const panelBase: React.CSSProperties = {
+    width: 'clamp(224px, 30%, 280px)', flex: '0 0 auto',
+    overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none',
+    background: 'var(--surface-sticky)', padding: '8px 10px',
+    display: 'flex', flexDirection: 'column', gap: 6,
+  };
+  const hpP = state.p2.hpPercent;
 
   return (
     <div style={{ display: 'flex', height: '100%', minWidth: 0, fontFamily: 'var(--font-ui)', color: 'var(--text-body)' }}>
-      {/* -------- attacker (p1) -------- */}
-      {collapsed.p1 ? (
-        <Rail
-          side="left"
-          name={nameOf(state.p1.selectedId)}
-          dex={state.p1.selectedId}
-          tone="accent"
-          subline={p1ActiveMoveSubline}
-          onExpand={() => toggleCollapsed('p1')}
-        />
-      ) : (
-        <Panel side="left" badge={<Badge tone="accent">You</Badge>} onCollapse={() => toggleCollapsed('p1')}>
-          {attackerExtra}
-          <ArenaStatCard side={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" onOpenSpecies={() => setPicker({ side: 'p1', field: 'species' })} />
-          <ArenaMoveList
-            side={state.p1}
-            results={p1Results}
-            onSelect={(index) => dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index } })}
-            onEdit={() => setMovePickerSide('p1')}
-          />
-          <SelectRow label="Ability" value={state.p1.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p1', field: 'ability' })} />
-          <SelectRow label="Item" value={state.p1.item ?? 'None'} leading={<ItemIcon item={state.p1.item} size={18} />} onClick={() => setPicker({ side: 'p1', field: 'item' })} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <TuneBox label="Nature" value={natureShort(state.p1)} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
-            <TuneBox
-              label="Rank"
-              value={fmtStage(state.p1.stages[p1RankStat] || 0)}
-              active={(state.p1.stages[p1RankStat] || 0) !== 0}
-              onClick={() => setAdvancedSide('p1')}
-            />
-            <TuneBox label="Atk SP" value={state.p1.spAtk} active={state.p1.spAtk > 0} onClick={() => setAdvancedSide('p1')} />
-            <TuneBox label="SpA SP" value={state.p1.spSpa} active={state.p1.spSpa > 0} onClick={() => setAdvancedSide('p1')} />
+
+      {/* -------- attacker (p1, left) -------- */}
+      <div style={{ ...panelBase, borderRight: '1px solid var(--line-1)' }}>
+        <SideHeader side={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" badge="You" onOpenSpecies={() => setPicker({ side: 'p1', field: 'species' })} />
+
+        {attackerExtra}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={microHdr}>Moves</span>
+            <span style={{ flex: 1 }} />
+            <button onClick={() => setMovePickerSide('p1')} aria-label="Edit attacker moves" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'inline-flex', color: 'var(--ink-3)' }}>
+              <Icon name="pencil" size={12} color="var(--ink-3)" />
+            </button>
           </div>
-          <ArenaSideConditions side={state.p1} which="p1" dispatch={dispatch} />
-        </Panel>
-      )}
+          {state.p1.moves.map((m, i) => (
+            <MoveRow
+              key={i}
+              move={m as MoveData | null}
+              result={p1Results[i] ?? null}
+              active={i === state.p1.activeMoveIndex}
+              showBp
+              onClick={() => (m ? dispatch({ type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1', index: i } }) : setMovePickerSide('p1'))}
+            />
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 5 }}>
+          <TuneStat label="Nature" value={natureShort(state.p1)} active={!!state.p1.boostedStat} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
+          <MicroStepper label={p1OffLabel} value={state.p1[p1OffKey] as number} active={(state.p1[p1OffKey] as number) > 0}
+            onDec={() => stepSp('p1', p1OffKey, state.p1[p1OffKey] as number, -EV_STEP)}
+            onInc={() => stepSp('p1', p1OffKey, state.p1[p1OffKey] as number, EV_STEP)} />
+          <TuneStat label="Rank" value={fmtStage(state.p1.stages[p1RankStat] || 0)} active={(state.p1.stages[p1RankStat] || 0) !== 0} onClick={() => setAdvancedSide('p1')} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
+          <MetaPill icon="sparkles" label={state.p1.activeAbility ?? 'Ability'} onClick={() => setPicker({ side: 'p1', field: 'ability' })} />
+          <MetaPill icon="shield" label={state.p1.item ?? 'Item'} onClick={() => setPicker({ side: 'p1', field: 'item' })} />
+        </div>
+
+        <span style={{ flex: 1 }} />
+        <button style={addBtn} onClick={() => setAdvancedSide('p1')}>
+          <Icon name="plus" size={12} color="var(--ink-3)" />
+          Add item · ability · weather…
+        </button>
+      </div>
 
       {/* -------- center: result column -------- */}
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 520, margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ flex: 1, display: 'flex', gap: 3, padding: 3, background: 'var(--surface-inset)', borderRadius: 'var(--r-pill)', border: '1px solid var(--line-1)' }}>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', padding: '6px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ flex: 1, display: 'flex', gap: 2, padding: 2, background: 'var(--surface-inset)', borderRadius: 'var(--r-pill)', border: '1px solid var(--line-1)' }}>
             {(['damage', 'speed'] as const).map((v) => {
               const on = view === v;
               return (
                 <button key={v} onClick={() => setView(v)} style={{
-                  flex: 1, padding: '5px 0', borderRadius: 'var(--r-pill)', cursor: 'pointer',
+                  flex: 1, padding: '4px 0', borderRadius: 'var(--r-pill)', cursor: 'pointer',
                   background: on ? 'var(--accent-soft)' : 'transparent',
                   border: `1px solid ${on ? 'var(--accent-soft-line)' : 'transparent'}`,
-                  fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700,
+                  fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
                   color: on ? 'var(--accent)' : 'var(--ink-3)',
-                  transition: 'background var(--dur) var(--ease), color var(--dur) var(--ease)',
                 }}>
                   {v === 'damage' ? 'Damage' : 'Speed'}
                 </button>
@@ -278,67 +327,60 @@ export function ArenaCalculatorLandscape({
           <button
             onClick={() => setDir((d) => (d === 'p1' ? 'p2' : 'p1'))}
             aria-label="Swap direction"
-            style={{ width: 32, height: 32, flex: '0 0 auto', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', cursor: 'pointer' }}
+            title="Swap sides"
+            style={{ width: 26, height: 26, flex: 'none', borderRadius: 8, display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', cursor: 'pointer' }}
           >
-            <Icon name="arrow-left-right" size={15} color="var(--ink-2)" />
+            <Icon name="arrow-left-right" size={13} color="var(--ink-2)" />
           </button>
-        </div>
-
-        {view === 'damage' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            {activeMoveType && <TypeBadge type={activeMoveType} size="sm" />}
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, color: 'var(--ink-1)', letterSpacing: 'var(--ls-tight)', lineHeight: 1.05, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {r?.moveName ?? 'No move'}
-            </span>
-            <span style={{ flex: 1 }} />
-            <div style={{ display: 'flex', flex: '0 0 auto', border: '1px solid var(--line-1)', borderRadius: 'var(--r-pill)', overflow: 'hidden', background: 'var(--surface-inset)' }}>
-              {([['Single', false], ['Spread', true]] as const).map(([label, spread]) => {
-                const on = state.isSpreadTarget === spread;
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => dispatch({ type: 'SET_SPREAD_TARGET', payload: spread })}
-                    style={{ padding: '4px 11px', cursor: 'pointer', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 700, lineHeight: 1.7, whiteSpace: 'nowrap', background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--ink-3)' }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-3)' }}>
-          <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[dir].selectedId)}</span> vs{' '}
-          <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[defDir].selectedId)}</span>
         </div>
 
         {view === 'damage' ? (
           <>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, color: 'var(--ink-1)', letterSpacing: 'var(--ls-readout)', lineHeight: 1 }}>{pct}</div>
-              <div style={{ fontSize: 11, color: 'var(--ink-3)', fontWeight: 600, marginTop: 4 }}>{dmg}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {activeMoveType && <TypeBadge type={activeMoveType} size="sm" />}
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {r?.moveName ?? activeMove?.nameEn ?? 'No move'}
+              </span>
+              <span style={{ flex: 1 }} />
+              <div style={{ display: 'flex', flex: 'none', border: '1px solid var(--line-1)', borderRadius: 999, overflow: 'hidden', background: 'var(--surface-inset)' }}>
+                {([['Single', false], ['Spread', true]] as const).map(([label, spread]) => {
+                  const on = state.isSpreadTarget === spread;
+                  return (
+                    <button key={label} type="button" onClick={() => dispatch({ type: 'SET_SPREAD_TARGET', payload: spread })}
+                      style={{ padding: '2px 9px', cursor: 'pointer', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 700, lineHeight: 1.7, whiteSpace: 'nowrap', background: on ? 'var(--accent-soft)' : 'transparent', color: on ? 'var(--accent)' : 'var(--ink-3)' }}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 27, fontWeight: 700, color: 'var(--ink-1)', letterSpacing: 'var(--ls-readout)', lineHeight: 1 }}>{pct}</div>
+              <div style={{ fontSize: 10, color: 'var(--ink-3)', fontWeight: 600, marginTop: 3 }}>
+                <span>{dmg}</span> · <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[dir].selectedId)}</span> vs <span style={{ color: 'var(--ink-1)' }}>{nameOf(state[defDir].selectedId)}</span>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <KOVerdict verdict={ko.verdict} confidence={ko.confidence} tone={ko.tone} />
             </div>
+
             {r && (
               <div style={{ height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden', display: 'flex' }}>
                 <div style={{ width: `${Math.min(100, r.minPercent)}%`, background: 'var(--danger)' }} />
                 <div style={{ width: `${Math.min(100, r.maxPercent) - Math.min(100, r.minPercent)}%`, background: 'var(--danger-soft)', borderLeft: '1px solid var(--danger-line)' }} />
               </div>
             )}
+
             {(scenarios.crit || scenarios.maxBulk || scenarios.noSp) && (
-              <div>
-                <Micro style={{ marginBottom: 8 }}>Scenarios</Micro>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  <ScenarioRow label="Crit" range={scenarios.crit} />
-                  <ScenarioRow label="Opp. max bulk" range={scenarios.maxBulk} />
-                  <ScenarioRow label="Opp. no SP" range={scenarios.noSp} />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <ScenarioRow label="Crit" range={scenarios.crit} />
+                <ScenarioRow label="Opp. max bulk" range={scenarios.maxBulk} />
+                <ScenarioRow label="Opp. no SP" range={scenarios.noSp} />
               </div>
             )}
+
             <ArenaBattlefieldRow state={state} dispatch={dispatch} />
           </>
         ) : (
@@ -356,72 +398,76 @@ export function ArenaCalculatorLandscape({
             trickRoom={state.isTrickRoom}
           />
         )}
-        <button
-          onClick={() => setAdvancedSide(dir)}
-          style={{ minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer' }}
-        >
-          Advanced
-        </button>
       </div>
 
-      {/* -------- defender (p2) -------- */}
-      {collapsed.p2 ? (
-        <Rail
-          side="right"
-          name={nameOf(state.p2.selectedId)}
-          dex={state.p2.selectedId}
-          tone="danger"
-          item={state.p2.item}
-          hpPercent={state.p2.hpPercent}
-          onExpand={() => toggleCollapsed('p2')}
-        />
-      ) : (
-        <Panel side="right" badge={<Badge tone="danger">Opponent</Badge>} onCollapse={() => toggleCollapsed('p2')}>
-          {defenderExtra}
-          <button
-            onClick={onOpenScan}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 40, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
-          >
-            <Icon name="scan-line" size={15} color="var(--danger)" />
-            Scan opponent team
-          </button>
-          <ArenaStatCard side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Micro>HP</Micro>
-            <div style={{ flex: 1, height: 7, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ width: `${state.p2.hpPercent}%`, height: '100%', background: 'var(--safe)' }} />
+      {/* -------- defender (p2, right) -------- */}
+      <div style={{
+        ...panelBase,
+        width: 'calc(clamp(224px, 30%, 280px) + var(--safe-right, 0px))',
+        marginRight: 'calc(-1 * var(--safe-right, 0px))',
+        padding: '8px calc(10px + var(--safe-right, 0px)) 8px 10px',
+        borderLeft: '1px solid var(--line-1)',
+      }}>
+        <SideHeader side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" badge="Opp" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
+
+        <button onClick={onOpenScan} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', minHeight: 24, borderRadius: 8, background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+          <Icon name="scan-line" size={12} color="var(--danger)" />
+          Scan opponent team
+        </button>
+
+        {defenderExtra}
+
+        {/* HP: draggable bar + numeric input + steppers */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ ...microHdr, flex: 'none' }}>HP</span>
+            <div onPointerDown={hpBarDown} style={{ flex: 1, height: 11, background: 'var(--surface-inset)', borderRadius: 999, overflow: 'hidden', cursor: 'ew-resize', touchAction: 'none' }}>
+              <div style={{ width: `${hpP}%`, height: '100%', background: hpP > 30 ? 'var(--safe)' : 'var(--danger)' }} />
             </div>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: 'var(--ink-1)', minWidth: 34, textAlign: 'right' }}>{hpP}%</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
             <input
               aria-label="Defender HP percent"
-              type="number" min={0} max={100} value={state.p2.hpPercent}
+              type="number" min={0} max={100} value={hpP}
               onChange={(e) => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })}
-              style={{ width: 60, padding: '5px 8px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)', color: 'var(--ink-1)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, textAlign: 'center' }}
+              style={{ width: 52, padding: '3px 6px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 7, color: 'var(--ink-1)', fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, textAlign: 'center' }}
             />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-4)' }}>% HP</span>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--ink-4)' }}>%</span>
             <span style={{ flex: 1 }} />
-            <button aria-label="Lower defender HP" onClick={() => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, state.p2.hpPercent - 1) } })} style={hpStep}>−</button>
-            <button aria-label="Raise defender HP" onClick={() => dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.min(100, state.p2.hpPercent + 1) } })} style={hpStep}>+</button>
+            <button aria-label="Lower defender HP" onClick={() => stepHp(-1)} style={microBtn}>−</button>
+            <button aria-label="Raise defender HP" onClick={() => stepHp(1)} style={microBtn}>+</button>
           </div>
-          <SelectRow label="Move" value={state.p2.moves[state.p2.activeMoveIndex]?.nameEn ?? 'None'} onClick={() => setMovePickerSide('p2')} />
-          <SelectRow label="Ability" value={state.p2.activeAbility ?? 'None'} onClick={() => setPicker({ side: 'p2', field: 'ability' })} />
-          <SelectRow label="Item" value={state.p2.item ?? 'None'} leading={<ItemIcon item={state.p2.item} size={18} />} onClick={() => setPicker({ side: 'p2', field: 'item' })} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <TuneBox label="Nature" value={natureShort(state.p2)} onClick={() => setPicker({ side: 'p2', field: 'nature' })} />
-            <TuneBox label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0} onClick={() => setAdvancedSide('p2')} />
-            <TuneBox label="Def SP" value={state.p2.spDef} active={state.p2.spDef > 0} onClick={() => setAdvancedSide('p2')} />
-            <TuneBox label="SpD SP" value={state.p2.spSpd} active={state.p2.spSpd > 0} onClick={() => setAdvancedSide('p2')} />
-            <TuneBox
-              label="Rank"
-              value={fmtStage(state.p2.stages[p2RankStat] || 0)}
-              active={(state.p2.stages[p2RankStat] || 0) !== 0}
-              onClick={() => setAdvancedSide('p2')}
-            />
-          </div>
-          <ArenaSideConditions side={state.p2} which="p2" dispatch={dispatch} />
-        </Panel>
-      )}
+        </div>
+
+        {/* defender active move (opens move picker; matters when sides are swapped) */}
+        <MoveRow
+          move={state.p2.moves[state.p2.activeMoveIndex] as MoveData | null}
+          result={p2Results[state.p2.activeMoveIndex] ?? null}
+          active={dir === 'p2'}
+          onClick={() => setMovePickerSide('p2')}
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4 }}>
+          <TuneStat label="Nature" value={natureShort(state.p2)} active={!!state.p2.boostedStat} onClick={() => setPicker({ side: 'p2', field: 'nature' })} />
+          <MicroStepper label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0}
+            onDec={() => stepSp('p2', 'spHp', state.p2.spHp, -EV_STEP)} onInc={() => stepSp('p2', 'spHp', state.p2.spHp, EV_STEP)} />
+          <MicroStepper label={p2DefLabel} value={state.p2[p2DefKey] as number} active={(state.p2[p2DefKey] as number) > 0}
+            onDec={() => stepSp('p2', p2DefKey, state.p2[p2DefKey] as number, -EV_STEP)} onInc={() => stepSp('p2', p2DefKey, state.p2[p2DefKey] as number, EV_STEP)} />
+          <TuneStat label="Rank" value={fmtStage(state.p2.stages[p2RankStat] || 0)} active={(state.p2.stages[p2RankStat] || 0) !== 0} onClick={() => setAdvancedSide('p2')} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
+          <MetaPill icon="sparkles" label={state.p2.activeAbility ?? 'Ability'} onClick={() => setPicker({ side: 'p2', field: 'ability' })} />
+          <MetaPill icon="shield" label={state.p2.item ?? 'Item'} onClick={() => setPicker({ side: 'p2', field: 'item' })} />
+        </div>
+
+        <span style={{ flex: 1 }} />
+        <button style={addBtn} onClick={() => setAdvancedSide('p2')}>
+          <Icon name="plus" size={12} color="var(--ink-3)" />
+          Add item · screen · hazard…
+        </button>
+      </div>
 
       {/* -------- sheets (same wiring as portrait) -------- */}
       <ArenaAdvancedSheet
