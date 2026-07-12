@@ -11,7 +11,7 @@ const bridgeMock = vi.hoisted(() => ({
   setWindowState: vi.fn(),
   setBubbleTag: vi.fn(),
   onBubbleTap: vi.fn((cb: () => void) => { (globalThis as any).__tap = cb; return () => {}; }),
-  onBack: vi.fn(() => () => {}),
+  onBack: vi.fn((cb: () => void) => { (globalThis as any).__back = cb; return () => {}; }),
 }));
 const scanFrameMock = vi.hoisted(() => vi.fn());
 const detectPlayerPanelsMock = vi.hoisted(() => vi.fn((): unknown => null));
@@ -169,5 +169,17 @@ describe('OverlayApp', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'cancel-stub' })); });
     expect(screen.queryByTestId('player-scan')).toBeNull();
     expect(bridgeMock.setWindowState).toHaveBeenCalledWith('hidden'); // no roster -> window hidden
+  });
+
+  it('native Back while the my-team scan is open minimizes instead of destroying it', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    await act(async () => { (globalThis as any).__back(); });
+    // minimized: window hidden + bubble tagged scan, but the panel (and its scan state) stays mounted
+    expect(bridgeMock.setWindowState).toHaveBeenCalledWith('hidden');
+    expect(bridgeMock.setBubbleTag).toHaveBeenCalledWith('scan');
+    expect(screen.getByTestId('player-scan')).toBeTruthy();
   });
 });
