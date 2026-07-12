@@ -1,9 +1,9 @@
-// Team-preview confirm panel (window state 'panel'): 6 detected mons with
-// confidence, tap a card to fix from candidates or full search, confirm
-// locks the roster. Parent remounts (key) per scan.
+// Team-preview confirm panel (window state 'panel'), styled after the
+// TeamScan confirm design: detected-team grid left, fix-detection panel
+// right, pinned Confirm & save footer. Parent remounts (key) per scan.
 import React, { useMemo, useState } from 'react';
 import PokemonImage from '@/components/atoms/PokemonImage';
-import PokemonImagePicker from '../scan/PokemonImagePicker';
+import { Icon } from '@/design-system/arena';
 import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { SlotResult } from '../scan/types';
 
@@ -15,95 +15,183 @@ interface ConfirmRosterViewProps {
   onClose: () => void;
 }
 
+const LOW_CONFIDENCE = 0.75;
+const micro: React.CSSProperties = {
+  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)',
+};
 const pct = (score: number) => `${Math.max(0, Math.min(99, Math.round(score * 100)))}%`;
 
 const ConfirmRosterView: React.FC<ConfirmRosterViewProps> = ({ slots, pokemonList, onConfirm, onRescan, onClose }) => {
+  // The design shows exactly the six team-preview slots; drop scanner noise.
+  const shown = useMemo(() => slots.slice(0, 6), [slots]);
   const byId = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
-  const [picks, setPicks] = useState<(number | null)[]>(() => slots.map((s) => s.candidates[0]?.id ?? null));
-  const [fixing, setFixing] = useState<number | null>(null);
-  const [searchAll, setSearchAll] = useState(false);
+  const [picks, setPicks] = useState<(number | null)[]>(() => shown.map((s) => s.candidates[0]?.id ?? null));
+  // Pre-select the least-confident slot for review, like the design.
+  const [fixing, setFixing] = useState<number>(() => {
+    let idx = 0;
+    let min = Infinity;
+    shown.forEach((s, i) => { const sc = s.candidates[0]?.score ?? -1; if (sc < min) { min = sc; idx = i; } });
+    return idx;
+  });
+  const [query, setQuery] = useState('');
 
   const nameOf = (id: number | null) => (id == null ? 'Unknown' : byId.get(id)?.nameEn ?? `#${id}`);
-  const setPick = (slotIdx: number, id: number) => {
-    setPicks((prev) => prev.map((p, i) => (i === slotIdx ? id : p)));
-    setFixing(null);
-    setSearchAll(false);
-  };
+  const setPick = (slotIdx: number, id: number) => setPicks((prev) => prev.map((p, i) => (i === slotIdx ? id : p)));
   const ids = picks.filter((p): p is number => p != null);
 
+  const applyTyped = () => {
+    const q = query.trim().toLowerCase();
+    if (!q) return;
+    const match =
+      pokemonList.find((p) => p.nameEn.toLowerCase() === q) ??
+      pokemonList.find((p) => p.nameEn.toLowerCase().startsWith(q)) ??
+      pokemonList.find((p) => p.nameEn.toLowerCase().includes(q) || (p.nameZh ?? '').includes(query.trim()) || p.identifier.includes(q));
+    if (match) { setPick(fixing, match.id); setQuery(''); }
+  };
+
+  const slotState = (i: number) => {
+    const top = shown[i].candidates[0];
+    const manual = picks[i] != null && picks[i] !== top?.id;
+    const low = !manual && (top?.score ?? 0) < LOW_CONFIDENCE;
+    return { manual, low };
+  };
+
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950/95 text-slate-100">
-      <div className="flex items-center gap-2 px-3 h-9 border-b border-slate-800 shrink-0">
-        <span className="text-xs font-bold">Confirm opponent roster</span>
-        <span className="flex-1" />
-        <button aria-label="Re-scan team" onClick={onRescan} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
-          Re-scan
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-page)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)' }}>
+      {/* chrome bar (overlay variant: no nav rail / stepper) */}
+      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 9, padding: '8px 14px', borderBottom: '1px solid var(--line-1)' }}>
+        <Icon name="scan-line" size={15} color="var(--accent)" />
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>Confirm opponent roster</span>
+        <span style={{ flex: 1 }} />
+        <button aria-label="Re-scan team" onClick={onRescan} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+          <Icon name="rotate-ccw" size={12} color="var(--ink-2)" />Re-scan team
         </button>
-        <button aria-label="Minimize" onClick={onClose} className="text-[11px] px-2 py-1 rounded border border-slate-700 hover:bg-slate-800">
-          ▾
+        <button aria-label="Minimize" onClick={onClose} style={{ width: 26, height: 26, display: 'grid', placeItems: 'center', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', cursor: 'pointer' }}>
+          <Icon name="chevron-down" size={14} color="var(--ink-2)" />
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-3">
-        <div className="grid grid-cols-3 gap-2">
-          {slots.map((s, i) => {
-            const low = (s.candidates[0]?.score ?? 0) < 0.75;
-            const manual = picks[i] != null && picks[i] !== s.candidates[0]?.id;
-            return (
-              <button
-                key={i}
-                aria-label={`Fix ${nameOf(picks[i])}`}
-                onClick={() => { setFixing(fixing === i ? null : i); setSearchAll(false); }}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg border ${
-                  fixing === i ? 'border-blue-400 bg-blue-500/10' : low && !manual ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-800 bg-slate-900'
-                }`}
-              >
-                {picks[i] != null && <PokemonImage id={picks[i]!} name={nameOf(picks[i])} className="w-12 h-12" />}
-                <span className="text-[11px] font-semibold truncate max-w-full">{nameOf(picks[i])}</span>
-                <span className={`text-[10px] font-bold ${manual ? 'text-blue-400' : low ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {manual ? 'Set' : s.candidates[0] ? pct(s.candidates[0].score) : '—'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="ac-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 14 }}>
+          {/* LEFT: detected team */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
+              <div style={micro}>Detected team</div>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 10.5, color: 'var(--ink-4)' }}>Tap a card to review</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              {shown.map((s, i) => {
+                const { manual, low } = slotState(i);
+                const sel = fixing === i;
+                return (
+                  <button
+                    key={i}
+                    aria-label={`Fix ${nameOf(picks[i])}`}
+                    onClick={() => setFixing(i)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', gap: 2, padding: 8, borderRadius: 'var(--r-md)', cursor: 'pointer',
+                      background: sel ? 'var(--accent-soft)' : 'var(--surface-card)',
+                      border: `1px solid ${sel ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, width: '100%' }}>
+                      <span style={{
+                        fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+                        color: low ? 'var(--field)' : manual ? 'var(--accent)' : 'var(--safe)',
+                        background: low ? 'var(--field-soft)' : manual ? 'var(--accent-soft)' : 'var(--safe-soft)',
+                        border: `1px solid ${low ? 'var(--field-line)' : manual ? 'var(--accent-soft-line)' : 'var(--safe-line)'}`,
+                      }}>
+                        {manual ? 'Set' : s.candidates[0] ? pct(s.candidates[0].score) : '—'}
+                      </span>
+                      <Icon name={low ? 'alert-triangle' : 'check'} size={13} color={low ? 'var(--field)' : 'var(--safe)'} />
+                    </div>
+                    <div style={{ width: '100%', height: 52, display: 'grid', placeItems: 'center', margin: '2px 0' }}>
+                      {picks[i] != null && <PokemonImage id={picks[i]!} name={nameOf(picks[i])} className="w-12 h-12" />}
+                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                      {nameOf(picks[i])}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {fixing != null && (
-          <div className="mt-3 p-2 rounded-lg border border-slate-800 bg-slate-900">
-            <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-2">Fix this slot</div>
-            <div className="flex flex-wrap gap-2">
-              {slots[fixing].candidates.slice(0, 3).map((c) => (
-                <button
-                  key={c.id}
-                  aria-label={`Use ${nameOf(c.id)}`}
-                  onClick={() => setPick(fixing, c.id)}
-                  className={`flex items-center gap-2 px-2 py-1 rounded border ${picks[fixing] === c.id ? 'border-blue-400 bg-blue-500/10' : 'border-slate-700'}`}
-                >
-                  <PokemonImage id={c.id} name={nameOf(c.id)} className="w-7 h-7" />
-                  <span className="text-[11px]">{nameOf(c.id)}</span>
-                  <span className="text-[10px] text-slate-400">{pct(c.score)}</span>
-                </button>
-              ))}
-              <button onClick={() => setSearchAll((v) => !v)} className="text-[11px] px-2 py-1 rounded border border-dashed border-slate-600 text-slate-300">
-                Search all…
+          {/* RIGHT: fix detection */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="replace" size={15} color="var(--accent)" />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'var(--ink-1)' }}>Fix detection</span>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 10.5, fontWeight: 700, color: 'var(--field)', background: 'var(--field-soft)', border: '1px solid var(--field-line)', borderRadius: 999, padding: '2px 8px' }}>
+                Slot {fixing + 1}
+              </span>
+            </div>
+            <div style={micro}>Top candidates</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {shown[fixing]?.candidates.slice(0, 3).map((c) => {
+                const on = picks[fixing] === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    aria-label={`Use ${nameOf(c.id)}`}
+                    onClick={() => setPick(fixing, c.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 48, padding: '6px 10px', borderRadius: 'var(--r-sm)', cursor: 'pointer',
+                      background: on ? 'var(--accent-soft)' : 'var(--surface-inset)',
+                      border: `1px solid ${on ? 'var(--accent-soft-line)' : 'var(--line-1)'}`,
+                    }}
+                  >
+                    <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 999, display: 'grid', placeItems: 'center', border: `2px solid ${on ? 'var(--accent)' : 'var(--line-3)'}` }}>
+                      <span style={{ width: 10, height: 10, borderRadius: 999, background: on ? 'var(--accent)' : 'transparent' }} />
+                    </span>
+                    <span style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
+                      <PokemonImage id={c.id} name={nameOf(c.id)} className="w-8 h-8" />
+                    </span>
+                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', textAlign: 'left' }}>{nameOf(c.id)}</span>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: c.score >= 0.6 ? 'var(--safe)' : c.score >= 0.2 ? 'var(--field)' : 'var(--ink-4)' }}>{pct(c.score)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ ...micro, marginTop: 2 }}>Or type a name</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyTyped(); }}
+                placeholder="Amoonguss…"
+                aria-label="Type a name"
+                style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-sm)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, outline: 'none' }}
+              />
+              <button aria-label="Apply" onClick={applyTyped} style={{ flex: 'none', padding: '0 13px', minHeight: 36, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Apply
               </button>
             </div>
-            {searchAll && (
-              <div className="mt-2 max-h-48 overflow-y-auto">
-                <PokemonImagePicker pokemonList={pokemonList} selectedId={picks[fixing]} onSelect={(id) => setPick(fixing, id)} />
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 'auto', padding: '9px 10px', borderRadius: 'var(--r-sm)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' }}>
+              <Icon name="shield-check" size={14} color="var(--accent)" />
+              <span style={{ fontSize: 11, color: 'var(--ink-2)', lineHeight: 1.35 }}>
+                Saving locks these 6 species — future in-battle scans match only them.
+              </span>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="p-3 shrink-0 border-t border-slate-800">
+      {/* pinned footer */}
+      <div style={{ flex: 'none', padding: '9px 14px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ flex: 1 }} />
         <button
           disabled={ids.length === 0}
           onClick={() => onConfirm(ids)}
-          className="w-full h-10 rounded-lg font-bold text-sm bg-blue-500 text-slate-950 disabled:opacity-40"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 38, padding: '0 18px', borderRadius: 'var(--r-sm)', border: 'none',
+            cursor: ids.length === 0 ? 'default' : 'pointer', fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+            color: 'var(--navy-900)', background: 'var(--accent)', opacity: ids.length === 0 ? 0.4 : 1,
+          }}
         >
-          Confirm &amp; lock roster
+          <Icon name="check" size={15} color="var(--navy-900)" />Confirm &amp; save
         </button>
       </div>
     </div>

@@ -6,9 +6,9 @@ import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelec
 import type { SlotResult } from '../scan/types';
 
 const mon = (id: number, nameEn: string) => ({ id, nameEn, identifier: nameEn.toLowerCase() } as PokemonBaseStats);
-const list = [mon(445, 'Garchomp'), mon(149, 'Dragonite'), mon(823, 'Corviknight')];
-const slot = (candidates: Array<{ id: number; score: number }>): SlotResult =>
-  ({ box: { x: 0, y: 0, w: 10, h: 10 }, candidates });
+const list = [mon(445, 'Garchomp'), mon(149, 'Dragonite'), mon(823, 'Corviknight'), mon(591, 'Amoonguss')];
+const slot = (candidates: Array<{ id: number; score: number }>, x = 0): SlotResult =>
+  ({ box: { x, y: 0, w: 10, h: 10 }, candidates });
 
 describe('ConfirmRosterView', () => {
   it('shows top candidate per slot with confidence and confirms the ids', () => {
@@ -22,10 +22,25 @@ describe('ConfirmRosterView', () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getByText('Garchomp')).toBeTruthy();
-    expect(screen.getByText('92%')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Confirm & lock roster/ }));
+    // The name and % can appear on both the card and the fix-panel row.
+    expect(screen.getAllByText('Garchomp').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('92%').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
     expect(onConfirm).toHaveBeenCalledWith([445, 823]);
+  });
+
+  it('pre-selects the least-confident slot in the fix panel', () => {
+    render(
+      <ConfirmRosterView
+        slots={[slot([{ id: 823, score: 0.99 }]), slot([{ id: 445, score: 0.61 }, { id: 149, score: 0.26 }])]}
+        pokemonList={list}
+        onConfirm={() => {}}
+        onRescan={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText('Slot 2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Use Dragonite/ })).toBeTruthy();
   });
 
   it('lets the user swap a slot to another candidate', () => {
@@ -41,8 +56,33 @@ describe('ConfirmRosterView', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Fix Garchomp/ }));
     fireEvent.click(screen.getByRole('button', { name: /Use Dragonite/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Confirm & lock roster/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
     expect(onConfirm).toHaveBeenCalledWith([149]);
+  });
+
+  it('applies a typed name to the selected slot', () => {
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmRosterView
+        slots={[slot([{ id: 445, score: 0.61 }])]}
+        pokemonList={list}
+        onConfirm={onConfirm}
+        onRescan={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: /Type a name/ }), { target: { value: 'amoon' } });
+    fireEvent.click(screen.getByRole('button', { name: /Apply/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirm & save/ }));
+    expect(onConfirm).toHaveBeenCalledWith([591]);
+  });
+
+  it('caps the detected grid at 6 slots', () => {
+    const seven = [445, 149, 823, 591, 445, 149, 823].map((id, i) => slot([{ id, score: 0.9 }], i));
+    render(
+      <ConfirmRosterView slots={seven} pokemonList={list} onConfirm={() => {}} onRescan={() => {}} onClose={() => {}} />,
+    );
+    expect(screen.getAllByRole('button', { name: /^Fix / })).toHaveLength(6);
   });
 
   it('wires rescan and close', () => {
