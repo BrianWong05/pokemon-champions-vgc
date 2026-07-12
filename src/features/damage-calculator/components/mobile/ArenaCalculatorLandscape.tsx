@@ -7,6 +7,7 @@ import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
 import { buildSpeedCompare, speedFormula, fmtStage } from '@/features/damage-calculator/utils/speed';
+import { megaCycleTarget } from '@/features/damage-calculator/utils/mega';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { Sprite, KOVerdict, koVerdictFromText, Icon, TypeBadge } from '@/design-system/arena';
 import type { KoTone } from '@/design-system/arena';
@@ -73,8 +74,9 @@ function StatBlock({ side }: { side: SideState }) {
   );
 }
 
-function SideHeader({ side, name, tone, badge, onOpenSpecies }: {
+function SideHeader({ side, name, tone, badge, onOpenSpecies, mega }: {
   side: SideState; name: string; tone: 'accent' | 'danger'; badge: string; onOpenSpecies: () => void;
+  mega?: { label: string; onClick: () => void } | null;
 }) {
   const ring = tone === 'accent' ? 'var(--accent)' : 'var(--danger)';
   const glow = tone === 'accent' ? 'var(--accent-soft)' : 'var(--danger-soft)';
@@ -82,13 +84,23 @@ function SideHeader({ side, name, tone, badge, onOpenSpecies }: {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
       <Sprite dex={side.selectedId} name={name} size={46} style={{ border: `2px solid ${ring}`, boxShadow: `0 0 0 2px ${glow}` }} />
-      <button onClick={onOpenSpecies} style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
+      <div role="button" tabIndex={0} onClick={onOpenSpecies} onKeyDown={(e) => { if (e.key === 'Enter') onOpenSpecies(); }} style={{ flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name || 'Select'}</span>
           <SmallBadge tone={tone}>{badge}</SmallBadge>
         </div>
-        <div style={{ display: 'flex', gap: 3, marginTop: 4 }}>{types.map((t) => <TypeBadge key={t} type={t} size="sm" />)}</div>
-      </button>
+        <div style={{ display: 'flex', gap: 3, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+          {types.map((t) => <TypeBadge key={t} type={t} size="sm" />)}
+          {mega && (
+            <button
+              onClick={(e) => { e.stopPropagation(); mega.onClick(); }}
+              style={{ flex: 'none', fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--field)', background: 'var(--field-soft)', border: '1px solid var(--field-line)', borderRadius: 999, padding: '1px 6px', cursor: 'pointer' }}
+            >
+              {mega.label}
+            </button>
+          )}
+        </div>
+      </div>
       <StatBlock side={side} />
     </div>
   );
@@ -196,6 +208,12 @@ export function ArenaCalculatorLandscape({
 
   const defDir: Side = dir === 'p1' ? 'p2' : 'p1';
   const nameOf = (id: number | null) => pokemonList.find((p) => p.id === id)?.nameEn ?? '—';
+  const megaFor = (sideKey: Side) => {
+    const target = megaCycleTarget(state[sideKey].selectedId, pokemonList);
+    if (!target) return null;
+    const isMega = /-mega(-[a-z]+)?$/.test(pokemonList.find((p) => p.id === state[sideKey].selectedId)?.identifier ?? '');
+    return { label: isMega ? 'Unmega' : 'Mega', onClick: () => void actions.handleSwapForm(sideKey, target) };
+  };
   const scenarios = useDamageScenarios(state, pokemonList, dir);
   const results = dir === 'p1' ? p1Results : p2Results;
   const atk = state[dir];
@@ -262,7 +280,7 @@ export function ArenaCalculatorLandscape({
 
       {/* -------- attacker (p1, left) -------- */}
       <div style={{ ...panelBase, borderRight: '1px solid var(--line-1)' }}>
-        <SideHeader side={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" badge="You" onOpenSpecies={() => setPicker({ side: 'p1', field: 'species' })} />
+        <SideHeader side={state.p1} name={nameOf(state.p1.selectedId)} tone="accent" badge="You" onOpenSpecies={() => setPicker({ side: 'p1', field: 'species' })} mega={megaFor('p1')} />
 
         {attackerExtra}
 
@@ -409,7 +427,7 @@ export function ArenaCalculatorLandscape({
         padding: '8px calc(10px + var(--safe-right, 0px)) 8px 10px',
         borderLeft: '1px solid var(--line-1)',
       }}>
-        <SideHeader side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" badge="Opp" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} />
+        <SideHeader side={state.p2} name={nameOf(state.p2.selectedId)} tone="danger" badge="Opp" onOpenSpecies={() => setPicker({ side: 'p2', field: 'species' })} mega={megaFor('p2')} />
 
         {onOpenScan && (
           <button onClick={onOpenScan} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%', minHeight: 24, borderRadius: 8, background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', color: 'var(--danger)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>

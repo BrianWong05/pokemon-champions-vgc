@@ -69,6 +69,7 @@ export type SideAction =
   | { type: 'SET_MOVE_POWER', payload: { side: 'p1' | 'p2', val: number } }
   | { type: 'SET_MOVE_CATEGORY', payload: { side: 'p1' | 'p2', val: 'physical' | 'special' } }
   | { type: 'SELECT_POKEMON', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
+  | { type: 'SWAP_FORM', payload: { side: 'p1' | 'p2', pokemon: PokemonBaseStats } }
   | { type: 'SELECT_MOVE_FOR_SLOT', payload: { side: 'p1' | 'p2', index: number, move: MoveData } }
   | { type: 'CLEAR_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
   | { type: 'SET_ACTIVE_MOVE_SLOT', payload: { side: 'p1' | 'p2', index: number } }
@@ -247,6 +248,25 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
         spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
         nature: 'Hardy', boostedStat: null, hinderedStat: null,
         item: null, loadedFromScan: false,
+      };
+    }
+    case 'SWAP_FORM': {
+      // Mega evolve / revert: species fields change, the build (moves, SP,
+      // nature, ranks, item, HP) is the same mon and stays put. Abilities
+      // are refetched by the caller via SET_ABILITIES.
+      const { pokemon: p } = action.payload;
+      return {
+        ...state,
+        selectedId: p.id,
+        type1: p.type1,
+        type2: p.type2,
+        isTypeOverridden: false,
+        baseHp: p.baseHp,
+        baseAtk: p.baseAttack,
+        baseDef: p.baseDefense,
+        baseSpa: p.baseSpAtk,
+        baseSpd: p.baseSpDef,
+        baseSpe: p.baseSpeed,
       };
     }
     case 'SELECT_POKEMON': {
