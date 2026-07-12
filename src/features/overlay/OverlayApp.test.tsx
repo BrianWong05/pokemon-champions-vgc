@@ -14,6 +14,8 @@ const bridgeMock = vi.hoisted(() => ({
   onBack: vi.fn(() => () => {}),
 }));
 const scanFrameMock = vi.hoisted(() => vi.fn());
+const detectPlayerPanelsMock = vi.hoisted(() => vi.fn((): unknown => null));
+const createTeamMock = vi.hoisted(() => vi.fn(async () => 'team-1'));
 
 vi.mock('./overlayBridge', () => ({ overlayBridge: bridgeMock }));
 vi.mock('./usePokemonList', () => ({ usePokemonList: () => [mon(445, 'Garchomp'), mon(823, 'Corviknight')] }));
@@ -27,6 +29,23 @@ vi.mock('../scan/scanFrame', async (importOriginal) => {
     DEFAULT_DEPS: { ...orig.DEFAULT_DEPS, blobToRgbaImage: async () => ({ width: 1, height: 1, data: new Uint8ClampedArray(4) }) },
   };
 });
+vi.mock('../scan/playerPanels', () => ({ detectPlayerPanels: detectPlayerPanelsMock }));
+vi.mock('./useMoveList', () => ({ useMoveList: () => [] }));
+vi.mock('@/features/teams/hooks/useTeams', () => ({
+  useTeams: () => ({
+    teams: [], loading: false, error: null,
+    createTeam: createTeamMock,
+    fetchTeams: vi.fn(), updateTeam: vi.fn(), deleteTeam: vi.fn(), getTeam: vi.fn(),
+  }),
+}));
+vi.mock('../scan/PlayerScanPanel', () => ({
+  default: ({ onSave, onCancel, frame }: any) => (
+    <div data-testid="player-scan" data-frame-seq={frame?.seq ?? 'none'}>
+      <button onClick={() => onSave([{ selectedId: 445 }])}>save-stub</button>
+      <button onClick={onCancel}>cancel-stub</button>
+    </div>
+  ),
+}));
 vi.mock('@/pages/DamageCalculator', () => ({
   default: ({ overlayDefender }: any) => <div data-testid="calc">{overlayDefender ? `${overlayDefender.id}:${String(overlayDefender.hpPercent)}` : 'no-defender'}</div>,
 }));
@@ -34,7 +53,7 @@ vi.mock('@/pages/DamageCalculator', () => ({
 import OverlayApp from './OverlayApp';
 
 describe('OverlayApp', () => {
-  beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); });
+  beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); detectPlayerPanelsMock.mockReturnValue(null); });
 
   it('reflects a locked roster to native on mount (strip + calc tag)', () => {
     localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
@@ -109,5 +128,46 @@ describe('OverlayApp', () => {
     expect(panel.style.opacity).toBe('0');
     fireEvent.pointerUp(peek);
     expect(panel.style.opacity).toBe('1');
+  });
+
+  it('bubble tap on a player-team screen routes to the my-team scan, not scanFrame', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    const panel = await screen.findByTestId('player-scan');
+    expect(panel.getAttribute('data-frame-seq')).not.toBe('none');
+    expect(scanFrameMock).not.toHaveBeenCalled();
+    expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
+  });
+
+  it('bubble tap while the my-team scan is open adds a frame instead of restarting', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    const seq1 = (await screen.findByTestId('player-scan')).getAttribute('data-frame-seq');
+    await act(async () => { (globalThis as any).__tap(); });
+    const seq2 = (await screen.findByTestId('player-scan')).getAttribute('data-frame-seq');
+    expect(seq2).not.toBe(seq1); // new frame reached the SAME mounted panel
+    expect(scanFrameMock).not.toHaveBeenCalled();
+  });
+
+  it('saving the scanned team creates it named after the first species and shows the saved card', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'save-stub' })); });
+    expect(createTeamMock).toHaveBeenCalledWith("Garchomp's Team", [{ selectedId: 445 }]);
+    expect(await screen.findByText('Team saved')).toBeTruthy();
+  });
+
+  it('cancelling the my-team scan closes the panel back to idle', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'cancel-stub' })); });
+    expect(screen.queryByTestId('player-scan')).toBeNull();
+    expect(bridgeMock.setWindowState).toHaveBeenCalledWith('hidden'); // no roster -> window hidden
   });
 });
