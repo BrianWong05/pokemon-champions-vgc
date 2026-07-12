@@ -7,7 +7,7 @@ import { NATURES, getFormattedNature } from '@/features/pokemon/utils/pokemon-na
 import type { PlayerScreenKind } from './playerTypes';
 import PokemonImagePicker from './PokemonImagePicker';
 import CropStep from './CropStep';
-import { filePickerSource, cameraSource } from './captureSource';
+import { filePickerSource, cameraSource, type CaptureSource, type CaptureSourceKind } from './captureSource';
 import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
 import { buildConfigs, type MergedPlayerScan, type PlayerSlot } from './mergePlayerScan';
 import { loadClassifier } from './classifier';
@@ -22,6 +22,13 @@ export interface PlayerScanPanelProps {
   active?: boolean;
   /** test-only affordance: inject fake usePlayerTeamScan deps instead of the real DEFAULT_PLAYER_DEPS */
   deps?: PlayerTeamScanDeps;
+  /** Capture affordances rendered in each screen chip. Defaults to file picker +
+   *  camera (Teams flows). Pass [] to hide them (overlay: frames arrive via `frame`). */
+  sources?: CaptureSource[];
+  /** Replaces the default intro copy (overlay: minimize-and-bubble-tap instructions). */
+  hint?: React.ReactNode;
+  /** Externally captured frame; scanned whenever `seq` advances (overlay bubble taps). */
+  frame?: { blob: Blob; seq: number } | null;
 }
 
 // Editable copy of a slot's fields, seeded from the merged scan and mutated locally.
@@ -38,6 +45,13 @@ const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 
 const CHIP_LABEL: Record<PlayerScreenKind, string> = { moves: 'Moves & item', stats: 'Stats & nature' };
 
+const DEFAULT_SOURCES: CaptureSource[] = [filePickerSource, cameraSource];
+const SOURCE_LABEL: Record<CaptureSourceKind, string> = {
+  file: 'Add screenshot',
+  camera: 'Take photo',
+  mediaProjection: 'Scan this screen',
+};
+
 const toEditable = (slot: PlayerSlot): EditableSlot => ({
   speciesId: slot.species[0]?.id ?? null,
   ability: slot.ability.value,
@@ -53,7 +67,7 @@ const toEditable = (slot: PlayerSlot): EditableSlot => ({
  * Save. Rendered inside PlayerScanModal for the portrait Teams flow, and inline
  * (no popup) in the landscape new-team "Scan" method.
  */
-export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps }) => {
+export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
@@ -96,6 +110,16 @@ export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, m
     });
   }, [merged, movesImage.status, statsImage.status]);
 
+  // Externally captured frames (overlay bubble taps): scan each seq exactly once.
+  const lastFrameSeq = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (frame && frame.seq !== lastFrameSeq.current) {
+      lastFrameSeq.current = frame.seq;
+      void addFrame(frame.blob);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frame?.seq]);
+
   const updateEdit = (slot: number, patch: Partial<EditableSlot>) =>
     setEdits((prev) => ({ ...prev, [slot]: { ...prev[slot], ...patch } }));
 
@@ -104,9 +128,9 @@ export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, m
     setEdits((prev) => { const next = { ...prev }; delete next[slot]; return next; });
   };
 
-  const captureFor = async (source: typeof filePickerSource | typeof cameraSource) => {
-    const frame = await source.capture();
-    if (frame) await addFrame(frame.blob);
+  const captureFor = async (source: CaptureSource) => {
+    const frame2 = await source.capture();
+    if (frame2) await addFrame(frame2.blob);
   };
 
   const cropRetry = () => (b: Blob) => {
@@ -162,20 +186,16 @@ export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, m
           <CropStep blob={state.blob} onCropped={cropRetry()} onCancel={() => setCroppingKind(null)} />
         ) : (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="px-3 py-1.5 text-sm rounded bg-accent text-accent-ink hover:bg-accent-hover transition-colors"
-              onClick={() => captureFor(filePickerSource)}
-            >
-              Add screenshot
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1.5 text-sm rounded bg-accent text-accent-ink hover:bg-accent-hover transition-colors"
-              onClick={() => captureFor(cameraSource)}
-            >
-              Take photo
-            </button>
+            {(sources ?? DEFAULT_SOURCES).map((s) => (
+              <button
+                key={s.kind}
+                type="button"
+                className="px-3 py-1.5 text-sm rounded bg-accent text-accent-ink hover:bg-accent-hover transition-colors"
+                onClick={() => captureFor(s)}
+              >
+                {SOURCE_LABEL[s.kind]}
+              </button>
+            ))}
             {state.blob && (
               <button
                 type="button"
@@ -193,7 +213,7 @@ export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, m
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-3">Add both screens of your team — moves/item and stats. Order doesn't matter.</p>
+      {hint ?? <p className="text-sm text-ink-3">Add both screens of your team — moves/item and stats. Order doesn't matter.</p>}
       <div className="flex gap-3">
         {renderChip('moves')}
         {renderChip('stats')}
