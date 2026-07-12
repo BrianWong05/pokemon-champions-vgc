@@ -29,6 +29,7 @@ import { useBattleRoster } from '@/features/scan/useBattleRoster';
 import OpponentRosterChips from '@/features/scan/OpponentRosterChips';
 import MyTeamChips from '@/features/scan/MyTeamChips';
 import { useMyTeam } from '@/features/scan/useMyTeam';
+import { readLastScanHp } from '@/features/scan/lastScanHp';
 import type { CapturedFrame } from '@/features/scan/captureSource';
 import { loadSavedBuild, saveBuild, clearBuild, type SavedBuild } from '@/features/damage-calculator/utils/build-store';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
@@ -156,7 +157,7 @@ const DamageCalculatorPage: React.FC = () => {
       roster={battleRoster}
       byId={pokemonById}
       activeId={state.p2.selectedId}
-      onPick={(id) => void handleLoadDefender(id)}
+      onPick={(id) => void handleLoadDefender(id, { hpPercent: readLastScanHp()[id] ?? null })}
       onClear={clearRoster}
     />
   ) : null;
