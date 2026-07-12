@@ -81,6 +81,17 @@ describe('OverlayApp', () => {
     expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
   });
 
+  it('"Scan new team" from the calc scans the screen behind and opens confirm for the next roster', async () => {
+    localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
+    scanFrameMock.mockResolvedValue({ mode: 'team', slots: [{ box: { x: 0, y: 0, w: 1, h: 1 }, candidates: [{ id: 445, score: 0.9 }] }] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); }); // roster locked -> calc
+    await screen.findByTestId('calc');
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Scan new team/ })); });
+    expect(bridgeMock.blinkAndCapture).toHaveBeenCalled();
+    expect(await screen.findByText(/Confirm opponent roster/)).toBeTruthy();
+  });
+
   it('unreadable frame shows the error card', async () => {
     scanFrameMock.mockResolvedValue({ mode: null, slots: [] });
     render(<OverlayApp />);

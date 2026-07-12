@@ -51,8 +51,11 @@ const OverlayApp: React.FC = () => {
 
   const closePanel = useCallback(() => {
     setView('idle');
-    // Fresh read (spec): roster changes made in the main app self-correct here.
-    overlayBridge.setWindowState(readBattleRoster() ? 'strip' : 'hidden');
+    // Fresh read (spec): roster changes made in the main app or via the
+    // chips' clear button self-correct here — window AND bubble tag.
+    const locked = !!readBattleRoster();
+    overlayBridge.setWindowState(locked ? 'strip' : 'hidden');
+    overlayBridge.setBubbleTag(locked ? 'calc' : 'scan');
   }, []);
 
   const runScan = useCallback(async (blob: Blob | null) => {
@@ -168,6 +171,14 @@ const OverlayApp: React.FC = () => {
           <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>
             <span className="text-xs font-bold">Damage · floating over battle</span>
             <span className="flex-1" />
+            <button
+              aria-label="Scan new team"
+              onClick={rescan}
+              className="text-[11px] px-2 py-1 rounded inline-flex items-center gap-1"
+              style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}
+            >
+              <Icon name="scan-line" size={12} color="var(--ink-2)" />Scan new team
+            </button>
             <button
               aria-label="Hold to peek at the game"
               onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); setPeeking(true); }}
