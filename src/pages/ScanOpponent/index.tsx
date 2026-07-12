@@ -11,6 +11,7 @@ import PokemonImagePicker from '@/features/scan/PokemonImagePicker';
 import CropStep from '@/features/scan/CropStep';
 import { useTeamScan } from '@/features/scan/useTeamScan';
 import { filePickerSource, cameraSource } from '@/features/scan/captureSource';
+import OneTapCaptureToggle from '@/features/scan/OneTapCaptureToggle';
 import { saveBattleRoster } from '@/features/scan/battleRoster';
 import {
   assignUniqueCandidates,
@@ -206,6 +207,11 @@ const ScanOpponentPage: React.FC = () => {
                     <span style={{ fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.3 }}>{text}</span>
                   </div>
                 ))}
+              </div>
+              {/* Android only (renders null elsewhere): starts the floating-bubble
+                  overlay session — the mobile UI's sole path to the toggle. */}
+              <div style={{ marginTop: 14 }}>
+                <OneTapCaptureToggle />
               </div>
             </div>
           </div>
