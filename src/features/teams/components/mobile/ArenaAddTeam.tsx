@@ -157,9 +157,11 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
 
       {/* body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '14px 16px' }}>
-        {method === 'scan' ? (
+        {/* Keep the scan mounted (just hidden) across method switches so a scanned team isn't lost when toggling to Paste. */}
+        <div style={{ display: method === 'scan' ? 'block' : 'none', height: '100%' }}>
           <ArenaPlayerScanReview pokemonList={pokemonList} moveList={moveList} onSave={onScanSave} />
-        ) : (
+        </div>
+        {method !== 'scan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
