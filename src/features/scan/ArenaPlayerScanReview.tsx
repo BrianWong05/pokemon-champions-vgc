@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Sprite, Icon, ItemIcon, TypeBadge } from '@/design-system/arena';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
@@ -34,6 +35,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
 
   React.useEffect(() => { if (active) void loadClassifier(); }, [active]);
 
+  const portrait = useViewportMode() === 'arena';
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
   // Move's type name (for the type-colored chip); null when unknown/empty.
@@ -154,7 +156,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
         {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
         {lastError && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--danger)' }}>{lastError}</div>}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '11px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 9 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3,1fr)', gap: 9 }}>
             {merged.slots.map((s) => {
               const e = edits[s.slot] ?? toEditable(s);
               const flags = deriveSlotFlags(s, vocab);

@@ -11,6 +11,7 @@ import { formatShowdownSet } from '@/features/pokemon/utils/showdown-formatter';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import ItemSearchSelect from '@/components/molecules/ItemSearchSelect';
 import ItemImage from '@/components/atoms/ItemImage';
+import { useViewportMode } from '@/hooks/useViewportMode';
 
 export interface ArenaReviewMonProps {
   member: TeamWithMembers['members'][number];
@@ -122,6 +123,7 @@ const MoveField: React.FC<{ index: number; value: MoveData | null; moveList: Mov
  */
 export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel, banner }) => {
   const c = member.configuration;
+  const portrait = useViewportMode() === 'arena';
   const species = pokemonList.find((p) => p.id === c.selectedId);
   const [sp, setSp] = useState<Record<string, number>>({
     spHp: c.spHp, spAtk: c.spAtk, spDef: c.spDef, spSpa: c.spSpa, spSpd: c.spSpd, spSpe: c.spSpe,
@@ -203,10 +205,10 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
 
       {banner}
 
-      {/* body: moves | stats */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      {/* body: moves | stats — side by side on landscape, stacked in portrait */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: portrait ? 'column' : 'row', overflowY: portrait ? 'auto' : 'visible', scrollbarWidth: 'none' }}>
         {/* LEFT: moves · ability · item */}
-        <div style={{ width: '48%', flex: 'none', overflowY: 'auto', scrollbarWidth: 'none', borderRight: '1px solid var(--line-1)', padding: '13px 15px' }}>
+        <div style={{ width: portrait ? '100%' : '48%', flex: 'none', overflowY: portrait ? 'visible' : 'auto', scrollbarWidth: 'none', borderRight: portrait ? 'none' : '1px solid var(--line-1)', borderBottom: portrait ? '1px solid var(--line-1)' : 'none', padding: '13px 15px' }}>
           <div style={{ ...micro, marginBottom: 11 }}>Moves · ability · item</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -375,7 +377,7 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
         </div>
 
         {/* RIGHT: stats + SP + auto EV */}
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '13px 16px' }}>
+        <div style={{ width: portrait ? '100%' : undefined, flex: portrait ? 'none' : 1, minWidth: 0, overflowY: portrait ? 'visible' : 'auto', scrollbarWidth: 'none', padding: '13px 16px' }}>
           <div style={micro}>Stats</div>
           <div style={{ fontSize: 10.5, color: 'var(--ink-4)', margin: '5px 0 10px', lineHeight: 1.35 }}>Final stats are derived — edit the SP investment (type or slide).</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 11, padding: '8px 10px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-1)' }}>
@@ -439,8 +441,8 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
       </div>
 
       {/* footer */}
-      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 9, padding: '10px 16px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)' }}>
-        <span style={{ fontSize: 10.5, color: 'var(--ink-3)', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{teamName} · ready to save.</span>
+      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', flexWrap: portrait ? 'wrap' : 'nowrap', justifyContent: portrait ? 'flex-end' : undefined, gap: 9, padding: '10px 16px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)' }}>
+        <span style={{ display: portrait ? 'none' : 'block', fontSize: 10.5, color: 'var(--ink-3)', flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{teamName} · ready to save.</span>
         <button onClick={exportShowdown} style={footerBtn(false)}><Icon name="clipboard-paste" size={15} color="var(--ink-2)" />Export Showdown</button>
         {onSendToCalc && <button onClick={onSendToCalc} style={footerBtn(false)}><Icon name="calculator" size={15} color="var(--ink-2)" />Send to calc</button>}
         <button onClick={() => onSave(buildConfig())} style={footerBtn(true)}><Icon name="check" size={16} color="#0a0f1a" />{saveLabel ?? 'Save to team'}</button>
