@@ -262,6 +262,26 @@ const TeamsPage: React.FC = () => {
   const editTeam = editTeamId ? teams.find((t) => t.id === editTeamId) : null;
   const closeAddTeam = () => { setCreatingTeam(false); setEditTeamId(null); };
 
+  // Shared by the landscape and portrait ArenaAddTeam full-screen flows.
+  const handleAddTeamScanSave = async (members: PokemonConfig[]) => {
+    if (editTeamId) {
+      const tm = teams.find((t) => t.id === editTeamId);
+      if (tm) await updateTeam(editTeamId, tm.name, members);
+      setFocusTeamId(editTeamId); closeAddTeam();
+    } else {
+      await handleSavePlayerTeam(members);
+    }
+  };
+  const handleAddTeamCreate = async (name: string, members: PokemonConfig[]) => {
+    if (editTeamId) {
+      await updateTeam(editTeamId, name.trim() || editTeam?.name || 'Team', members);
+      setFocusTeamId(editTeamId); closeAddTeam();
+    } else {
+      const nm = name.trim() || `${pokemonList.find((p) => p.id === members[0]?.selectedId)?.nameEn ?? 'New'}'s Team`;
+      await createTeam(nm, members);
+    }
+  };
+
   // ponytail: shared modals for both mobile frames; landscape = master-detail, portrait = card list
   if (isMobile || mode === 'arena-landscape') {
     return (
@@ -275,24 +295,8 @@ const TeamsPage: React.FC = () => {
               initialConfigs={editTeam ? editTeam.members.map((m) => m.configuration) : undefined}
               submitLabel={editTeam ? 'Save changes' : undefined}
               onBack={closeAddTeam}
-              onScanSave={async (members) => {
-                if (editTeamId) {
-                  const tm = teams.find((t) => t.id === editTeamId);
-                  if (tm) await updateTeam(editTeamId, tm.name, members);
-                  setFocusTeamId(editTeamId); closeAddTeam();
-                } else {
-                  await handleSavePlayerTeam(members);
-                }
-              }}
-              onCreate={async (name, members) => {
-                if (editTeamId) {
-                  await updateTeam(editTeamId, name.trim() || editTeam?.name || 'Team', members);
-                  setFocusTeamId(editTeamId); closeAddTeam();
-                } else {
-                  const nm = name.trim() || `${pokemonList.find((p) => p.id === members[0]?.selectedId)?.nameEn ?? 'New'}'s Team`;
-                  await createTeam(nm, members);
-                }
-              }}
+              onScanSave={handleAddTeamScanSave}
+              onCreate={handleAddTeamCreate}
             />
           ) : reviewMember && reviewTeam ? (
             <ArenaReviewMon
@@ -315,13 +319,18 @@ const TeamsPage: React.FC = () => {
               onReviewMon={(teamId, memberId) => setReviewTarget({ teamId, memberId })}
             />
           )
+        ) : creatingTeam ? (
+          <ArenaAddTeam
+            pokemonList={pokemonList}
+            moveList={moveList}
+            onBack={closeAddTeam}
+            onScanSave={handleAddTeamScanSave}
+            onCreate={handleAddTeamCreate}
+          />
         ) : (
           <ArenaTeams
             teams={teams} loading={teamsLoading} error={error}
-            onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
-            onImport={() => setIsImportModalOpen(true)}
-            onScan={() => setIsScanModalOpen(true)}
-            onScanPlayer={() => setIsPlayerScanOpen(true)}
+            onNew={() => setCreatingTeam(true)}
             onOpen={(id) => navigate(`/teams/${id}`)}
             onExport={(team) => setExportTeam(team)}
             onDelete={handleDeleteTeam}
@@ -338,24 +347,6 @@ const TeamsPage: React.FC = () => {
             }))}
           />
         )}
-        <TeamShowdownImportModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImport={handleImportTeam}
-        />
-        <ScanTeamModal
-          isOpen={isScanModalOpen}
-          onClose={() => setIsScanModalOpen(false)}
-          onImport={handleImportTeam}
-          pokemonList={pokemonList}
-        />
-        <PlayerScanModal
-          isOpen={isPlayerScanOpen}
-          onClose={() => setIsPlayerScanOpen(false)}
-          pokemonList={pokemonList}
-          moveList={moveList}
-          onSave={handleSavePlayerTeam}
-        />
         <ToastNotification message={toast} />
       </>
     );

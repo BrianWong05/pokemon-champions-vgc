@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Sprite, Icon, ItemIcon, TypeBadge } from '@/design-system/arena';
+import { useViewportMode } from '@/hooks/useViewportMode';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
@@ -34,6 +35,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
 
   React.useEffect(() => { if (active) void loadClassifier(); }, [active]);
 
+  const portrait = useViewportMode() === 'arena';
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
   // Move's type name (for the type-colored chip); null when unknown/empty.
@@ -92,6 +94,13 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
     onSave(buildConfigs(applyEditsToSlots(merged, edits), basesById, movesById, vocab));
   };
 
+  // Discard the scan and all edits, back to an empty capture card.
+  const clearScan = () => {
+    reset();
+    setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false);
+    setResolvedSlots({}); setReopenSlots({}); setBandClosedSlots({});
+  };
+
   const hasSpecies = Object.values(edits).some((e) => e.speciesId != null);
 
   // Which screen (if any) is still unscanned — drives the "add the missing screen" bar in the glance.
@@ -147,7 +156,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
         {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
         {lastError && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--danger)' }}>{lastError}</div>}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '11px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 9 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3,1fr)', gap: 9 }}>
             {merged.slots.map((s) => {
               const e = edits[s.slot] ?? toEditable(s);
               const flags = deriveSlotFlags(s, vocab);
@@ -211,7 +220,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
             })}
           </div>
         </div>
-        <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onCancel={onCancel} onSave={handleSave} />
+        <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onClear={clearScan} onCancel={onCancel} onSave={handleSave} />
       </div>
     );
   }
@@ -305,7 +314,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
         </div>
         {speciesBanner}
         <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--ink-3)', fontSize: 12, padding: 16, textAlign: 'center' }}>Choose a Pokémon above to review its details.</div>
-        <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onCancel={onCancel} onSave={handleSave} />
+        <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onClear={clearScan} onCancel={onCancel} onSave={handleSave} />
       </div>
     );
   }
@@ -353,8 +362,10 @@ const changeSpeciesBtn: React.CSSProperties = { display: 'inline-flex', alignIte
 const bandCloseBtn: React.CSSProperties = { flex: 'none', width: 22, height: 22, display: 'grid', placeItems: 'center', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--ink-3)', cursor: 'pointer' };
 const missingBar: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' };
 
-const ArenaSaveBar: React.FC<{ hasSpecies: boolean; vocab: unknown; onCancel?: () => void; onSave: () => void }> = ({ hasSpecies, vocab, onCancel, onSave }) => (
-  <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)' }}>
+const ArenaSaveBar: React.FC<{ hasSpecies: boolean; vocab: unknown; onClear?: () => void; onCancel?: () => void; onSave: () => void }> = ({ hasSpecies, vocab, onClear, onCancel, onSave }) => (
+  <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)' }}>
+    {onClear && <button onClick={onClear} style={btnGhost}>Clear</button>}
+    <span style={{ flex: 1 }} />
     {onCancel && <button onClick={onCancel} style={btnGhost}>Cancel</button>}
     <button onClick={onSave} disabled={!hasSpecies || !vocab} style={{ padding: '8px 16px', borderRadius: 'var(--r-sm)', background: 'var(--safe-soft)', color: 'var(--safe)', border: '1px solid var(--safe-line)', fontWeight: 700, cursor: 'pointer', opacity: !hasSpecies || !vocab ? 0.45 : 1 }}>Save team</button>
   </div>
