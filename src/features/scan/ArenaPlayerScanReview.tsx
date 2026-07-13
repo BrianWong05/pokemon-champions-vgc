@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Sprite, Icon, ItemIcon } from '@/design-system/arena';
+import { Sprite, Icon, ItemIcon, TypeBadge } from '@/design-system/arena';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
@@ -7,7 +7,7 @@ import { filePickerSource, cameraSource } from './captureSource';
 import CropStep from './CropStep';
 import PokemonImagePicker from './PokemonImagePicker';
 import { loadClassifier } from './classifier';
-import { NATURES, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { NATURES, getFormattedNature, getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PlayerScanPanelProps } from './PlayerScanPanel';
@@ -15,6 +15,7 @@ import type { PlayerScreenKind } from './playerTypes';
 
 const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
+const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
 
 /**
  * ArenaPlayerScanReview — the 9a "fix in place" landscape review: capture chips
@@ -35,12 +36,11 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
   const itemNames = useMemo(() => [...new Set((vocab?.items ?? []).map((i) => i.key))], [vocab]);
 
-  // Move's type color for the glance dot + name; neutral when unknown/empty.
-  const moveTypeVar = (mv: number | null): string => {
-    if (mv == null) return 'var(--ink-3)';
+  // Move's type name (for the type-colored chip); null when unknown/empty.
+  const moveType = (mv: number | null): string | null => {
+    if (mv == null) return null;
     const typeId = (movesById.get(mv) as MoveData | undefined)?.typeId;
-    const typeName = typeId != null ? REVERSE_TYPE_IDS[typeId] : undefined;
-    return typeName ? `var(--type-${typeName})` : 'var(--ink-2)';
+    return typeId != null ? REVERSE_TYPE_IDS[typeId] ?? null : null;
   };
 
   const [edits, setEdits] = useState<Record<number, EditableSlot>>({});
@@ -154,56 +154,66 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
         )}
         {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
         {lastError && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--danger)' }}>{lastError}</div>}
-        <div style={{ flex: 1, minHeight: 0, padding: '11px 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gridTemplateRows: 'repeat(2,1fr)', gap: 9, height: '100%' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '11px 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 9 }}>
             {merged.slots.map((s) => {
               const e = edits[s.slot] ?? toEditable(s);
               const flags = deriveSlotFlags(s, vocab);
               const flagged = isSlotFlagged(flags);
-              const name = e.speciesId != null ? basesById.get(e.speciesId)?.nameEn ?? 'Unknown' : '—';
+              const base = e.speciesId != null ? basesById.get(e.speciesId) : undefined;
+              const name = e.speciesId != null ? base?.nameEn ?? 'Unknown' : '—';
               const spStr = e.sp.map((v, i) => (v > 0 ? `${SP_SHORT[i]} ${v}` : null)).filter(Boolean).join(' · ');
               const hasStats = s.statReads.length > 0;
+              const nat = getNatureStats(e.nature);
+              const natureStr = nat.boostedStat && nat.hinderedStat && nat.boostedStat !== nat.hinderedStat
+                ? `↑${STAT_SHORT[nat.boostedStat] ?? nat.boostedStat} ↓${STAT_SHORT[nat.hinderedStat] ?? nat.hinderedStat}`
+                : getFormattedNature(e.nature);
               return (
                 <button key={s.slot} onClick={() => setOpenSlot(s.slot)} style={glanceCard(flagged)}>
-                  {/* header row: sprite + name + confidence badge */}
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
-                    <Sprite dex={e.speciesId} size={36} />
-                    <span style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-                      <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                    </span>
+                  {/* sprite + name + types + confidence badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', minWidth: 0 }}>
+                    <div style={{ width: 34, height: 34, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
+                      <Sprite dex={e.speciesId} size={30} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                      {(base?.type1 || base?.type2) && (
+                        <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
+                          {base?.type1 && <TypeBadge type={base.type1} size="sm" />}
+                          {base?.type2 && <TypeBadge type={base.type2} size="sm" />}
+                        </div>
+                      )}
+                    </div>
                     <span style={confBadge(flagged)}>
                       <Icon name={flagged ? 'alert-triangle' : 'check'} size={9} color={flagged ? 'var(--field)' : 'var(--safe)'} />
                     </span>
-                  </span>
-                  {/* four move rows — 2-col grid; type-colored dot + name, flags an illegal move */}
-                  <span style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', width: '100%' }}>
+                  </div>
+                  {/* item */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    {e.item && <ItemIcon item={e.item} size={15} framed={false} />}
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: e.item ? 'var(--ink-2)' : 'var(--ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.item ?? 'No item'}</span>
+                  </div>
+                  {/* nature + ability */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                    <span style={natureBadge}>{natureStr}</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: e.ability ? 'var(--ink-2)' : 'var(--ink-4)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.ability ?? 'No ability'}</span>
+                  </div>
+                  {/* SP spread */}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: hasStats ? 'var(--ink-3)' : 'var(--ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {hasStats ? `SP ${spStr || '0'}` : 'SP · scan stats screen'}
+                  </div>
+                  {/* moves — 2×2 type-colored chips */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, width: '100%' }}>
                     {e.moves.map((mv, mi) => {
-                      const typeVar = moveTypeVar(mv);
+                      const illegal = flags.illegalMoves.includes(mi);
                       return (
-                        <span key={mi} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9, fontWeight: 600, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                          <span style={{ width: 7, height: 7, flex: 'none', borderRadius: 2, background: mv != null ? typeVar : 'var(--line-2)' }} />
-                          <span style={{ minWidth: 0, flex: 1, color: typeVar, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {mv != null ? movesById.get(mv)?.nameEn ?? '—' : '—'}
-                          </span>
-                          {flags.illegalMoves.includes(mi) && <Icon name="alert-triangle" size={8} color="var(--field)" />}
+                        <span key={mi} style={{ ...moveChip(moveType(mv)), ...(illegal ? { borderColor: 'var(--field)', color: 'var(--field)' } : {}) }}>
+                          {illegal && <Icon name="alert-triangle" size={8} color="var(--field)" />}
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{mv != null ? movesById.get(mv)?.nameEn ?? '—' : '—'}</span>
                         </span>
                       );
                     })}
-                  </span>
-                  {/* item + ability — from the moves & item screen */}
-                  <span style={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', marginTop: 'auto' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9.5, fontWeight: 600, color: e.item ? 'var(--ink-2)' : 'var(--ink-4)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      {e.item && <ItemIcon item={e.item} size={13} framed={false} />}
-                      <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.item ?? 'No item'}</span>
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9.5, color: 'var(--ink-3)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                      <Icon name="zap" size={11} color="var(--ink-4)" />
-                      <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.ability ?? 'No ability'}</span>
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, color: hasStats ? 'var(--ink-3)' : 'var(--ink-4)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {hasStats ? `SP ${spStr || '0'}` : 'SP · scan stats screen'}
-                    </span>
-                  </span>
+                  </div>
                 </button>
               );
             })}
@@ -376,7 +386,20 @@ export default ArenaPlayerScanReview;
 const btnAccent: React.CSSProperties = { padding: '6px 12px', fontSize: 12, borderRadius: 'var(--r-sm)', background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none', cursor: 'pointer' };
 const btnGhost: React.CSSProperties = { padding: '6px 12px', fontSize: 12, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--ink-2)', border: '1px solid var(--line-2)', cursor: 'pointer' };
 const backBtn: React.CSSProperties = { width: 30, height: 30, flex: 'none', display: 'grid', placeItems: 'center', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--ink-2)', cursor: 'pointer' };
-const glanceCard = (flagged: boolean): React.CSSProperties => ({ display: 'flex', flexDirection: 'column', gap: 7, padding: 10, borderRadius: 'var(--r-md)', textAlign: 'left', cursor: 'pointer', background: 'var(--surface-card)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--line-1)'}`, minWidth: 0 });
+const glanceCard = (flagged: boolean): React.CSSProperties => ({ display: 'flex', flexDirection: 'column', gap: 6, padding: 10, borderRadius: 'var(--r-md)', textAlign: 'left', cursor: 'pointer', background: 'var(--surface-card)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--line-1)'}`, minWidth: 0, overflow: 'hidden' });
+const natureBadge: React.CSSProperties = { flex: 'none', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)', borderRadius: 6, padding: '1px 6px', letterSpacing: '0.04em' };
+// Filled type-colored move chip, matching the ArenaAddTeam paste-preview cards (3b).
+// ponytail: duplicated from ArenaAddTeam's typeChip rather than shared — extract if a third caller appears.
+const moveChip = (type: string | null): React.CSSProperties => {
+  const c = type ? `var(--type-${type})` : null;
+  return {
+    display: 'flex', alignItems: 'center', gap: 3, minWidth: 0, height: 18, padding: '0 7px',
+    borderRadius: 'var(--r-xs)', fontSize: 9, fontWeight: 700, whiteSpace: 'nowrap',
+    color: c ?? 'var(--ink-4)',
+    background: c ? `color-mix(in srgb, ${c} 15%, transparent)` : 'var(--surface-inset)',
+    border: `1px solid ${c ? `color-mix(in srgb, ${c} 38%, transparent)` : 'var(--line-2)'}`,
+  };
+};
 const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, flex: 'none', borderRadius: 999, background: flagged ? 'var(--field-soft)' : 'var(--safe-soft)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--safe-line)'}` });
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
 const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
