@@ -248,7 +248,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
         <Icon name="alert-triangle" size={13} color="var(--field)" />
         <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)' }}>Is this right?</span>
-        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : evidence[0]}</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : speciesConflict ? evidence[0] : 'Pick the correct Pokémon.'}</span>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {s.species.slice(0, 3).map((c) => (
@@ -270,7 +270,17 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--safe)' }}>{openName} · re-derived</span>
       <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeLink}>Change</button>
     </div>
-  ) : null;
+  ) : (
+    // Confident detection — still let the user override the species.
+    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'var(--surface-inset)', borderBottom: '1px solid var(--line-1)' }}>
+      <Icon name="scan-line" size={12} color="var(--ink-4)" />
+      <span style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>Detected <span style={{ fontWeight: 700, color: 'var(--ink-1)' }}>{openName}</span></span>
+      <span style={{ flex: 1 }} />
+      <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeSpeciesBtn}>
+        <Icon name="replace" size={11} color="var(--accent)" />Change Pokémon
+      </button>
+    </div>
+  );
 
   // Build this slot's config for the shared ArenaReviewMon editor.
   const openConfig: PokemonConfig | null = (e.speciesId != null && vocab)
@@ -343,6 +353,7 @@ const moveChip = (type: string | null): React.CSSProperties => {
 const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, flex: 'none', borderRadius: 999, background: flagged ? 'var(--field-soft)' : 'var(--safe-soft)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--safe-line)'}` });
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
 const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
+const changeSpeciesBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', padding: '3px 9px', fontSize: 10.5, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent-soft-line)', cursor: 'pointer' };
 const missingBar: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' };
 
 const ArenaSaveBar: React.FC<{ hasSpecies: boolean; vocab: unknown; onCancel?: () => void; onSave: () => void }> = ({ hasSpecies, vocab, onCancel, onSave }) => (
