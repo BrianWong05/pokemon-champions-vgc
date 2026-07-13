@@ -38,8 +38,8 @@ vi.mock('@/features/teams/hooks/useTeams', () => ({
     fetchTeams: vi.fn(), updateTeam: vi.fn(), deleteTeam: vi.fn(), getTeam: vi.fn(),
   }),
 }));
-vi.mock('../scan/PlayerScanPanel', () => ({
-  default: ({ onSave, onCancel, frame }: any) => (
+vi.mock('../scan/ArenaPlayerScanReview', () => ({
+  ArenaPlayerScanReview: ({ onSave, onCancel, frame }: any) => (
     <div data-testid="player-scan" data-frame-seq={frame?.seq ?? 'none'}>
       <button onClick={() => onSave([{ selectedId: 445 }])}>save-stub</button>
       <button onClick={onCancel}>cancel-stub</button>
