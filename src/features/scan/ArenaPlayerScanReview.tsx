@@ -7,13 +7,15 @@ import { filePickerSource, cameraSource } from './captureSource';
 import CropStep from './CropStep';
 import PokemonImagePicker from './PokemonImagePicker';
 import { loadClassifier } from './classifier';
-import { NATURES, getFormattedNature, getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
+import { getFormattedNature, getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import { ArenaReviewMon } from '@/features/teams/components/mobile/ArenaReviewMon';
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
+import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
+import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PlayerScanPanelProps } from './PlayerScanPanel';
 import type { PlayerScreenKind } from './playerTypes';
 
-const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
 const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
 
@@ -34,8 +36,6 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
 
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
-  const itemNames = useMemo(() => [...new Set((vocab?.items ?? []).map((i) => i.key))], [vocab]);
-
   // Move's type name (for the type-colored chip); null when unknown/empty.
   const moveType = (mv: number | null): string | null => {
     if (mv == null) return null;
@@ -229,8 +229,6 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const e = edits[openSlot] ?? toEditable(s);
   const flags = deriveSlotFlags(s, vocab);
   const speciesConflict = flags.speciesUncertain || flags.speciesDisagreement || flags.illegalMoves.length > 0 || flags.badAbility;
-  const learnset = e.speciesId != null ? vocab?.movesFor(e.speciesId) ?? [] : [];
-  const abilityOptions = e.speciesId != null ? vocab?.abilitiesFor(e.speciesId) ?? [] : [];
   const openName = e.speciesId != null ? basesById.get(e.speciesId)?.nameEn ?? 'Unknown' : '—';
   const resolved = !!resolvedSlots[openSlot];
   const reopened = !!reopenSlots[openSlot];
@@ -243,141 +241,83 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   if (flags.speciesDisagreement) evidence.push('The two screenshots read different species.');
   if (evidence.length === 0) evidence.push('Not sure this is the right Pokémon.');
 
-  return (
-    <div style={box}>
-      {/* fix header */}
-      <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--line-1)' }}>
-        <button onClick={() => setOpenSlot(null)} aria-label="Back to team" style={backBtn}><Icon name="chevron-right" size={16} color="var(--ink-2)" style={{ transform: 'scaleX(-1)' }} /></button>
-        <Sprite dex={e.speciesId} size={36} />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14.5, fontWeight: 700, color: 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{openName}</div>
-        </div>
+  // Species-correction band (conflict) or resolved banner — rendered inside the
+  // shared editor via its `banner` slot.
+  const speciesBanner = showSpeciesBand ? (
+    <div style={{ flex: 'none', padding: '8px 16px 9px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
+        <Icon name="alert-triangle" size={13} color="var(--field)" />
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)' }}>Is this right?</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : evidence[0]}</span>
       </div>
-
-      {/* species candidate band OR resolved banner */}
-      {showSpeciesBand ? (
-        <div style={{ flex: 'none', padding: '8px 16px 9px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
-            <Icon name="alert-triangle" size={13} color="var(--field)" />
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)' }}>Is this right?</span>
-            <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : evidence[0]}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {s.species.slice(0, 3).map((c) => (
-              <button key={c.id} onClick={() => pickSpecies(openSlot, c.id)} style={candTile(e.speciesId === c.id)}>
-                <Sprite dex={c.id} size={30} />
-                <span style={{ minWidth: 0, textAlign: 'left' }}>
-                  <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>{basesById.get(c.id)?.nameEn}</span>
-                  <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--ink-4)' }}>{Math.round(c.score * 100)}%</span>
-                </span>
-              </button>
-            ))}
-            <button onClick={() => setPickerOpen((v) => !v)} style={btnGhost}>{pickerOpen ? 'Close' : 'Choose Pokémon'}</button>
-          </div>
-          {pickerOpen && <div style={{ marginTop: 8 }}><PokemonImagePicker pokemonList={pokemonList} selectedId={e.speciesId} onSelect={(id) => pickSpecies(openSlot, id)} /></div>}
-        </div>
-      ) : resolved ? (
-        <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 16px', background: 'var(--safe-soft)', borderBottom: '1px solid var(--safe-line)' }}>
-          <Icon name="check" size={13} color="var(--safe)" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--safe)' }}>{openName} · re-derived</span>
-          <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeLink}>Change</button>
-        </div>
-      ) : null}
-
-      {/* two columns: left moves/ability/item — right nature + stat->SP */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
-        <div style={{ width: '47%', flex: 'none', overflowY: 'auto', borderRight: '1px solid var(--line-1)', padding: '11px 14px', scrollbarWidth: 'none' }}>
-          <label style={fieldWrap}>
-            <span style={fieldLabelText}>Item</span>
-            <input
-              style={control(!s.item.confident || flags.ambiguousItem ? 'amber' : undefined)}
-              list={`items-${openSlot}`}
-              value={e.item ?? ''}
-              onChange={(ev) => updateEdit(openSlot, { item: ev.target.value || null })}
-            />
-            <datalist id={`items-${openSlot}`}>
-              {itemNames.map((name) => (
-                <option key={name} value={name} />
-              ))}
-            </datalist>
-          </label>
-
-          <label style={fieldWrap}>
-            <span style={fieldLabelText}>Ability</span>
-            <select
-              style={control(!s.ability.confident || flags.badAbility ? 'amber' : undefined)}
-              value={e.ability ?? ''}
-              onChange={(ev) => updateEdit(openSlot, { ability: ev.target.value || null })}
-            >
-              <option value="">—</option>
-              {abilityOptions.map((a) => (
-                <option key={a.key} value={a.key}>{a.names.en}</option>
-              ))}
-            </select>
-          </label>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {[0, 1, 2, 3].map((mi) => (
-              <label key={mi} style={fieldWrap}>
-                <span style={fieldLabelText}>Move {mi + 1}</span>
-                <select
-                  style={control(flags.illegalMoves.includes(mi) ? 'red' : !s.moves[mi]?.confident ? 'amber' : undefined)}
-                  value={e.moves[mi] ?? ''}
-                  onChange={(ev) => {
-                    const val = ev.target.value ? Number(ev.target.value) : null;
-                    const nextMoves = [...e.moves];
-                    nextMoves[mi] = val;
-                    updateEdit(openSlot, { moves: nextMoves });
-                  }}
-                >
-                  <option value="">—</option>
-                  {learnset.map((m) => (
-                    <option key={m.moveId} value={m.moveId}>{movesById.get(m.moveId)?.nameEn ?? m.names.en}</option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '11px 15px', scrollbarWidth: 'none' }}>
-          <label style={fieldWrap}>
-            <span style={fieldLabelText}>Nature</span>
-            <select
-              style={control(!s.nature.confident ? 'amber' : undefined)}
-              value={getFormattedNature(e.nature)}
-              onChange={(ev) => updateEdit(openSlot, { nature: ev.target.value })}
-            >
-              {NATURES.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </label>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-            {STAT_LABELS.map((label, i) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 30, fontSize: 11, fontWeight: 700, color: 'var(--ink-2)' }}>{label}</span>
-                <span style={{ flex: 1, fontSize: 11, color: 'var(--ink-3)' }}>{s.statReads[i]?.stat ?? '—'}</span>
-                <Icon name="chevron-right" size={12} color="var(--ink-4)" />
-                <input
-                  type="number"
-                  min={0}
-                  max={32}
-                  style={{ ...control(flags.inconsistentSp.includes(i) ? 'red' : undefined), width: 54, flex: 'none' }}
-                  value={e.sp[i] ?? 0}
-                  onChange={(ev) => {
-                    const nextSp = [...e.sp];
-                    nextSp[i] = Math.max(0, Math.min(32, Number(ev.target.value) || 0));
-                    updateEdit(openSlot, { sp: nextSp });
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {s.species.slice(0, 3).map((c) => (
+          <button key={c.id} onClick={() => pickSpecies(openSlot, c.id)} style={candTile(e.speciesId === c.id)}>
+            <Sprite dex={c.id} size={30} />
+            <span style={{ minWidth: 0, textAlign: 'left' }}>
+              <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>{basesById.get(c.id)?.nameEn}</span>
+              <span style={{ display: 'block', fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: 'var(--ink-4)' }}>{Math.round(c.score * 100)}%</span>
+            </span>
+          </button>
+        ))}
+        <button onClick={() => setPickerOpen((v) => !v)} style={btnGhost}>{pickerOpen ? 'Close' : 'Choose Pokémon'}</button>
       </div>
-      <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onCancel={onCancel} onSave={handleSave} />
+      {pickerOpen && <div style={{ marginTop: 8 }}><PokemonImagePicker pokemonList={pokemonList} selectedId={e.speciesId} onSelect={(id) => pickSpecies(openSlot, id)} /></div>}
     </div>
+  ) : resolved ? (
+    <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 16px', background: 'var(--safe-soft)', borderBottom: '1px solid var(--safe-line)' }}>
+      <Icon name="check" size={13} color="var(--safe)" />
+      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--safe)' }}>{openName} · re-derived</span>
+      <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeLink}>Change</button>
+    </div>
+  ) : null;
+
+  // Build this slot's config for the shared ArenaReviewMon editor.
+  const openConfig: PokemonConfig | null = (e.speciesId != null && vocab)
+    ? buildConfigs({ ...merged, slots: [applyEditsToSlots(merged, edits).slots[openSlot]] }, basesById, movesById, vocab)[0] ?? null
+    : null;
+
+  const saveDetail = (config: PokemonConfig) => {
+    updateEdit(openSlot, {
+      speciesId: config.selectedId,
+      item: config.item,
+      ability: config.activeAbility,
+      moves: config.moves.map((m) => m?.id ?? null),
+      sp: [config.spHp, config.spAtk, config.spDef, config.spSpa, config.spSpd, config.spSpe],
+      nature: config.nature,
+    });
+    setOpenSlot(null);
+  };
+
+  // No identified species yet — show the picker band alone.
+  if (!openConfig) {
+    return (
+      <div style={box}>
+        <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--line-1)' }}>
+          <button onClick={() => setOpenSlot(null)} aria-label="Back to team" style={backBtn}><Icon name="chevron-right" size={16} color="var(--ink-2)" style={{ transform: 'scaleX(-1)' }} /></button>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14.5, fontWeight: 700, color: 'var(--ink-1)' }}>Pick a Pokémon</div>
+        </div>
+        {speciesBanner}
+        <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--ink-3)', fontSize: 12, padding: 16, textAlign: 'center' }}>Choose a Pokémon above to review its details.</div>
+        <ArenaSaveBar hasSpecies={hasSpecies} vocab={vocab} onCancel={onCancel} onSave={handleSave} />
+      </div>
+    );
+  }
+
+  // Reuse the polished per-Pokémon editor; remount on species change so it re-seeds from the re-derived config.
+  const member = { id: `slot-${openSlot}`, order: openSlot, configuration: openConfig } as unknown as TeamWithMembers['members'][number];
+  return (
+    <ArenaReviewMon
+      key={e.speciesId ?? 'none'}
+      member={member}
+      teamName="Scanned team"
+      pokemonList={pokemonList}
+      moveList={moveList}
+      saveLabel="Done"
+      banner={speciesBanner}
+      onBack={() => setOpenSlot(null)}
+      onSave={saveDetail}
+    />
   );
 };
 
@@ -404,20 +344,6 @@ const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
 const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
 const missingBar: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' };
-
-// Left/right column field editors, ported from PlayerScanPanel's control markup onto DS tokens.
-const fieldWrap: React.CSSProperties = { display: 'block', fontSize: 10, color: 'var(--ink-3)', marginBottom: 10 };
-const fieldLabelText: React.CSSProperties = { display: 'block', marginBottom: 4, fontWeight: 600, color: 'var(--ink-3)' };
-const control = (tone?: 'amber' | 'red'): React.CSSProperties => ({
-  width: '100%',
-  height: 32,
-  background: 'var(--surface-inset)',
-  border: `1px solid ${tone === 'red' ? 'var(--danger)' : tone === 'amber' ? 'var(--field-line)' : 'var(--line-2)'}`,
-  borderRadius: 'var(--r-sm)',
-  padding: '0 8px',
-  fontSize: 12,
-  color: 'var(--ink-1)',
-});
 
 const ArenaSaveBar: React.FC<{ hasSpecies: boolean; vocab: unknown; onCancel?: () => void; onSave: () => void }> = ({ hasSpecies, vocab, onCancel, onSave }) => (
   <div style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '10px 16px', borderTop: '1px solid var(--line-1)', background: 'var(--surface-sticky)' }}>

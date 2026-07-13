@@ -21,6 +21,8 @@ export interface ArenaReviewMonProps {
   onSave: (config: PokemonConfig) => void;
   onSendToCalc?: () => void;
   saveLabel?: string;
+  /** Optional content rendered directly under the header — e.g. the scan flow's species-correction band. */
+  banner?: React.ReactNode;
 }
 
 const STATS: { key: string; label: string; short: string; ev: string; baseKey: keyof PokemonConfig; spKey: keyof PokemonConfig }[] = [
@@ -54,7 +56,7 @@ const footerBtn = (primary: boolean): React.CSSProperties => ({
  * Note: the app uses Champions SP (0–32) via championsStat — the same numbers
  * the calculator shows — rather than the mock's raw 0–252 EVs.
  */
-export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel }) => {
+export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel, banner }) => {
   const c = member.configuration;
   const species = pokemonList.find((p) => p.id === c.selectedId);
   const [sp, setSp] = useState<Record<string, number>>({
@@ -139,6 +141,8 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
           <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--safe)' }}>Stats + Moves merged</span>
         </span>
       </div>
+
+      {banner}
 
       {/* body: moves | stats */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
