@@ -23,6 +23,9 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
+  // ponytail: dev-only harness for golden verification in-browser (mirrors PlayerScanPanel)
+  if (import.meta.env.DEV) (window as any).__playerScanDebug = { addFrame };
+
   React.useEffect(() => { if (active) void loadClassifier(); }, [active]);
 
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
@@ -79,6 +82,12 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
 
   const hasSpecies = Object.values(edits).some((e) => e.speciesId != null);
 
+  // Which screen (if any) is still unscanned — drives the "add the missing screen" bar in the glance.
+  const missingKind: PlayerScreenKind | null =
+    movesImage.status === 'done' && statsImage.status !== 'done' ? 'stats'
+      : statsImage.status === 'done' && movesImage.status !== 'done' ? 'moves'
+        : null;
+
   const box: React.CSSProperties = { display: 'flex', width: '100%', height: '100%', flexDirection: 'column', background: 'var(--bg-page)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', overflow: 'hidden' };
 
   // --- capture chips (before a full scan) ---
@@ -122,6 +131,18 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   if (openSlot == null) {
     return (
       <div style={box}>
+        {missingKind && (
+          <div style={missingBar}>
+            <Icon name="alert-triangle" size={13} color="var(--field)" />
+            <span style={{ flex: 1, fontSize: 11, color: 'var(--ink-2)' }}>
+              Only the {missingKind === 'stats' ? 'moves & item' : 'stats & nature'} screen was scanned — add {missingKind === 'stats' ? 'stats & nature' : 'moves & item'}.
+            </span>
+            <button type="button" style={btnAccent} onClick={() => captureFor(filePickerSource)}>Add screenshot</button>
+            <button type="button" style={btnGhost} onClick={() => captureFor(cameraSource)}>Take photo</button>
+          </div>
+        )}
+        {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
+        {lastError && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--danger)' }}>{lastError}</div>}
         <div style={{ flex: 1, minHeight: 0, padding: '11px 16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gridTemplateRows: 'repeat(2,1fr)', gap: 9, height: '100%' }}>
             {merged.slots.map((s) => {
@@ -196,7 +217,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
             <Icon name="alert-triangle" size={13} color="var(--field)" />
             <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)' }}>Is this right?</span>
-            <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{evidence[0]}</span>
+            <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : evidence[0]}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {s.species.slice(0, 3).map((c) => (
@@ -326,6 +347,7 @@ const glanceCard = (flagged: boolean): React.CSSProperties => ({ display: 'flex'
 const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, flex: 'none', borderRadius: 999, background: flagged ? 'var(--field-soft)' : 'var(--safe-soft)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--safe-line)'}` });
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
 const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
+const missingBar: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' };
 
 // Left/right column field editors, ported from PlayerScanPanel's control markup onto DS tokens.
 const fieldWrap: React.CSSProperties = { display: 'block', fontSize: 10, color: 'var(--ink-3)', marginBottom: 10 };
