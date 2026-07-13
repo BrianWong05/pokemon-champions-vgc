@@ -102,38 +102,29 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
 
   const box: React.CSSProperties = { display: 'flex', width: '100%', height: '100%', flexDirection: 'column', background: 'var(--bg-page)', color: 'var(--text-body)', fontFamily: 'var(--font-ui)', overflow: 'hidden' };
 
-  // --- capture chips (before a full scan) ---
-  const renderChip = (kind: PlayerScreenKind) => {
-    const state = kind === 'moves' ? movesImage : statsImage;
-    const label = kind === 'moves' ? 'Moves & item' : 'Stats & nature';
-    return (
-      <div key={kind} style={{ flex: 1, padding: 12, borderRadius: 'var(--r-md)', border: '1px solid var(--line-2)', background: 'var(--surface-inset)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-1)' }}>{label}</span>
-          {state.status === 'done' && <Icon name="check" size={14} color="var(--safe)" />}
-          {state.status === 'error' && <span style={{ fontSize: 11, color: 'var(--danger)' }}>Error</span>}
-        </div>
-        {croppingKind === kind && state.blob ? (
-          <CropStep blob={state.blob} onCropped={(b) => { setCroppingKind(null); void addFrame(b); }} onCancel={() => setCroppingKind(null)} />
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button type="button" style={btnAccent} onClick={() => captureFor(filePickerSource)}>Add screenshot</button>
-            <button type="button" style={btnAccent} onClick={() => captureFor(cameraSource)}>Take photo</button>
-            {state.blob && <button type="button" style={btnGhost} onClick={() => setCroppingKind(kind)}>Crop &amp; retry</button>}
-          </div>
-        )}
-      </div>
-    );
-  };
-
+  // --- single capture card (before a full scan) — the app detects which screen it is ---
   if (!merged || merged.slots.length === 0) {
+    const errImg = movesImage.status === 'error' ? movesImage : statsImage.status === 'error' ? statsImage : null;
     return (
       <div style={box}>
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 16px' }}>
-          <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: '0 0 10px' }}>Add both screens of your team — moves/item and stats. Order doesn't matter.</p>
-          <div style={{ display: 'flex', gap: 12 }}>{renderChip('moves')}{renderChip('stats')}</div>
-          {lastError && <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 10 }}>{lastError}</p>}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px' }}>
+          <p style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', margin: '0 0 4px' }}>Scan your team</p>
+          <p style={{ fontSize: 11.5, color: 'var(--ink-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
+            Add the two in-game screens — the moves &amp; item screen and the stats &amp; nature screen — in any order. Each screenshot is detected automatically; after the first, we&apos;ll ask for the other.
+          </p>
+          <div style={{ padding: 14, borderRadius: 'var(--r-md)', border: '1px solid var(--line-2)', background: 'var(--surface-inset)' }}>
+            {croppingKind && errImg?.blob ? (
+              <CropStep blob={errImg.blob} onCropped={(b) => { setCroppingKind(null); void addFrame(b); }} onCancel={() => setCroppingKind(null)} />
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <button type="button" style={btnAccent} onClick={() => captureFor(filePickerSource)}>Add screenshot</button>
+                <button type="button" style={btnGhost} onClick={() => captureFor(cameraSource)}>Take photo</button>
+                {errImg?.blob && <button type="button" style={btnGhost} onClick={() => setCroppingKind(errImg === movesImage ? 'moves' : 'stats')}>Crop &amp; retry</button>}
+              </div>
+            )}
+          </div>
           {busy && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 10 }}>Scanning…</p>}
+          {(errImg?.error || lastError) && <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 10 }}>{errImg?.error || lastError}</p>}
         </div>
       </div>
     );
