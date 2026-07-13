@@ -323,7 +323,6 @@ const TeamsPage: React.FC = () => {
           <ArenaAddTeam
             pokemonList={pokemonList}
             moveList={moveList}
-            initialMethod="scan"
             onBack={closeAddTeam}
             onScanSave={handleAddTeamScanSave}
             onCreate={handleAddTeamCreate}
@@ -331,10 +330,7 @@ const TeamsPage: React.FC = () => {
         ) : (
           <ArenaTeams
             teams={teams} loading={teamsLoading} error={error}
-            onCreate={async (name) => { const id = await createTeam(name); navigate(`/teams/${id}`); }}
-            onImport={() => setIsImportModalOpen(true)}
-            onScan={() => setIsScanModalOpen(true)}
-            onScanPlayer={() => setCreatingTeam(true)}
+            onNew={() => setCreatingTeam(true)}
             onOpen={(id) => navigate(`/teams/${id}`)}
             onExport={(team) => setExportTeam(team)}
             onDelete={handleDeleteTeam}
@@ -351,17 +347,6 @@ const TeamsPage: React.FC = () => {
             }))}
           />
         )}
-        <TeamShowdownImportModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImport={handleImportTeam}
-        />
-        <ScanTeamModal
-          isOpen={isScanModalOpen}
-          onClose={() => setIsScanModalOpen(false)}
-          onImport={handleImportTeam}
-          pokemonList={pokemonList}
-        />
         <ToastNotification message={toast} />
       </>
     );
