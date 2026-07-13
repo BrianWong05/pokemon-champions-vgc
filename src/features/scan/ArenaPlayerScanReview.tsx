@@ -49,10 +49,11 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const [pickerOpen, setPickerOpen] = useState(false);
   const [resolvedSlots, setResolvedSlots] = useState<Record<number, boolean>>({});
   const [reopenSlots, setReopenSlots] = useState<Record<number, boolean>>({});
+  const [bandClosedSlots, setBandClosedSlots] = useState<Record<number, boolean>>({});
 
   // Reset on hide (host closed).
   React.useEffect(() => {
-    if (!active) { reset(); setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false); setResolvedSlots({}); setReopenSlots({}); }
+    if (!active) { reset(); setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false); setResolvedSlots({}); setReopenSlots({}); setBandClosedSlots({}); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -232,7 +233,10 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const openName = e.speciesId != null ? basesById.get(e.speciesId)?.nameEn ?? 'Unknown' : '—';
   const resolved = !!resolvedSlots[openSlot];
   const reopened = !!reopenSlots[openSlot];
-  const showSpeciesBand = (speciesConflict && !resolved) || reopened;
+  const bandClosed = !!bandClosedSlots[openSlot];
+  const showSpeciesBand = !bandClosed && ((speciesConflict && !resolved) || reopened);
+  const openBand = () => { setReopenSlots((p) => ({ ...p, [openSlot]: true })); setBandClosedSlots((p) => ({ ...p, [openSlot]: false })); };
+  const closeBand = () => { setReopenSlots((p) => ({ ...p, [openSlot]: false })); setBandClosedSlots((p) => ({ ...p, [openSlot]: true })); };
 
   // Evidence sentences from flags (English, derivable).
   const evidence: string[] = [];
@@ -245,10 +249,11 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   // shared editor via its `banner` slot.
   const speciesBanner = showSpeciesBand ? (
     <div style={{ flex: 'none', padding: '8px 16px 9px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
         <Icon name="alert-triangle" size={13} color="var(--field)" />
-        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)' }}>Is this right?</span>
-        <span style={{ fontSize: 10, color: 'var(--ink-3)' }}>{resolved ? 'Pick a different Pokémon.' : speciesConflict ? evidence[0] : 'Pick the correct Pokémon.'}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ink-1)', flex: 'none' }}>Is this right?</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-3)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{resolved ? 'Pick a different Pokémon.' : speciesConflict ? evidence[0] : 'Pick the correct Pokémon.'}</span>
+        <button onClick={closeBand} aria-label="Close" style={bandCloseBtn}><Icon name="x" size={13} color="var(--ink-3)" /></button>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {s.species.slice(0, 3).map((c) => (
@@ -268,7 +273,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
     <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 16px', background: 'var(--safe-soft)', borderBottom: '1px solid var(--safe-line)' }}>
       <Icon name="check" size={13} color="var(--safe)" />
       <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--safe)' }}>{openName} · re-derived</span>
-      <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeLink}>Change</button>
+      <button onClick={openBand} style={changeLink}>Change</button>
     </div>
   ) : (
     // Confident detection — still let the user override the species.
@@ -276,7 +281,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
       <Icon name="scan-line" size={12} color="var(--ink-4)" />
       <span style={{ fontSize: 10.5, color: 'var(--ink-3)' }}>Detected <span style={{ fontWeight: 700, color: 'var(--ink-1)' }}>{openName}</span></span>
       <span style={{ flex: 1 }} />
-      <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeSpeciesBtn}>
+      <button onClick={openBand} style={changeSpeciesBtn}>
         <Icon name="replace" size={11} color="var(--accent)" />Change Pokémon
       </button>
     </div>
@@ -354,6 +359,7 @@ const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
 const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
 const changeSpeciesBtn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', padding: '3px 9px', fontSize: 10.5, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--accent)', border: '1px solid var(--accent-soft-line)', cursor: 'pointer' };
+const bandCloseBtn: React.CSSProperties = { flex: 'none', width: 22, height: 22, display: 'grid', placeItems: 'center', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--ink-3)', cursor: 'pointer' };
 const missingBar: React.CSSProperties = { flex: 'none', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' };
 
 const ArenaSaveBar: React.FC<{ hasSpecies: boolean; vocab: unknown; onCancel?: () => void; onSave: () => void }> = ({ hasSpecies, vocab, onCancel, onSave }) => (
