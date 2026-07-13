@@ -15,7 +15,7 @@ import { useBattleRoster } from '../scan/useBattleRoster';
 import { formFamilyIds, buildLegalIdsResolver, readBattleRoster } from '../scan/battleRoster';
 import { scanFrame, DEFAULT_DEPS } from '../scan/scanFrame';
 import type { SlotResult } from '../scan/types';
-import PlayerScanPanel from '../scan/PlayerScanPanel';
+import { ArenaPlayerScanReview } from '../scan/ArenaPlayerScanReview';
 import { detectPlayerPanels } from '../scan/playerPanels';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { useMoveList } from './useMoveList';
@@ -239,38 +239,34 @@ const OverlayApp: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto p-3">
-            {view === 'playerSaved' ? (
-              <div className="h-full grid place-items-center">
-                <div className="text-center space-y-3">
-                  <div className="text-sm font-bold" style={{ color: 'var(--ink-1)' }}>Team saved</div>
-                  <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Find it on the Teams page — moves, item and EVs included.</div>
-                  <button onClick={cancelPlayerScan} className="h-9 px-5 rounded-lg font-bold text-sm" style={{ background: 'var(--accent)', color: 'var(--navy-900)' }}>Done</button>
-                </div>
+          {view === 'playerSaved' ? (
+            <div className="flex-1 min-h-0 grid place-items-center p-3">
+              <div className="text-center space-y-3">
+                <div className="text-sm font-bold" style={{ color: 'var(--ink-1)' }}>Team saved</div>
+                <div className="text-xs" style={{ color: 'var(--ink-3)' }}>Find it on the Teams page — moves, item and EVs included.</div>
+                <button onClick={cancelPlayerScan} className="h-9 px-5 rounded-lg font-bold text-sm" style={{ background: 'var(--accent)', color: 'var(--navy-900)' }}>Done</button>
               </div>
-            ) : (
-              <>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 flex flex-col">
               {saveError && (
-                <p className="text-sm mb-2" style={{ color: 'var(--danger)' }} role="alert">
+                <p className="text-sm px-3 pt-2 shrink-0" style={{ color: 'var(--danger)' }} role="alert">
                   Saving failed — try again.
                 </p>
               )}
-              <PlayerScanPanel
-                pokemonList={pokemonList}
-                moveList={moveList}
-                sources={[]}
-                hint={
-                  <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
-                    Scanned from the game's team screens. To add the other screen (moves or stats), minimize this panel (▾), flip the screen in-game, and tap the bubble again.
-                  </p>
-                }
-                frame={playerFrame}
-                onSave={(members) => void handlePlayerSave(members)}
-                onCancel={cancelPlayerScan}
-              />
-              </>
-            )}
-          </div>
+              <div className="flex-1 min-h-0">
+                <ArenaPlayerScanReview
+                  pokemonList={pokemonList}
+                  moveList={moveList}
+                  sources={[]}
+                  hint="Scanned from the game's team screens. To add the other screen (moves or stats), minimize this panel (▾), flip the screen in-game, and tap the bubble again."
+                  frame={playerFrame}
+                  onSave={(members) => void handlePlayerSave(members)}
+                  onCancel={cancelPlayerScan}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

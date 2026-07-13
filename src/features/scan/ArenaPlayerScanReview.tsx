@@ -4,7 +4,7 @@ import { useViewportMode } from '@/hooks/useViewportMode';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
-import { filePickerSource, cameraSource } from './captureSource';
+import { filePickerSource, cameraSource, type CaptureSource, type CaptureSourceKind } from './captureSource';
 import CropStep from './CropStep';
 import PokemonImagePicker from './PokemonImagePicker';
 import { loadClassifier } from './classifier';
@@ -19,14 +19,18 @@ import type { PlayerScreenKind } from './playerTypes';
 
 const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
 const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: 'C', spd: 'D', spe: 'S' };
+const SOURCE_LABEL: Record<CaptureSourceKind, string> = { file: 'Add screenshot', camera: 'Take photo', mediaProjection: 'Scan this screen' };
+const DEFAULT_SOURCES: CaptureSource[] = [filePickerSource, cameraSource];
 
 /**
  * ArenaPlayerScanReview — the 9a "fix in place" landscape review: capture chips
  * → six-mon glance (confidence badges) → per-mon detail (species candidate band
  * + editable fields). Drop-in for `PlayerScanPanel` in the landscape scan slot;
- * same recognition pipeline, Arena-styled render only.
+ * same recognition pipeline, Arena-styled render only. Supports the overlay
+ * hosting seams too (`sources` [] to hide pickers, `hint` copy, `frame` for
+ * bubble-tap captures), so the Android bubble popup shares this polished view.
  */
-export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps }) => {
+export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
@@ -84,10 +88,31 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
     setPickerOpen(false);
   };
 
-  const captureFor = async (source: typeof filePickerSource | typeof cameraSource) => {
-    const frame = await source.capture();
-    if (frame) await addFrame(frame.blob);
+  // Capture buttons rendered in each screen chip. Overlay passes [] — frames
+  // arrive via bubble taps (the `frame` prop), so no in-app pickers.
+  const captureSources = sources ?? DEFAULT_SOURCES;
+
+  const captureFor = async (source: CaptureSource) => {
+    const captured = await source.capture();
+    if (captured) await addFrame(captured.blob);
   };
+
+  const renderSources = () =>
+    captureSources.map((s, i) => (
+      <button key={s.kind} type="button" style={i === 0 ? btnAccent : btnGhost} onClick={() => captureFor(s)}>
+        {SOURCE_LABEL[s.kind]}
+      </button>
+    ));
+
+  // Externally captured frames (overlay bubble taps): scan each seq once.
+  const lastFrameSeq = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (frame && frame.seq !== lastFrameSeq.current) {
+      lastFrameSeq.current = frame.seq;
+      void addFrame(frame.blob);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [frame?.seq]);
 
   const handleSave = () => {
     if (!merged || !vocab) return;
@@ -118,20 +143,23 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
       <div style={box}>
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 16px' }}>
           <p style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-1)', margin: '0 0 4px' }}>Scan your team</p>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
-            Add the two in-game screens — the moves &amp; item screen and the stats &amp; nature screen — in any order. Each screenshot is detected automatically; after the first, we&apos;ll ask for the other.
-          </p>
-          <div style={{ padding: 14, borderRadius: 'var(--r-md)', border: '1px solid var(--line-2)', background: 'var(--surface-inset)' }}>
-            {croppingKind && errImg?.blob ? (
-              <CropStep blob={errImg.blob} onCropped={(b) => { setCroppingKind(null); void addFrame(b); }} onCancel={() => setCroppingKind(null)} />
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                <button type="button" style={btnAccent} onClick={() => captureFor(filePickerSource)}>Add screenshot</button>
-                <button type="button" style={btnGhost} onClick={() => captureFor(cameraSource)}>Take photo</button>
-                {errImg?.blob && <button type="button" style={btnGhost} onClick={() => setCroppingKind(errImg === movesImage ? 'moves' : 'stats')}>Crop &amp; retry</button>}
-              </div>
-            )}
-          </div>
+          {hint ?? (
+            <p style={{ fontSize: 11.5, color: 'var(--ink-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
+              Add the two in-game screens — the moves &amp; item screen and the stats &amp; nature screen — in any order. Each screenshot is detected automatically; after the first, we&apos;ll ask for the other.
+            </p>
+          )}
+          {(croppingKind && errImg?.blob) || captureSources.length > 0 ? (
+            <div style={{ marginTop: 12, padding: 14, borderRadius: 'var(--r-md)', border: '1px solid var(--line-2)', background: 'var(--surface-inset)' }}>
+              {croppingKind && errImg?.blob ? (
+                <CropStep blob={errImg.blob} onCropped={(b) => { setCroppingKind(null); void addFrame(b); }} onCancel={() => setCroppingKind(null)} />
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {renderSources()}
+                  {errImg?.blob && <button type="button" style={btnGhost} onClick={() => setCroppingKind(errImg === movesImage ? 'moves' : 'stats')}>Crop &amp; retry</button>}
+                </div>
+              )}
+            </div>
+          ) : null}
           {busy && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 10 }}>Scanning…</p>}
           {(errImg?.error || lastError) && <p style={{ fontSize: 12, color: 'var(--danger)', marginTop: 10 }}>{errImg?.error || lastError}</p>}
         </div>
@@ -143,14 +171,16 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   if (openSlot == null) {
     return (
       <div style={box}>
+        {hint && (
+          <div style={{ flex: 'none', padding: '8px 16px', borderBottom: '1px solid var(--line-1)', fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.45 }}>{hint}</div>
+        )}
         {missingKind && (
           <div style={missingBar}>
             <Icon name="alert-triangle" size={13} color="var(--field)" />
             <span style={{ flex: 1, fontSize: 11, color: 'var(--ink-2)' }}>
               Only the {missingKind === 'stats' ? 'moves & item' : 'stats & nature'} screen was scanned — add {missingKind === 'stats' ? 'stats & nature' : 'moves & item'}.
             </span>
-            <button type="button" style={btnAccent} onClick={() => captureFor(filePickerSource)}>Add screenshot</button>
-            <button type="button" style={btnGhost} onClick={() => captureFor(cameraSource)}>Take photo</button>
+            {renderSources()}
           </div>
         )}
         {busy && <div style={{ flex: 'none', padding: '6px 16px', fontSize: 11, color: 'var(--ink-2)' }}>Scanning…</div>}
