@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Sprite, Icon } from '@/design-system/arena';
-import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
+import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
 import { filePickerSource, cameraSource } from './captureSource';
@@ -33,10 +33,12 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [croppingKind, setCroppingKind] = useState<PlayerScreenKind | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [resolvedSlots, setResolvedSlots] = useState<Record<number, boolean>>({});
+  const [reopenSlots, setReopenSlots] = useState<Record<number, boolean>>({});
 
   // Reset on hide (host closed).
   React.useEffect(() => {
-    if (!active) { reset(); setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false); }
+    if (!active) { reset(); setEdits({}); setOpenSlot(null); setCroppingKind(null); setPickerOpen(false); setResolvedSlots({}); setReopenSlots({}); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -60,6 +62,8 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const pickSpecies = (slot: number, id: number) => {
     setSlotSpecies(slot, id);                                   // re-scans + re-derives the slot
     setEdits((prev) => { const next = { ...prev }; delete next[slot]; return next; }); // drop stale local edits
+    setResolvedSlots((prev) => ({ ...prev, [slot]: true }));    // show the green "re-derived" banner
+    setReopenSlots((prev) => { const next = { ...prev }; delete next[slot]; return next; }); // a fresh pick closes any reopened band
     setPickerOpen(false);
   };
 
@@ -161,16 +165,19 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const e = edits[openSlot] ?? toEditable(s);
   const flags = deriveSlotFlags(s, vocab);
   const speciesConflict = flags.speciesUncertain || flags.speciesDisagreement || flags.illegalMoves.length > 0 || flags.badAbility;
-  const speciesEdited = e.speciesId !== s.species[0]?.id;
   const learnset = e.speciesId != null ? vocab?.movesFor(e.speciesId) ?? [] : [];
   const abilityOptions = e.speciesId != null ? vocab?.abilitiesFor(e.speciesId) ?? [] : [];
   const openName = e.speciesId != null ? basesById.get(e.speciesId)?.nameEn ?? 'Unknown' : '—';
+  const resolved = !!resolvedSlots[openSlot];
+  const reopened = !!reopenSlots[openSlot];
+  const showSpeciesBand = (speciesConflict && !resolved) || reopened;
 
   // Evidence sentences from flags (English, derivable).
   const evidence: string[] = [];
   flags.illegalMoves.forEach((mi) => { const nm = e.moves[mi] != null ? movesById.get(e.moves[mi]!)?.nameEn : null; if (nm) evidence.push(`${nm} isn't in ${openName}'s learnset.`); });
   if (flags.badAbility && s.ability.value) evidence.push(`${s.ability.value} isn't a ${openName} ability.`);
   if (flags.speciesDisagreement) evidence.push('The two screenshots read different species.');
+  if (evidence.length === 0) evidence.push('Not sure this is the right Pokémon.');
 
   return (
     <div style={box}>
@@ -184,7 +191,7 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
       </div>
 
       {/* species candidate band OR resolved banner */}
-      {speciesConflict && !speciesEdited ? (
+      {showSpeciesBand ? (
         <div style={{ flex: 'none', padding: '8px 16px 9px', background: 'var(--field-soft)', borderBottom: '1px solid var(--field-line)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7, flexWrap: 'wrap' }}>
             <Icon name="alert-triangle" size={13} color="var(--field)" />
@@ -205,10 +212,11 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
           </div>
           {pickerOpen && <div style={{ marginTop: 8 }}><PokemonImagePicker pokemonList={pokemonList} selectedId={e.speciesId} onSelect={(id) => pickSpecies(openSlot, id)} /></div>}
         </div>
-      ) : speciesEdited ? (
+      ) : resolved ? (
         <div style={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 7, padding: '6px 16px', background: 'var(--safe-soft)', borderBottom: '1px solid var(--safe-line)' }}>
           <Icon name="check" size={13} color="var(--safe)" />
           <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--safe)' }}>{openName} · re-derived</span>
+          <button onClick={() => setReopenSlots((prev) => ({ ...prev, [openSlot]: true }))} style={changeLink}>Change</button>
         </div>
       ) : null}
 
@@ -317,6 +325,7 @@ const backBtn: React.CSSProperties = { width: 30, height: 30, flex: 'none', disp
 const glanceCard = (flagged: boolean): React.CSSProperties => ({ display: 'flex', flexDirection: 'column', gap: 7, padding: 10, borderRadius: 'var(--r-md)', textAlign: 'left', cursor: 'pointer', background: 'var(--surface-card)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--line-1)'}`, minWidth: 0 });
 const confBadge = (flagged: boolean): React.CSSProperties => ({ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, flex: 'none', borderRadius: 999, background: flagged ? 'var(--field-soft)' : 'var(--safe-soft)', border: `1px solid ${flagged ? 'var(--field-line)' : 'var(--safe-line)'}` });
 const candTile = (active: boolean): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 8, padding: 7, borderRadius: 'var(--r-md)', background: 'var(--bg-page)', border: `1px solid ${active ? 'var(--accent)' : 'var(--line-2)'}`, cursor: 'pointer' });
+const changeLink: React.CSSProperties = { marginLeft: 'auto', padding: '2px 8px', fontSize: 10, fontWeight: 700, borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--safe)', border: '1px solid var(--safe-line)', cursor: 'pointer' };
 
 // Left/right column field editors, ported from PlayerScanPanel's control markup onto DS tokens.
 const fieldWrap: React.CSSProperties = { display: 'block', fontSize: 10, color: 'var(--ink-3)', marginBottom: 10 };
