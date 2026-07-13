@@ -14,6 +14,7 @@ import type { PlayerScanPanelProps } from './PlayerScanPanel';
 import type { PlayerScreenKind } from './playerTypes';
 
 const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
+const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
 
 /**
  * ArenaPlayerScanReview — the 9a "fix in place" landscape review: capture chips
@@ -160,6 +161,8 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
               const flags = deriveSlotFlags(s, vocab);
               const flagged = isSlotFlagged(flags);
               const name = e.speciesId != null ? basesById.get(e.speciesId)?.nameEn ?? 'Unknown' : '—';
+              const spStr = e.sp.map((v, i) => (v > 0 ? `${SP_SHORT[i]} ${v}` : null)).filter(Boolean).join(' · ');
+              const hasStats = s.statReads.length > 0;
               return (
                 <button key={s.slot} onClick={() => setOpenSlot(s.slot)} style={glanceCard(flagged)}>
                   {/* header row: sprite + name + confidence badge */}
@@ -196,6 +199,9 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
                     <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9.5, color: 'var(--ink-3)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                       <Icon name="zap" size={11} color="var(--ink-4)" />
                       <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.ability ?? 'No ability'}</span>
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, color: hasStats ? 'var(--ink-3)' : 'var(--ink-4)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {hasStats ? `SP ${spStr || '0'}` : 'SP · scan stats screen'}
                     </span>
                   </span>
                 </button>
