@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icon, Sprite, TypeBadge } from '@/design-system/arena';
 import type { TeamWithMembers } from '@/db/repositories/team.repo';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
@@ -21,6 +21,8 @@ export interface ArenaReviewMonProps {
   onSave: (config: PokemonConfig) => void;
   onSendToCalc?: () => void;
   saveLabel?: string;
+  /** Optional content rendered directly under the header — e.g. the scan flow's species-correction band. */
+  banner?: React.ReactNode;
 }
 
 const STATS: { key: string; label: string; short: string; ev: string; baseKey: keyof PokemonConfig; spKey: keyof PokemonConfig }[] = [
@@ -46,6 +48,70 @@ const footerBtn = (primary: boolean): React.CSSProperties => ({
 });
 
 /**
+ * MoveField — app-styled move autocomplete replacing the native <datalist>
+ * (which renders unreadably, especially in dark theme). Shows the current move,
+ * filters as you type, and opens a token-styled dropdown like the ability picker.
+ */
+const MoveField: React.FC<{ index: number; value: MoveData | null; moveList: MoveData[]; onSelect: (m: MoveData | null) => void }> = ({ index, value, moveList, onSelect }) => {
+  const [text, setText] = useState(value?.nameEn ?? '');
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  useEffect(() => { setText(value?.nameEn ?? ''); }, [value]);
+
+  const type = value ? (REVERSE_TYPE_IDS[value.typeId] ?? 'normal') : null;
+  const results = useMemo(() => {
+    const t = text.trim().toLowerCase();
+    if (!t) return [];
+    return moveList.filter((m) => m.nameEn.toLowerCase().includes(t) || (m.nameZh && m.nameZh.includes(text.trim()))).slice(0, 12);
+  }, [text, moveList]);
+
+  const commit = (m: MoveData) => { onSelect(m); setText(m.nameEn); setOpen(false); };
+  const close = () => { setOpen(false); setText(value?.nameEn ?? ''); };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+      <span style={{ width: 16, height: 16, flex: 'none', borderRadius: 5, background: type ? `var(--type-${type})` : 'var(--line-2)' }} />
+      <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+        <input
+          type="text"
+          value={text}
+          placeholder={`Move ${index + 1}`}
+          onChange={(e) => { const v = e.target.value; setText(v); setOpen(true); setActive(0); if (!v.trim()) onSelect(null); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (!open || results.length === 0) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActive((p) => (p + 1) % results.length); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((p) => (p - 1 + results.length) % results.length); }
+            else if (e.key === 'Enter') { e.preventDefault(); commit(results[active] ?? results[0]); }
+            else if (e.key === 'Escape') close();
+          }}
+          style={{ ...textInput, width: '100%' }}
+        />
+        {open && results.length > 0 && (
+          <>
+            <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+            <div style={{ position: 'absolute', [index >= 2 ? 'bottom' : 'top']: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 100, background: 'var(--surface-card)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-pop)', maxHeight: 208, overflowY: 'auto', padding: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {results.map((m, i) => {
+                const rt = REVERSE_TYPE_IDS[m.typeId] ?? 'normal';
+                const on = i === active;
+                return (
+                  <button key={m.id} type="button" onMouseDown={(e) => { e.preventDefault(); commit(m); }} onMouseEnter={() => setActive(i)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 'var(--r-sm)', background: on ? 'var(--accent-soft)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-ui)' }}>
+                    <span style={{ width: 10, height: 10, flex: 'none', borderRadius: 3, background: `var(--type-${rt})` }} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 600, color: on ? 'var(--accent)' : 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nameEn}</span>
+                    <span style={{ flex: 'none', fontSize: 9.5, fontWeight: 700, color: on ? 'var(--accent)' : 'var(--ink-4)' }}>{m.damageClassId === 2 ? 'Phys' : m.damageClassId === 3 ? 'Spec' : 'Status'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/**
  * ArenaReviewMon — the per-Pokémon "Review & save" screen (Turn 3c of the Arena
  * design). Stats and moves merge into one editable profile: moves / ability /
  * item on the left, derived stats with editable SP on the right. Tap a stat to
@@ -54,7 +120,7 @@ const footerBtn = (primary: boolean): React.CSSProperties => ({
  * Note: the app uses Champions SP (0–32) via championsStat — the same numbers
  * the calculator shows — rather than the mock's raw 0–252 EVs.
  */
-export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel }) => {
+export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName, pokemonList, moveList, onBack, onSave, onSendToCalc, saveLabel, banner }) => {
   const c = member.configuration;
   const species = pokemonList.find((p) => p.id === c.selectedId);
   const [sp, setSp] = useState<Record<string, number>>({
@@ -91,11 +157,6 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
     if (up && !down) { setDown(key); return; }
     if (down && !up) { setUp(key); return; }
     if (!up && !down) setUp(key);
-  };
-
-  const setMove = (i: number, name: string) => {
-    const m = moveList.find((mv) => mv.nameEn.toLowerCase() === name.trim().toLowerCase()) ?? null;
-    setMoves((prev) => prev.map((v, idx) => (idx === i ? m : v)));
   };
 
   const buildConfig = (): PokemonConfig => ({
@@ -139,6 +200,8 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
           <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--safe)' }}>Stats + Moves merged</span>
         </span>
       </div>
+
+      {banner}
 
       {/* body: moves | stats */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
@@ -299,16 +362,15 @@ export const ArenaReviewMon: React.FC<ArenaReviewMonProps> = ({ member, teamName
             </div>
             <div style={{ height: 1, background: 'var(--line-1)', margin: '3px 0' }} />
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-4)' }}>Moves</div>
-            {[0, 1, 2, 3].map((i) => {
-              const type = moves[i] ? (REVERSE_TYPE_IDS[moves[i]!.typeId] ?? 'normal') : null;
-              return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <span style={{ width: 16, height: 16, flex: 'none', borderRadius: 5, background: type ? `var(--type-${type})` : 'var(--line-2)' }} />
-                  <input list="review-moves-dl" defaultValue={moves[i]?.nameEn ?? ''} onChange={(e) => setMove(i, e.target.value)} placeholder={`Move ${i + 1}`} style={textInput} />
-                </div>
-              );
-            })}
-            <datalist id="review-moves-dl">{moveList.map((m) => <option key={m.id} value={m.nameEn} />)}</datalist>
+            {[0, 1, 2, 3].map((i) => (
+              <MoveField
+                key={i}
+                index={i}
+                value={moves[i]}
+                moveList={moveList}
+                onSelect={(m) => setMoves((prev) => prev.map((v, idx) => (idx === i ? m : v)))}
+              />
+            ))}
           </div>
         </div>
 

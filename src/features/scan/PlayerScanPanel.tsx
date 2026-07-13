@@ -9,7 +9,8 @@ import PokemonImagePicker from './PokemonImagePicker';
 import CropStep from './CropStep';
 import { filePickerSource, cameraSource, type CaptureSource, type CaptureSourceKind } from './captureSource';
 import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
-import { buildConfigs, type MergedPlayerScan, type PlayerSlot } from './mergePlayerScan';
+import { buildConfigs } from './mergePlayerScan';
+import { toEditable, applyEditsToSlots, type EditableSlot } from './playerScanFlags';
 import { loadClassifier } from './classifier';
 
 export interface PlayerScanPanelProps {
@@ -31,16 +32,6 @@ export interface PlayerScanPanelProps {
   frame?: { blob: Blob; seq: number } | null;
 }
 
-// Editable copy of a slot's fields, seeded from the merged scan and mutated locally.
-interface EditableSlot {
-  speciesId: number | null;
-  ability: string | null;
-  item: string | null;
-  moves: (number | null)[];
-  sp: number[]; // length 6, [hp,atk,def,spa,spd,spe]
-  nature: string;
-}
-
 const STAT_LABELS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
 
 const CHIP_LABEL: Record<PlayerScreenKind, string> = { moves: 'Moves & item', stats: 'Stats & nature' };
@@ -51,15 +42,6 @@ const SOURCE_LABEL: Record<CaptureSourceKind, string> = {
   camera: 'Take photo',
   mediaProjection: 'Scan this screen',
 };
-
-const toEditable = (slot: PlayerSlot): EditableSlot => ({
-  speciesId: slot.species[0]?.id ?? null,
-  ability: slot.ability.value,
-  item: slot.item.value,
-  moves: slot.moves.map((m) => m.value),
-  sp: [0, 1, 2, 3, 4, 5].map((i) => slot.statReads[i]?.sp ?? 0),
-  nature: slot.nature.name,
-});
 
 /**
  * PlayerScanPanel — the "scan my team" body: two screenshot chips (moves/item +
@@ -148,20 +130,7 @@ export const PlayerScanPanel: React.FC<PlayerScanPanelProps> = ({ pokemonList, m
 
   const handleSave = () => {
     if (!merged || !vocab) return;
-    const editedSlots: PlayerSlot[] = merged.slots.map((slot) => {
-      const e = edits[slot.slot] ?? toEditable(slot);
-      const species = e.speciesId != null ? [{ id: e.speciesId, score: 1 }] : slot.species;
-      return {
-        ...slot,
-        species,
-        ability: { ...slot.ability, value: e.ability },
-        item: { ...slot.item, value: e.item },
-        moves: slot.moves.map((m, i) => ({ ...m, value: e.moves[i] ?? null })),
-        statReads: e.sp.map((sp, i) => ({ ...(slot.statReads[i] ?? { stat: null, mult: null, consistent: false }), sp })),
-        nature: { ...slot.nature, name: e.nature },
-      };
-    });
-    const edited: MergedPlayerScan = { ...merged, slots: editedSlots };
+    const edited = applyEditsToSlots(merged, edits);
     const configs = buildConfigs(edited, basesById, movesById, vocab);
     onSave(configs);
   };

@@ -9,7 +9,7 @@ import { matchSpecies } from '@/features/pokemon/utils/showdown-matcher';
 import { getNatureStats } from '@/features/pokemon/utils/pokemon-natures';
 import { fetchTeamFromUrl } from '@/services/paste-fetcher';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { PlayerScanPanel } from '@/features/scan/PlayerScanPanel';
+import { ArenaPlayerScanReview } from '@/features/scan/ArenaPlayerScanReview';
 import { ArenaReviewMon } from './ArenaReviewMon';
 
 export interface ArenaAddTeamProps {
@@ -158,7 +158,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
       {/* body */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', padding: '14px 16px' }}>
         {method === 'scan' ? (
-          <PlayerScanPanel pokemonList={pokemonList} moveList={moveList} onSave={onScanSave} />
+          <ArenaPlayerScanReview pokemonList={pokemonList} moveList={moveList} onSave={onScanSave} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', gap: 8 }}>
