@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Sprite, Icon } from '@/design-system/arena';
+import { Sprite, Icon, ItemIcon } from '@/design-system/arena';
 import { usePlayerTeamScan } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
@@ -8,6 +8,8 @@ import CropStep from './CropStep';
 import PokemonImagePicker from './PokemonImagePicker';
 import { loadClassifier } from './classifier';
 import { NATURES, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
+import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
+import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PlayerScanPanelProps } from './PlayerScanPanel';
 import type { PlayerScreenKind } from './playerTypes';
 
@@ -31,6 +33,14 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
   const basesById = useMemo(() => new Map(pokemonList.map((p) => [p.id, p])), [pokemonList]);
   const movesById = useMemo(() => new Map(moveList.map((m) => [m.id, m])), [moveList]);
   const itemNames = useMemo(() => [...new Set((vocab?.items ?? []).map((i) => i.key))], [vocab]);
+
+  // Move's type color for the glance dot + name; neutral when unknown/empty.
+  const moveTypeVar = (mv: number | null): string => {
+    if (mv == null) return 'var(--ink-3)';
+    const typeId = (movesById.get(mv) as MoveData | undefined)?.typeId;
+    const typeName = typeId != null ? REVERSE_TYPE_IDS[typeId] : undefined;
+    return typeName ? `var(--type-${typeName})` : 'var(--ink-2)';
+  };
 
   const [edits, setEdits] = useState<Record<number, EditableSlot>>({});
   const [openSlot, setOpenSlot] = useState<number | null>(null);
@@ -162,14 +172,31 @@ export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonL
                       <Icon name={flagged ? 'alert-triangle' : 'check'} size={9} color={flagged ? 'var(--field)' : 'var(--safe)'} />
                     </span>
                   </span>
-                  {/* four move rows — 2-col grid; flags an illegal move */}
+                  {/* four move rows — 2-col grid; type-colored dot + name, flags an illegal move */}
                   <span style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px', width: '100%' }}>
-                    {e.moves.map((mv, mi) => (
-                      <span key={mi} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9, fontWeight: 600, color: 'var(--ink-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {mv != null ? movesById.get(mv)?.nameEn ?? '—' : '—'}
-                        {flags.illegalMoves.includes(mi) && <Icon name="alert-triangle" size={8} color="var(--field)" />}
-                      </span>
-                    ))}
+                    {e.moves.map((mv, mi) => {
+                      const typeVar = moveTypeVar(mv);
+                      return (
+                        <span key={mi} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9, fontWeight: 600, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          <span style={{ width: 7, height: 7, flex: 'none', borderRadius: 2, background: mv != null ? typeVar : 'var(--line-2)' }} />
+                          <span style={{ minWidth: 0, flex: 1, color: typeVar, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {mv != null ? movesById.get(mv)?.nameEn ?? '—' : '—'}
+                          </span>
+                          {flags.illegalMoves.includes(mi) && <Icon name="alert-triangle" size={8} color="var(--field)" />}
+                        </span>
+                      );
+                    })}
+                  </span>
+                  {/* item + ability — from the moves & item screen */}
+                  <span style={{ display: 'flex', flexDirection: 'column', gap: 3, width: '100%', marginTop: 'auto' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9.5, fontWeight: 600, color: e.item ? 'var(--ink-2)' : 'var(--ink-4)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      {e.item && <ItemIcon item={e.item} size={13} framed={false} />}
+                      <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.item ?? 'No item'}</span>
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 9.5, color: 'var(--ink-3)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                      <Icon name="zap" size={11} color="var(--ink-4)" />
+                      <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.ability ?? 'No ability'}</span>
+                    </span>
                   </span>
                 </button>
               );
