@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Sprite, Icon, ItemIcon, TypeBadge } from '@/design-system/arena';
 import { useViewportMode } from '@/hooks/useViewportMode';
-import { usePlayerTeamScan } from './usePlayerTeamScan';
+import { usePlayerTeamScan, type PlayerTeamScanDeps } from './usePlayerTeamScan';
 import { buildConfigs } from './mergePlayerScan';
 import { toEditable, applyEditsToSlots, deriveSlotFlags, isSlotFlagged, type EditableSlot } from './playerScanFlags';
 import { filePickerSource, cameraSource, type CaptureSource, type CaptureSourceKind } from './captureSource';
@@ -14,7 +14,7 @@ import { ArenaReviewMon } from '@/features/teams/components/mobile/ArenaReviewMo
 import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { PokemonConfig } from '@/features/pokemon/hooks/usePokemonEditor';
 import type { TeamWithMembers } from '@/db/repositories/team.repo';
-import type { PlayerScanPanelProps } from './PlayerScanPanel';
+import type { PokemonBaseStats } from '@/components/molecules/PokemonSearchSelect';
 import type { PlayerScreenKind } from './playerTypes';
 
 const SP_SHORT = ['H', 'A', 'B', 'C', 'D', 'S'];
@@ -22,15 +22,34 @@ const STAT_SHORT: Record<string, string> = { hp: 'H', atk: 'A', def: 'B', spa: '
 const SOURCE_LABEL: Record<CaptureSourceKind, string> = { file: 'Add screenshot', camera: 'Take photo', mediaProjection: 'Scan this screen' };
 const DEFAULT_SOURCES: CaptureSource[] = [filePickerSource, cameraSource];
 
+export interface PlayerScanReviewProps {
+  pokemonList: PokemonBaseStats[];
+  moveList: MoveData[];
+  onSave: (members: PokemonConfig[]) => void;
+  /** When provided, a Cancel button shows; use to close the host (modal) and clear state. */
+  onCancel?: () => void;
+  /** Whether the panel is currently shown — drives classifier warmup and reset-on-hide. Default true. */
+  active?: boolean;
+  /** test-only affordance: inject fake usePlayerTeamScan deps instead of the real DEFAULT_PLAYER_DEPS */
+  deps?: PlayerTeamScanDeps;
+  /** Capture affordances rendered in each screen chip. Defaults to file picker +
+   *  camera (Teams flows). Pass [] to hide them (overlay: frames arrive via `frame`). */
+  sources?: CaptureSource[];
+  /** Replaces the default intro copy (overlay: minimize-and-bubble-tap instructions). */
+  hint?: React.ReactNode;
+  /** Externally captured frame; scanned whenever `seq` advances (overlay bubble taps). */
+  frame?: { blob: Blob; seq: number } | null;
+}
+
 /**
- * ArenaPlayerScanReview — the 9a "fix in place" landscape review: capture chips
+ * ArenaPlayerScanReview — the "fix in place" scan review: capture card
  * → six-mon glance (confidence badges) → per-mon detail (species candidate band
- * + editable fields). Drop-in for `PlayerScanPanel` in the landscape scan slot;
- * same recognition pipeline, Arena-styled render only. Supports the overlay
- * hosting seams too (`sources` [] to hide pickers, `hint` copy, `frame` for
- * bubble-tap captures), so the Android bubble popup shares this polished view.
+ * + editable fields). Hosted by the desktop/landscape new-team "Scan" tab
+ * (ArenaAddTeam) and the Android overlay. Supports the overlay hosting seams
+ * (`sources` [] to hide pickers, `hint` copy, `frame` for bubble-tap captures),
+ * so the Android bubble popup shares this polished view.
  */
-export const ArenaPlayerScanReview: React.FC<PlayerScanPanelProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame }) => {
+export const ArenaPlayerScanReview: React.FC<PlayerScanReviewProps> = ({ pokemonList, moveList, onSave, onCancel, active = true, deps, sources, hint, frame }) => {
   const { movesImage, statsImage, merged, vocab, lastError, busy, addFrame, setSlotSpecies, reset } =
     usePlayerTeamScan(pokemonList, deps);
 
