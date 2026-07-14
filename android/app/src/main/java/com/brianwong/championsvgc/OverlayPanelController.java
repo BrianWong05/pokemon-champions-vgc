@@ -80,6 +80,12 @@ public class OverlayPanelController {
         eval("window.__overlayBubbleTap && window.__overlayBubbleTap();");
     }
 
+    /** Bubble double-tap: rescan the screen. The web layer auto-routes the frame. */
+    public void onBubbleDoubleTap() {
+        if (webView == null) createWebView();
+        eval("window.__overlayBubbleDoubleTap && window.__overlayBubbleDoubleTap();");
+    }
+
     private void eval(String js) {
         main.post(() -> { if (webView != null) webView.evaluateJavascript(js, null); });
     }

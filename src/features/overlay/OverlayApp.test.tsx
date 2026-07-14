@@ -11,6 +11,7 @@ const bridgeMock = vi.hoisted(() => ({
   setWindowState: vi.fn(),
   setBubbleTag: vi.fn(),
   onBubbleTap: vi.fn((cb: () => void) => { (globalThis as any).__tap = cb; return () => {}; }),
+  onBubbleDoubleTap: vi.fn((cb: () => void) => { (globalThis as any).__doubleTap = cb; return () => {}; }),
   onBack: vi.fn((cb: () => void) => { (globalThis as any).__back = cb; return () => {}; }),
 }));
 const scanFrameMock = vi.hoisted(() => vi.fn());
@@ -78,6 +79,24 @@ describe('OverlayApp', () => {
     expect(await screen.findByTestId('calc')).toBeTruthy();
     expect(bridgeMock.setWindowState).toHaveBeenCalledWith('panel');
     expect(bridgeMock.blinkAndCapture).not.toHaveBeenCalled();
+    expect(scanFrameMock).not.toHaveBeenCalled();
+  });
+
+  it('double-tap with the roster locked rescans the screen and auto-routes an opponent team to confirm', async () => {
+    localStorage.setItem('scan.battleRoster', JSON.stringify([445, 823]));
+    scanFrameMock.mockResolvedValue({ mode: 'team', slots: [{ box: { x: 0, y: 0, w: 1, h: 1 }, candidates: [{ id: 445, score: 0.9 }] }] });
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__doubleTap(); });
+    expect(bridgeMock.blinkAndCapture).toHaveBeenCalled();
+    expect(await screen.findByText(/Confirm opponent roster/)).toBeTruthy();
+  });
+
+  it('double-tap on a my-team "Replicate This Team?" frame auto-routes to the my-team scan', async () => {
+    detectPlayerPanelsMock.mockReturnValue({});
+    render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__doubleTap(); });
+    expect(bridgeMock.blinkAndCapture).toHaveBeenCalled();
+    expect(await screen.findByText(/Scan my team/)).toBeTruthy();
     expect(scanFrameMock).not.toHaveBeenCalled();
   });
 

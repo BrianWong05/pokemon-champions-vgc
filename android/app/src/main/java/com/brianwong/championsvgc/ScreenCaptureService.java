@@ -25,6 +25,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -177,8 +178,6 @@ public class ScreenCaptureService extends Service {
         tagLp.topMargin = -dp(7);
         box.addView(bubbleTagView, tagLp);
 
-        box.setOnClickListener(v -> { if (panelController != null) panelController.onBubbleTap(); });
-
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
@@ -192,7 +191,25 @@ public class ScreenCaptureService extends Service {
         bubbleLp.x = 24;
         bubbleLp.y = 240;
 
-        // Drag to move; a sub-slop release counts as a tap (performClick).
+        // Single tap opens the calculator; double tap rescans. GestureDetector
+        // fires exactly one (onSingleTapConfirmed waits out the double-tap
+        // window) and won't fire either when the touch turns into a drag.
+        final GestureDetector tapDetector = new GestureDetector(this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onSingleTapConfirmed(MotionEvent e) {
+                        if (panelController != null) panelController.onBubbleTap();
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+                        if (panelController != null) panelController.onBubbleDoubleTap();
+                        return true;
+                    }
+                });
+
+        // Drag to move; taps/double-taps are handled by tapDetector.
         final int slop = ViewConfiguration.get(this).getScaledTouchSlop();
         box.setOnTouchListener(new View.OnTouchListener() {
             private int startX, startY;
@@ -201,6 +218,7 @@ public class ScreenCaptureService extends Service {
 
             @Override
             public boolean onTouch(View v, MotionEvent e) {
+                tapDetector.onTouchEvent(e);
                 switch (e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         dragging = false;
@@ -221,10 +239,8 @@ public class ScreenCaptureService extends Service {
                         return true;
                     }
                     case MotionEvent.ACTION_UP:
-                        if (!dragging) v.performClick();
-                        return true;
                     default:
-                        return false;
+                        return true;
                 }
             }
         });

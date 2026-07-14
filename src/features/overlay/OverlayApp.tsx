@@ -172,6 +172,10 @@ const OverlayApp: React.FC = () => {
 
   const rescan = useCallback(() => void runScan(overlayBridge.blinkAndCapture()), [runScan]);
 
+  // Double-tap the bubble: rescan the screen. runScan auto-routes the frame —
+  // opponent team-preview -> confirm, own "Replicate This Team?" -> my-team scan.
+  useEffect(() => overlayBridge.onBubbleDoubleTap(rescan), [rescan]);
+
   const handleConfirm = useCallback((ids: number[]) => {
     confirmRoster(ids);
     overlayBridge.setBubbleTag('calc');
