@@ -6,9 +6,12 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   maxWidth?: string;
+  /** Overrides the default padded, scrolling body wrapper — e.g. a fixed-height,
+   *  edge-to-edge body that hosts a component managing its own scroll. */
+  bodyClassName?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-2xl', bodyClassName }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -45,7 +48,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidt
             </button>
           </div>
         )}
-        <div className="p-6 overflow-y-auto">
+        <div className={bodyClassName ?? 'p-6 overflow-y-auto'}>
           {children}
         </div>
       </div>

@@ -4,9 +4,8 @@ import { useTeams, TeamWithMembers } from '@/features/teams/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
-import TeamShowdownImportModal from '@/components/organisms/TeamShowdownImportModal';
+import Modal from '@/components/atoms/Modal';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
-import PlayerScanModal from '@/features/scan/PlayerScanModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
 import { getDb } from '@/db';
@@ -29,15 +28,11 @@ const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam, updateTeam } = useTeams();
   const { format } = useFormat();
   const navigate = useNavigate();
-  const [isCreating, setIsCreating] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
   
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
-  const [isPlayerScanOpen, setIsPlayerScanOpen] = useState(false);
   const { toast } = useToast();
   const mode = useViewportMode();
   const isMobile = mode === 'arena';
@@ -208,7 +203,6 @@ const TeamsPage: React.FC = () => {
       teamId = opts.teamId;
     } else {
       teamId = await createTeam(teamName, newMembers);
-      setIsImportModalOpen(false);
     }
 
     if (corrections.length > 0) {
@@ -223,7 +217,6 @@ const TeamsPage: React.FC = () => {
     if (!members.length) return;
     const first = pokemonList.find(p => p.id === members[0].selectedId);
     const teamId = await createTeam(`${first?.nameEn ?? 'Scanned'}'s Team`, members);
-    setIsPlayerScanOpen(false);
     if (mode !== 'arena-landscape') navigate(`/teams/${teamId}`);
   };
 
@@ -235,20 +228,6 @@ const TeamsPage: React.FC = () => {
       await updateTeam(team.id, team.name, members);
     }
     setReviewTarget(null);
-  };
-
-  const handleCreateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTeamName.trim()) return;
-
-    try {
-      const newTeamId = await createTeam(newTeamName.trim());
-      setNewTeamName('');
-      setIsCreating(false);
-      navigate(`/teams/${newTeamId}`);
-    } catch (err) {
-      console.error('Error creating team:', err);
-    }
   };
 
   const handleDeleteTeam = async (id: string, name: string) => {
@@ -366,67 +345,25 @@ const TeamsPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-ink-1">Teams</h1>
         <div className="flex gap-2">
           <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="text-accent bg-accent-soft hover:bg-accent-soft-hover px-4 py-2 rounded-lg transition-colors font-medium"
-          >
-            Import team
-          </button>
-          <button
             onClick={() => setIsScanModalOpen(true)}
             className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 hover:bg-raise"
           >
             Scan team
           </button>
           <button
-            onClick={() => setIsPlayerScanOpen(true)}
-            className="px-4 py-2 rounded bg-inset text-ink-1 border border-line-2 hover:bg-raise"
-          >
-            Scan my team
-          </button>
-          <button
-            onClick={() => setIsCreating(true)}
+            onClick={() => setCreatingTeam(true)}
             className="bg-accent text-accent-ink px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors"
           >
-            Create new team
+            Import team
           </button>
         </div>
       </div>
 
-      {isCreating && (
-        <form onSubmit={handleCreateTeam} className="bg-card p-4 rounded-xl mb-6 border border-line">
-          <h2 className="text-lg font-semibold mb-3 text-ink-1">Create team</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newTeamName}
-              onChange={(e) => setNewTeamName(e.target.value)}
-              placeholder="Team Name"
-              className="flex-1 border border-line-2 rounded-md px-3 py-2 bg-inset text-ink-1 placeholder:text-ink-4 focus:outline-none focus:ring-2 focus:ring-accent"
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="px-4 py-2 text-ink-2 hover:bg-raise rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!newTeamName.trim()}
-              className="bg-accent text-accent-ink px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-45"
-            >
-              Save
-            </button>
-          </div>
-        </form>
-      )}
-
-      {teams.length === 0 && !isCreating ? (
+      {teams.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-xl border border-line">
           <p className="text-ink-3 mb-4">You haven't created any teams yet.</p>
           <button
-            onClick={() => setIsCreating(true)}
+            onClick={() => setCreatingTeam(true)}
             className="text-accent font-semibold hover:underline"
           >
             Create your first team
@@ -512,24 +449,24 @@ const TeamsPage: React.FC = () => {
         />
       )}
 
-      <TeamShowdownImportModal
-        isOpen={isImportModalOpen}
-        onClose={() => setIsImportModalOpen(false)}
-        onImport={handleImportTeam}
-      />
+      {creatingTeam && (
+        <Modal isOpen onClose={closeAddTeam} maxWidth="max-w-5xl" bodyClassName="h-[80vh]">
+          <ArenaAddTeam
+            pokemonList={pokemonList}
+            moveList={moveList}
+            initialMethod="paste"
+            onBack={closeAddTeam}
+            onScanSave={handleAddTeamScanSave}
+            onCreate={handleAddTeamCreate}
+          />
+        </Modal>
+      )}
 
       <ScanTeamModal
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
         onImport={handleImportTeam}
         pokemonList={pokemonList}
-      />
-      <PlayerScanModal
-        isOpen={isPlayerScanOpen}
-        onClose={() => setIsPlayerScanOpen(false)}
-        pokemonList={pokemonList}
-        moveList={moveList}
-        onSave={handleSavePlayerTeam}
       />
       <ToastNotification message={toast} />
     </div>
