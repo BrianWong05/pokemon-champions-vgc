@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CalcState, CalcAction } from '@/features/damage-calculator/hooks/useCalculatorState';
 import type { DamageResult } from '@/components/organisms/ResultsPanel';
-import { Card, CardHeader, Sprite, TypeBadge, ItemIcon, SelectRow, StatField, StatGrid } from '@/design-system/arena';
+import { Card, CardHeader, Sprite, TypeBadge, ItemIcon, SelectRow, StatGrid, WheelPicker, SP_OPTIONS } from '@/design-system/arena';
 import { ArenaMoveList } from './ArenaMoveList';
 
 type SpKey = 'spHp' | 'spAtk' | 'spDef' | 'spSpa' | 'spSpd' | 'spSpe';
@@ -79,12 +79,13 @@ export function ArenaMonCard({ side, role, state, dispatch, nameOf, onOpenPicker
 
       <StatGrid>
         {SP_FIELDS.map(({ label, key }) => (
-          <StatField
+          <WheelPicker
             key={key}
             label={label}
-            value={s[key]}
+            options={SP_OPTIONS}
+            index={s[key]}
             active={s[key] > 0}
-            onChange={(e) => dispatch({ type: 'SET_SP', payload: { side, key, val: Number(e.target.value) || 0 } })}
+            onChange={(i) => dispatch({ type: 'SET_SP', payload: { side, key, val: i } })}
           />
         ))}
       </StatGrid>

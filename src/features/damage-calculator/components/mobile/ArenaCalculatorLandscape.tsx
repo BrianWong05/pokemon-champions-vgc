@@ -6,10 +6,11 @@ import type { MoveData } from '@/components/molecules/MoveSearchSelect';
 import type { Spread } from '@/features/damage-calculator/utils/common-spreads';
 import { useCalculatorActions } from '@/features/damage-calculator/hooks/useCalculatorActions';
 import { useDamageScenarios, ScenarioRange } from '@/features/damage-calculator/hooks/useDamageScenarios';
-import { buildSpeedCompare, speedFormula, fmtStage } from '@/features/damage-calculator/utils/speed';
+import { buildSpeedCompare, speedFormula } from '@/features/damage-calculator/utils/speed';
 import { megaCycleTarget } from '@/features/damage-calculator/utils/mega';
 import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
-import { Sprite, KOVerdict, koVerdictFromText, Icon, TypeBadge } from '@/design-system/arena';
+import { natureForStatWheel } from '@/features/pokemon/utils/pokemon-natures';
+import { Sprite, KOVerdict, koVerdictFromText, Icon, TypeBadge, WheelPicker, SP_OPTIONS, RANK_OPTIONS, NATURE_OPTIONS } from '@/design-system/arena';
 import type { KoTone } from '@/design-system/arena';
 import { ArenaPickerSheet, CorePickerField } from './ArenaPickerSheet';
 import { ArenaMovePickerSheet } from './ArenaMovePickerSheet';
@@ -23,15 +24,10 @@ type Side = 'p1' | 'p2';
 type Actions = ReturnType<typeof useCalculatorActions>;
 
 const STAT_LABEL: Record<string, string> = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
-const EV_STEP = 4;
-const EV_MAX = 252;
 const KO_COLOR: Record<KoTone, string> = { safe: 'var(--safe)', danger: 'var(--danger)', field: 'var(--field)' };
 
 /* ---------- shared inline styles (from the 7a design tokens) ---------- */
 
-const tuneBox: React.CSSProperties = { padding: '4px 6px', borderRadius: 8, background: 'var(--surface-inset)', border: '1px solid var(--line-1)', minWidth: 0, textAlign: 'left', cursor: 'pointer' };
-const tuneBoxOn: React.CSSProperties = { ...tuneBox, background: 'var(--accent-soft)', border: '1px solid var(--accent-soft-line)' };
-const tuneLabel: React.CSSProperties = { fontSize: 8.5, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const microBtn: React.CSSProperties = { width: 18, height: 18, flex: 'none', borderRadius: 5, background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, cursor: 'pointer', lineHeight: 1, display: 'grid', placeItems: 'center', padding: 0 };
 const metaPill: React.CSSProperties = { flex: '1 1 0', minWidth: 0, display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 999, background: 'var(--surface-inset)', border: '1px solid var(--line-1)', color: 'var(--ink-2)', fontSize: 9.5, fontWeight: 600, cursor: 'pointer' };
 const addBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, width: '100%', minHeight: 24, borderRadius: 8, background: 'transparent', border: '1px dashed var(--line-2)', color: 'var(--ink-3)', fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden' };
@@ -102,28 +98,6 @@ function SideHeader({ side, name, tone, badge, onOpenSpecies, mega }: {
         </div>
       </div>
       <StatBlock side={side} />
-    </div>
-  );
-}
-
-function TuneStat({ label, value, active, onClick }: { label: string; value: React.ReactNode; active?: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={active ? tuneBoxOn : tuneBox}>
-      <div style={tuneLabel}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', marginTop: 2 }}>{value}</div>
-    </button>
-  );
-}
-
-function MicroStepper({ label, value, active, onDec, onInc }: { label: string; value: number; active?: boolean; onDec: () => void; onInc: () => void }) {
-  return (
-    <div style={active ? tuneBoxOn : tuneBox}>
-      <div style={tuneLabel}>{label}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
-        <button aria-label={`Lower ${label}`} onClick={onDec} style={microBtn}>−</button>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 700, color: active ? 'var(--accent)' : 'var(--ink-1)', flex: 1, textAlign: 'center' }}>{value}</span>
-        <button aria-label={`Raise ${label}`} onClick={onInc} style={microBtn}>+</button>
-      </div>
     </div>
   );
 }
@@ -233,9 +207,6 @@ export function ArenaCalculatorLandscape({
     { baseSpe: state[defDir].baseSpe, speStage: state[defDir].stages.spe || 0, isTailwind: state[defDir].isTailwind },
   );
 
-  const natureShort = (s: SideState) =>
-    s.boostedStat ? `+${STAT_LABEL[s.boostedStat] ?? s.boostedStat}` : '—';
-
   // Offensive/defensive stat that matters for the attacker's active move category:
   // physical → atk/def, special (or no move) → spa/spd. Mirrors the portrait build.
   const p1ActiveMove = state.p1.moves[state.p1.activeMoveIndex] as MoveData | null;
@@ -247,8 +218,12 @@ export function ArenaCalculatorLandscape({
   const p2DefLabel = p1MoveIsPhysical ? 'Def SP' : 'SpD SP';
   const p2RankStat = p1MoveIsPhysical ? 'def' : 'spd';
 
-  const stepSp = (side: Side, key: keyof SideState, cur: number, delta: number) =>
-    dispatch({ type: 'SET_SP', payload: { side, key: key as string, val: Math.max(0, Math.min(EV_MAX, cur + delta)) } });
+  // Nature wheel: index 0 = hinder, 1 = neutral, 2 = boost, for one stat.
+  const natIdx = (s: SideState, stat: string) => (s.boostedStat === stat ? 2 : s.hinderedStat === stat ? 0 : 1);
+  const setNatureWheel = (side: Side, stat: string, target: number) => {
+    if (target === natIdx(state[side], stat)) return;
+    dispatch({ type: 'SET_NATURE', payload: { side, nature: natureForStatWheel(stat, target) } });
+  };
   const stepHp = (delta: number) =>
     dispatch({ type: 'SET_HP_PERCENT', payload: { side: 'p2', val: Math.max(0, Math.min(100, state.p2.hpPercent + delta)) } });
 
@@ -305,11 +280,14 @@ export function ArenaCalculatorLandscape({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 5 }}>
-          <TuneStat label="Nature" value={natureShort(state.p1)} active={!!state.p1.boostedStat} onClick={() => setPicker({ side: 'p1', field: 'nature' })} />
-          <MicroStepper label={p1OffLabel} value={state.p1[p1OffKey] as number} active={(state.p1[p1OffKey] as number) > 0}
-            onDec={() => stepSp('p1', p1OffKey, state.p1[p1OffKey] as number, -EV_STEP)}
-            onInc={() => stepSp('p1', p1OffKey, state.p1[p1OffKey] as number, EV_STEP)} />
-          <TuneStat label="Rank" value={fmtStage(state.p1.stages[p1RankStat] || 0)} active={(state.p1.stages[p1RankStat] || 0) !== 0} onClick={() => setAdvancedSide('p1')} />
+          <WheelPicker label="Nature" options={NATURE_OPTIONS} active={natIdx(state.p1, p1RankStat) !== 1}
+            index={natIdx(state.p1, p1RankStat)} onChange={(i) => setNatureWheel('p1', p1RankStat, i)} />
+          <WheelPicker label={p1OffLabel} options={SP_OPTIONS} active={(state.p1[p1OffKey] as number) > 0}
+            index={state.p1[p1OffKey] as number}
+            onChange={(i) => dispatch({ type: 'SET_SP', payload: { side: 'p1', key: p1OffKey as string, val: i } })} />
+          <WheelPicker label="Rank" options={RANK_OPTIONS} active={(state.p1.stages[p1RankStat] || 0) !== 0}
+            index={(state.p1.stages[p1RankStat] || 0) + 6}
+            onChange={(i) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat: p1RankStat, val: i - 6 } })} />
         </div>
 
         <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>
@@ -413,6 +391,8 @@ export function ArenaCalculatorLandscape({
             oppStage={state[defDir].stages.spe || 0}
             onYouStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
             onOppStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
+            youSpeSp={state[dir].spSpe}
+            onYouSpeSp={(i) => dispatch({ type: 'SET_SP', payload: { side: dir, key: 'spSpe', val: i } })}
             formula={speedFormula(state[dir])}
             trickRoom={state.isTrickRoom}
           />
@@ -470,12 +450,17 @@ export function ArenaCalculatorLandscape({
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 4 }}>
-          <TuneStat label="Nature" value={natureShort(state.p2)} active={!!state.p2.boostedStat} onClick={() => setPicker({ side: 'p2', field: 'nature' })} />
-          <MicroStepper label="HP SP" value={state.p2.spHp} active={state.p2.spHp > 0}
-            onDec={() => stepSp('p2', 'spHp', state.p2.spHp, -EV_STEP)} onInc={() => stepSp('p2', 'spHp', state.p2.spHp, EV_STEP)} />
-          <MicroStepper label={p2DefLabel} value={state.p2[p2DefKey] as number} active={(state.p2[p2DefKey] as number) > 0}
-            onDec={() => stepSp('p2', p2DefKey, state.p2[p2DefKey] as number, -EV_STEP)} onInc={() => stepSp('p2', p2DefKey, state.p2[p2DefKey] as number, EV_STEP)} />
-          <TuneStat label="Rank" value={fmtStage(state.p2.stages[p2RankStat] || 0)} active={(state.p2.stages[p2RankStat] || 0) !== 0} onClick={() => setAdvancedSide('p2')} />
+          <WheelPicker label="Nature" options={NATURE_OPTIONS} active={natIdx(state.p2, p2RankStat) !== 1}
+            index={natIdx(state.p2, p2RankStat)} onChange={(i) => setNatureWheel('p2', p2RankStat, i)} />
+          <WheelPicker label="HP SP" options={SP_OPTIONS} active={state.p2.spHp > 0}
+            index={state.p2.spHp}
+            onChange={(i) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key: 'spHp', val: i } })} />
+          <WheelPicker label={p2DefLabel} options={SP_OPTIONS} active={(state.p2[p2DefKey] as number) > 0}
+            index={state.p2[p2DefKey] as number}
+            onChange={(i) => dispatch({ type: 'SET_SP', payload: { side: 'p2', key: p2DefKey as string, val: i } })} />
+          <WheelPicker label="Rank" options={RANK_OPTIONS} active={(state.p2.stages[p2RankStat] || 0) !== 0}
+            index={(state.p2.stages[p2RankStat] || 0) + 6}
+            onChange={(i) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: 'p2', stat: p2RankStat, val: i - 6 } })} />
         </div>
 
         <div style={{ display: 'flex', gap: 4, minWidth: 0 }}>

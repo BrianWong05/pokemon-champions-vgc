@@ -177,7 +177,7 @@ export function sideReducer(state: SideState, action: SideAction): SideState {
     }
     case 'SET_SP': {
       const { key, val } = action.payload;
-      return { ...state, [key]: val };
+      return { ...state, [key]: Math.max(0, Math.min(32, val)) };
     }
     case 'TOGGLE_NATURE': {
       const { stat, mod } = action.payload;
