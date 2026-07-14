@@ -19,6 +19,7 @@ const App: React.FC = () => {
         <Route path="/" element={<Layout />}>
           <Route index element={<DamageCalculator />} />
           <Route path="teams" element={<TeamsPage />} />
+          <Route path="teams/new" element={<TeamsPage />} />
           <Route path="teams/:id" element={<TeamDetailPage />} />
           <Route path="ev-converter" element={<EvSpConverter />} />
           <Route path="speed-tiers" element={<SpeedTierList />} />
