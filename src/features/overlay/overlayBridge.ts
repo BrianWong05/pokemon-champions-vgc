@@ -16,6 +16,7 @@ declare global {
   interface Window {
     OverlayBridge?: NativeOverlayBridge;
     __overlayBubbleTap?: () => void;
+    __overlayBubbleDoubleTap?: () => void;
     __overlayBack?: () => void;
   }
 }
@@ -32,6 +33,10 @@ export const overlayBridge = {
   onBubbleTap(cb: () => void): () => void {
     window.__overlayBubbleTap = cb;
     return () => { if (window.__overlayBubbleTap === cb) delete window.__overlayBubbleTap; };
+  },
+  onBubbleDoubleTap(cb: () => void): () => void {
+    window.__overlayBubbleDoubleTap = cb;
+    return () => { if (window.__overlayBubbleDoubleTap === cb) delete window.__overlayBubbleDoubleTap; };
   },
   onBack(cb: () => void): () => void {
     window.__overlayBack = cb;

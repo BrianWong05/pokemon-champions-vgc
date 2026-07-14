@@ -10,7 +10,7 @@ declare global {
 }
 
 describe('overlayBridge', () => {
-  beforeEach(() => { delete window.OverlayBridge; delete (window as any).__overlayBubbleTap; });
+  beforeEach(() => { delete window.OverlayBridge; delete (window as any).__overlayBubbleTap; delete (window as any).__overlayBubbleDoubleTap; });
 
   it('is unavailable and inert without the native interface', () => {
     expect(overlayBridge.isAvailable()).toBe(false);
@@ -43,5 +43,14 @@ describe('overlayBridge', () => {
     expect(cb).toHaveBeenCalledOnce();
     off();
     expect((window as any).__overlayBubbleTap).toBeUndefined();
+  });
+
+  it('registers and unregisters the bubble double-tap callback', () => {
+    const cb = vi.fn();
+    const off = overlayBridge.onBubbleDoubleTap(cb);
+    (window as any).__overlayBubbleDoubleTap();
+    expect(cb).toHaveBeenCalledOnce();
+    off();
+    expect((window as any).__overlayBubbleDoubleTap).toBeUndefined();
   });
 });
