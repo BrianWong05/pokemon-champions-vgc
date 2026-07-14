@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTeams, TeamWithMembers } from '@/features/teams/hooks/useTeams';
 import PokemonImage from '@/components/atoms/PokemonImage';
 import ItemImage from '@/components/atoms/ItemImage';
 import TeamExportModal from '@/components/organisms/TeamExportModal';
-import Modal from '@/components/atoms/Modal';
 import ScanTeamModal from '@/features/scan/ScanTeamModal';
 import { ParsedShowdownSet } from '@/features/pokemon/utils/showdown-parser';
 import { getNatureStats, getFormattedNature } from '@/features/pokemon/utils/pokemon-natures';
@@ -28,7 +27,11 @@ const TeamsPage: React.FC = () => {
   const { teams, loading: teamsLoading, error, createTeam, deleteTeam, updateTeam } = useTeams();
   const { format } = useFormat();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+  // Desktop "Import team" is a full page (route), not a modal. /teams/new renders
+  // the ArenaAddTeam screen in place of the team list.
+  const onNewTeamRoute = location.pathname.endsWith('/teams/new');
+
   const [pokemonList, setPokemonList] = useState<PokemonBaseStats[]>([]);
   const [moveList, setMoveList] = useState<MoveData[]>([]);
   const [exportTeam, setExportTeam] = useState<TeamWithMembers | null>(null);
@@ -261,6 +264,13 @@ const TeamsPage: React.FC = () => {
     }
   };
 
+  // Desktop /teams/new page: create then land on the new team's detail.
+  const handleCreateFromNewPage = async (name: string, members: PokemonConfig[]) => {
+    const nm = name.trim() || `${pokemonList.find((p) => p.id === members[0]?.selectedId)?.nameEn ?? 'New'}'s Team`;
+    const id = await createTeam(nm, members);
+    navigate(`/teams/${id}`);
+  };
+
   // ponytail: shared modals for both mobile frames; landscape = master-detail, portrait = card list
   if (isMobile || mode === 'arena-landscape') {
     return (
@@ -339,6 +349,21 @@ const TeamsPage: React.FC = () => {
     return <div className="container mx-auto p-4 max-w-4xl text-danger">Error: {error}</div>;
   }
 
+  if (onNewTeamRoute) {
+    return (
+      <div className="h-[calc(100vh_-_8rem)] max-w-5xl mx-auto">
+        <ArenaAddTeam
+          pokemonList={pokemonList}
+          moveList={moveList}
+          initialMethod="paste"
+          onBack={() => navigate('/teams')}
+          onScanSave={handleSavePlayerTeam}
+          onCreate={handleCreateFromNewPage}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       <div className="flex justify-between items-center mb-6">
@@ -351,7 +376,7 @@ const TeamsPage: React.FC = () => {
             Scan team
           </button>
           <button
-            onClick={() => setCreatingTeam(true)}
+            onClick={() => navigate('/teams/new')}
             className="bg-accent text-accent-ink px-4 py-2 rounded-lg hover:bg-accent-hover transition-colors"
           >
             Import team
@@ -363,7 +388,7 @@ const TeamsPage: React.FC = () => {
         <div className="text-center py-12 bg-card rounded-xl border border-line">
           <p className="text-ink-3 mb-4">You haven't created any teams yet.</p>
           <button
-            onClick={() => setCreatingTeam(true)}
+            onClick={() => navigate('/teams/new')}
             className="text-accent font-semibold hover:underline"
           >
             Create your first team
@@ -447,19 +472,6 @@ const TeamsPage: React.FC = () => {
             speciesName: pokemonList.find(p => p.id === m.configuration.selectedId)?.nameEn || 'Unknown'
           }))}
         />
-      )}
-
-      {creatingTeam && (
-        <Modal isOpen onClose={closeAddTeam} maxWidth="max-w-5xl" bodyClassName="h-[80vh]">
-          <ArenaAddTeam
-            pokemonList={pokemonList}
-            moveList={moveList}
-            initialMethod="paste"
-            onBack={closeAddTeam}
-            onScanSave={handleAddTeamScanSave}
-            onCreate={handleAddTeamCreate}
-          />
-        </Modal>
       )}
 
       <ScanTeamModal
