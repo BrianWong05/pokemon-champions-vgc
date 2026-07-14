@@ -16,6 +16,9 @@ const tabByPath = (path: string): string => {
 const TITLE_BY_TAB: Record<string, string> = {
   calc: 'Calculator', teams: 'Teams', sp: 'EV / SP', speed: 'Speed tiers',
 };
+// EV/SP only works in portrait; hide it from the landscape rail (it'd just show
+// the "rotate to portrait" placeholder).
+const LANDSCAPE_TABS = ARENA_TABS.filter((t) => t.id !== 'sp');
 
 /**
  * ArenaShell — the dark mobile frame: sticky AppBar + scrolling content + sticky
@@ -46,6 +49,7 @@ const ArenaShell: React.FC<{ landscape?: boolean }> = ({ landscape = false }) =>
       {landscape ? (
         <NavRail
           active={active}
+          tabs={LANDSCAPE_TABS}
           onChange={(id) => navigate(ROUTE_BY_TAB[id] ?? '/')}
           bottom={
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
