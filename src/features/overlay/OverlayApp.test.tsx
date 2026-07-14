@@ -130,6 +130,19 @@ describe('OverlayApp', () => {
     expect(panel.style.opacity).toBe('1');
   });
 
+  it('hold-to-peek hides the my-team scan panel while pressed and restores it on release', async () => {
+    detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
+    const { container } = render(<OverlayApp />);
+    await act(async () => { (globalThis as any).__tap(); });
+    await screen.findByTestId('player-scan');
+    const peek = screen.getByRole('button', { name: /Hold to peek/ });
+    const panel = container.querySelector('.rounded-2xl') as HTMLElement;
+    fireEvent.pointerDown(peek);
+    expect(panel.style.opacity).toBe('0');
+    fireEvent.pointerUp(peek);
+    expect(panel.style.opacity).toBe('1');
+  });
+
   it('bubble tap on a player-team screen routes to the my-team scan, not scanFrame', async () => {
     detectPlayerPanelsMock.mockReturnValue({ kind: 'moves', panels: [] });
     render(<OverlayApp />);
