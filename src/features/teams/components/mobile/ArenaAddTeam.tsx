@@ -12,6 +12,8 @@ import { REVERSE_TYPE_IDS } from '@/features/pokemon/utils/pokemon-types';
 import { ArenaPlayerScanReview } from '@/features/scan/ArenaPlayerScanReview';
 import { ArenaReviewMon } from './ArenaReviewMon';
 import { useViewportMode } from '@/hooks/useViewportMode';
+import PokemonSearchSelect from '@/components/molecules/PokemonSearchSelect';
+import { pokemonRepository } from '@/db/repositories/pokemon.repo';
 
 export interface ArenaAddTeamProps {
   pokemonList: PokemonBaseStats[];
@@ -27,9 +29,10 @@ export interface ArenaAddTeamProps {
   initialMethod?: 'paste' | 'scan';
 }
 
-type Method = 'paste' | 'scan';
+type Method = 'paste' | 'build' | 'scan';
 const METHODS: { key: Method; label: string }[] = [
   { key: 'paste', label: 'Paste' },
+  { key: 'build', label: 'Build' },
   { key: 'scan', label: 'Scan' },
 ];
 const SP_FIELDS: [keyof PokemonConfig, string][] = [
@@ -101,13 +104,36 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
   const [editing, setEditing] = useState(false);
   const [edited, setEdited] = useState<Record<number, PokemonConfig>>({});
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  // Build tab: team assembled one Pokémon at a time. Edits write back in place
+  // (no `edited` overlay), so it can't cross-contaminate the paste preview.
+  const [builtConfigs, setBuiltConfigs] = useState<PokemonConfig[]>([]);
+  const [adderKey, setAdderKey] = useState(0); // remount the search box to clear it after each add
 
   const sets = useMemo(() => (method === 'scan' ? [] : parseShowdownTeam(text)), [text, method]);
   const configs = useMemo(() => sets.slice(0, 6).map((s) => setToConfig(s, pokemonList, moveList)), [sets, pokemonList, moveList]);
   // In edit mode, preview the team's real members until the user pastes a replacement.
   const baseConfigs = sets.length > 0 ? configs : (initialConfigs ?? []);
-  const displayConfigs = baseConfigs.map((cfg, i) => edited[i] ?? cfg);
+  const displayConfigs = method === 'build' ? builtConfigs : baseConfigs.map((cfg, i) => edited[i] ?? cfg);
   const nameOf = (dex: number | null) => pokemonList.find((p) => p.id === dex)?.nameEn ?? 'Unknown';
+
+  // Build tab: append a picked species as a default config (0 SP, Hardy, first ability).
+  const addPokemon = async (p: PokemonBaseStats) => {
+    if (builtConfigs.length >= 6) return;
+    let abilities: string[] = [];
+    try { abilities = await pokemonRepository.getPokemonAbilities(p.id); } catch (e) { console.error('[add-team] abilities', e); }
+    setBuiltConfigs((prev) => prev.length >= 6 ? prev : [...prev, {
+      selectedId: p.id, type1: p.type1, type2: p.type2,
+      baseHp: p.baseHp, baseAtk: p.baseAttack, baseDef: p.baseDefense,
+      baseSpa: p.baseSpAtk, baseSpd: p.baseSpDef, baseSpe: p.baseSpeed,
+      spHp: 0, spAtk: 0, spDef: 0, spSpa: 0, spSpd: 0, spSpe: 0,
+      nature: 'Hardy', boostedStat: null, hinderedStat: null,
+      moves: [null, null, null, null], activeMoveIndex: 0,
+      abilities, activeAbility: abilities[0] ?? null,
+      item: null, hpPercent: 100, isTypeOverridden: false,
+    }]);
+    setAdderKey((k) => k + 1);
+  };
+  const removeBuilt = (i: number) => setBuiltConfigs((prev) => prev.filter((_, j) => j !== i));
 
   const fetchUrl = async () => {
     if (!url.trim()) return;
@@ -136,7 +162,11 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
         moveList={moveList}
         saveLabel="Apply"
         onBack={() => setEditIndex(null)}
-        onSave={(cfg) => { setEdited((prev) => ({ ...prev, [idx]: cfg })); setEditIndex(null); }}
+        onSave={(cfg) => {
+          if (method === 'build') setBuiltConfigs((prev) => prev.map((c, i) => (i === idx ? cfg : c)));
+          else setEdited((prev) => ({ ...prev, [idx]: cfg }));
+          setEditIndex(null);
+        }}
       />
     );
   }
@@ -167,22 +197,41 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
         </div>
         {method !== 'scan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchUrl()}
-                placeholder="Paste a Poképaste / Victory Road link to fetch…"
-                style={{ flex: 1, minWidth: 0, height: 38, padding: '0 12px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12.5, outline: 'none' }}
-              />
-              <Button variant="secondary" onClick={fetchUrl} disabled={fetching || !url.trim()}>{fetching ? 'Fetching…' : 'Fetch'}</Button>
-            </div>
-            {(displayConfigs.length === 0 || editing) && (
-              <textarea
-                value={text} onChange={(e) => setText(e.target.value)}
-                placeholder="…or paste a Pokémon Showdown team export directly."
-                style={textArea}
-              />
+            {method === 'paste' && (
+              <>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchUrl()}
+                    placeholder="Paste a Poképaste / Victory Road link to fetch…"
+                    style={{ flex: 1, minWidth: 0, height: 38, padding: '0 12px', borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)', border: '1px solid var(--line-2)', color: 'var(--ink-1)', fontFamily: 'var(--font-ui)', fontSize: 12.5, outline: 'none' }}
+                  />
+                  <Button variant="secondary" onClick={fetchUrl} disabled={fetching || !url.trim()}>{fetching ? 'Fetching…' : 'Fetch'}</Button>
+                </div>
+                {(displayConfigs.length === 0 || editing) && (
+                  <textarea
+                    value={text} onChange={(e) => setText(e.target.value)}
+                    placeholder="…or paste a Pokémon Showdown team export directly."
+                    style={textArea}
+                  />
+                )}
+                {error && <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', borderRadius: 'var(--r-sm)', padding: '7px 10px' }}>{error}</div>}
+              </>
             )}
-            {error && <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--danger)', background: 'var(--danger-soft)', border: '1px solid var(--danger-line)', borderRadius: 'var(--r-sm)', padding: '7px 10px' }}>{error}</div>}
+            {method === 'build' && (
+              <div>
+                <PokemonSearchSelect
+                  key={adderKey}
+                  label="Add Pokémon"
+                  pokemonList={pokemonList}
+                  onSelect={(p) => void addPokemon(p)}
+                />
+                <p style={{ fontSize: 11, color: 'var(--ink-4)', margin: '6px 2px 0' }}>
+                  {builtConfigs.length >= 6
+                    ? 'Team full (6). Remove a Pokémon to add another.'
+                    : `Search and add Pokémon one at a time — ${6 - builtConfigs.length} slot${6 - builtConfigs.length === 1 ? '' : 's'} left. Tap a card to set its moves, item, EVs & nature.`}
+                </p>
+              </div>
+            )}
 
             {displayConfigs.length > 0 && (
               <>
@@ -190,9 +239,11 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ink-3)' }}>Preview</span>
                 <span style={{ fontSize: 10, color: 'var(--ink-4)' }}>· tap a card to edit</span>
                 <span style={{ flex: 1 }} />
-                <button onClick={() => setEditing((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 9px', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--ink-3)', fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                  <Icon name={editing ? 'chevron-up' : 'pencil'} size={12} color="var(--ink-3)" />{editing ? 'Hide editor' : 'Edit paste'}
-                </button>
+                {method === 'paste' && (
+                  <button onClick={() => setEditing((v) => !v)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 9px', borderRadius: 'var(--r-sm)', background: 'transparent', border: '1px solid var(--line-2)', color: 'var(--ink-3)', fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    <Icon name={editing ? 'chevron-up' : 'pencil'} size={12} color="var(--ink-3)" />{editing ? 'Hide editor' : 'Edit paste'}
+                  </button>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: portrait ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 9 }}>
                 {displayConfigs.map((cfg, i) => {
@@ -202,7 +253,8 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
                     : cfg.nature;
                   const spStr = SP_FIELDS.filter(([k]) => (cfg[k] as number) > 0).map(([k, l]) => `${l} ${cfg[k]}`).join(' · ');
                   return (
-                    <button key={i} onClick={() => setEditIndex(i)} title="Edit stats & moves" style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: 10, borderRadius: 'var(--r-md)', textAlign: 'left', cursor: 'pointer', background: 'var(--surface-card)', border: `1px solid ${isEdited ? 'var(--accent-soft-line)' : 'var(--line-1)'}`, minWidth: 0 }}>
+                    <div key={i} style={{ position: 'relative', minWidth: 0 }}>
+                    <button onClick={() => setEditIndex(i)} title="Edit stats & moves" style={{ display: 'flex', flexDirection: 'column', gap: 7, width: '100%', padding: 10, borderRadius: 'var(--r-md)', textAlign: 'left', cursor: 'pointer', background: 'var(--surface-card)', border: `1px solid ${isEdited ? 'var(--accent-soft-line)' : 'var(--line-1)'}`, minWidth: 0 }}>
                       {/* sprite + name + types */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ width: 36, height: 36, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--surface-inset)', borderRadius: 8, overflow: 'hidden' }}>
@@ -220,7 +272,7 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
                             </div>
                           )}
                         </div>
-                        <Icon name="chevron-right" size={14} color="var(--ink-4)" />
+                        {method !== 'build' && <Icon name="chevron-right" size={14} color="var(--ink-4)" />}
                       </div>
                       {/* item */}
                       {cfg.item && (
@@ -243,6 +295,16 @@ export const ArenaAddTeam: React.FC<ArenaAddTeamProps> = ({ pokemonList, moveLis
                         ))}
                       </div>
                     </button>
+                    {method === 'build' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removeBuilt(i); }}
+                        aria-label={`Remove ${nameOf(cfg.selectedId)}`}
+                        style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, display: 'grid', placeItems: 'center', borderRadius: 999, background: 'var(--surface-inset)', border: '1px solid var(--line-2)', cursor: 'pointer' }}
+                      >
+                        <Icon name="x" size={11} color="var(--ink-3)" />
+                      </button>
+                    )}
+                    </div>
                   );
                 })}
               </div>
