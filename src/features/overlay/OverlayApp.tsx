@@ -226,7 +226,7 @@ const OverlayApp: React.FC = () => {
       <div className="w-full h-screen p-2" onClick={view === 'playerScan' ? minimizePlayerScan : cancelPlayerScan}>
         <div
           className="w-full h-full flex flex-col rounded-2xl overflow-hidden shadow-2xl"
-          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)' }}
+          style={{ background: 'var(--bg-page)', border: '1px solid var(--line-2)', opacity: peeking ? 0 : 1 }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center gap-2 px-3 h-8 shrink-0" style={{ borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}>
@@ -234,9 +234,22 @@ const OverlayApp: React.FC = () => {
             <span className="text-xs font-bold">Scan my team</span>
             <span className="flex-1" />
             {view === 'playerScan' && (
-              <button aria-label="Minimize" onClick={minimizePlayerScan} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
-                ▾
-              </button>
+              <>
+                <button
+                  aria-label="Hold to peek at the game"
+                  onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); setPeeking(true); }}
+                  onPointerUp={() => setPeeking(false)}
+                  onPointerCancel={() => setPeeking(false)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="text-[11px] px-2 py-1 rounded inline-flex items-center gap-1"
+                  style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)', touchAction: 'none' }}
+                >
+                  <Icon name="eye" size={12} color="var(--ink-2)" />Peek
+                </button>
+                <button aria-label="Minimize" onClick={minimizePlayerScan} className="text-[11px] px-2 py-1 rounded" style={{ border: '1px solid var(--line-2)', background: 'var(--surface-inset)', color: 'var(--ink-2)' }}>
+                  ▾
+                </button>
+              </>
             )}
           </div>
           {view === 'playerSaved' ? (
