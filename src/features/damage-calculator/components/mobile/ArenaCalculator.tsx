@@ -124,6 +124,8 @@ export function ArenaCalculator({
             youStage={state[dir].stages.spe || 0} oppStage={state[defDir].stages.spe || 0}
             onYouStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: dir, stat: 'spe', val } })}
             onOppStage={(val) => dispatch({ type: 'SET_STAT_STAGE', payload: { side: defDir, stat: 'spe', val } })}
+            youSpeSp={state[dir].spSpe}
+            onYouSpeSp={(i) => dispatch({ type: 'SET_SP', payload: { side: dir, key: 'spSpe', val: i } })}
             formula={speedFormula(state[dir])}
             trickRoom={state.isTrickRoom}
           />

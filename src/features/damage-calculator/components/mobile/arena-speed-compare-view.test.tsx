@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { it, expect } from 'vitest';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { it, expect, vi } from 'vitest';
 import { ArenaSpeedCompareView } from './ArenaSpeedCompareView';
 
 const compare = {
@@ -58,6 +58,25 @@ it('Trick Room flips the comparison direction: slower still moves first', () => 
   // side moves first, so this tier must render Faster.
   const row = screen.getByText('Max+ scarf').closest('div')!;
   expect(within(row).getByText('Faster')).toBeTruthy();
+});
+
+it('the Spe rank wheel dispatches the stage (index - 6) via onYouStage', () => {
+  vi.useFakeTimers();
+  const onYouStage = vi.fn();
+  render(<ArenaSpeedCompareView {...props} onYouStage={onYouStage} />);
+  const wheel = screen.getAllByLabelText('Spe rank')[0]; // "you" column is first
+  wheel.scrollTop = 8 * 28; // RANK_OPTIONS index 8 = stage +2
+  fireEvent.scroll(wheel);
+  act(() => { vi.advanceTimersByTime(150); });
+  vi.useRealTimers();
+  expect(onYouStage).toHaveBeenCalledWith(2);
+});
+
+it('renders a Spe SP wheel only when onYouSpeSp is supplied', () => {
+  const { rerender } = render(<ArenaSpeedCompareView {...props} />);
+  expect(screen.queryByLabelText('Spe SP')).toBeNull();
+  rerender(<ArenaSpeedCompareView {...props} youSpeSp={12} onYouSpeSp={() => {}} />);
+  expect(screen.getByLabelText('Spe SP')).toBeTruthy();
 });
 
 it('does not show the Trick Room indicator by default', () => {

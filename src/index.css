@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./design-system/arena/tokens.css";
 
+/* Hide the scrollbar on the WheelPicker's vertical scroll list (Firefox uses scrollbar-width). */
+.arena-wheel-scroll::-webkit-scrollbar { display: none; }
+
 /* Arena tokens exposed as Tailwind utilities (bg-card, text-ink-2, border-line, …) */
 @theme inline {
   --color-page: var(--bg-page);

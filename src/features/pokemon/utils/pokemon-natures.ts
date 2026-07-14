@@ -79,6 +79,19 @@ export const getNatureFromStats = (boostedStat: string | null, hinderedStat: str
   return "Hardy";
 };
 
+/**
+ * Nature name for a per-stat 3-way wheel: target 0 = hinder, 1 = neutral, 2 = boost.
+ * A champions nature is a boost+hinder PAIR — a lone boost has no real nature and the
+ * damage engine ignores it. Pair the tuned stat with the conventional dump stat
+ * (Atk, or SpA when tuning Atk) so it maps to a real nature (↑SpA → Modest, ↑Def → Bold).
+ */
+export const natureForStatWheel = (stat: string, target: number): string => {
+  const partner = stat === 'atk' ? 'spa' : 'atk';
+  const boosted = target === 2 ? stat : target === 0 ? partner : null;
+  const hindered = target === 2 ? partner : target === 0 ? stat : null;
+  return getNatureFromStats(boosted, hindered);
+};
+
 export const getFormattedNature = (nature: string): string => {
   if (!nature) return "Hardy";
   const baseName = nature.split(' (')[0].trim().toLowerCase();

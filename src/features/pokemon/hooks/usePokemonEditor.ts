@@ -85,7 +85,7 @@ function pokemonReducer(state: PokemonConfig, action: PokemonAction): PokemonCon
   switch (action.type) {
     case 'SET_SP': {
       const { key, val } = action.payload;
-      return { ...state, [key]: val };
+      return { ...state, [key]: Math.max(0, Math.min(32, val)) };
     }
     case 'SET_NATURE': {
       const stats = statEngine.getStatsForNature(action.payload);

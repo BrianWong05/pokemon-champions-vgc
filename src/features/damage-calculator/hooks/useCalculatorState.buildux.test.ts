@@ -31,6 +31,12 @@ describe('build-ux reducer actions', () => {
     expect(next.item).toBe('Sitrus Berry');
   });
 
+  it('SET_SP clamps to [0, 32]', () => {
+    expect(sideReducer(initialSide, { type: 'SET_SP', payload: { side: 'p1', key: 'spSpa', val: 67 } }).spSpa).toBe(32);
+    expect(sideReducer(initialSide, { type: 'SET_SP', payload: { side: 'p1', key: 'spSpa', val: -5 } }).spSpa).toBe(0);
+    expect(sideReducer(initialSide, { type: 'SET_SP', payload: { side: 'p1', key: 'spSpa', val: 20 } }).spSpa).toBe(20);
+  });
+
   it('SET_SCAN_LOADED toggles the flag', () => {
     const next = sideReducer(initialSide, { type: 'SET_SCAN_LOADED', payload: { side: 'p2', val: true } });
     expect(next.loadedFromScan).toBe(true);

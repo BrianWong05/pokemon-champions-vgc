@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ArenaCalculatorLandscape } from './ArenaCalculatorLandscape';
 import type { CalcState, SideState } from '@/features/damage-calculator/hooks/useCalculatorState';
@@ -144,11 +144,16 @@ describe('ArenaCalculatorLandscape', () => {
     expect(screen.getAllByText('Faster').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('speed rank stepper dispatches SET_STAT_STAGE', () => {
+  it('speed rank wheel dispatches SET_STAT_STAGE', () => {
     const dispatch = setup();
     fireEvent.click(screen.getByText('Speed'));
-    // ArenaSpeedCompareView renders a "Spe rank" stepper per side; the "you" (attacker) column is first
-    fireEvent.click(screen.getAllByLabelText('Raise Spe rank')[0]);
+    // ArenaSpeedCompareView renders a "Spe rank" wheel per side; the "you" (attacker) column is first.
+    const wheel = screen.getAllByLabelText('Spe rank')[0];
+    vi.useFakeTimers();
+    wheel.scrollTop = 7 * 28; // RANK_OPTIONS index 7 = stage +1
+    fireEvent.scroll(wheel);
+    act(() => { vi.advanceTimersByTime(150); });
+    vi.useRealTimers();
     expect(dispatch).toHaveBeenCalledWith({ type: 'SET_STAT_STAGE', payload: { side: 'p1', stat: 'spe', val: 1 } });
   });
 

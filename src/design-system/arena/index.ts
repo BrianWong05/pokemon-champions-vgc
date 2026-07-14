@@ -5,6 +5,7 @@ export { TypeBadge } from './TypeBadge';
 export { Sprite } from './Sprite';
 export { ItemIcon } from './ItemIcon';
 export { StatField, StatGrid } from './StatField';
+export { WheelPicker, SP_OPTIONS, RANK_OPTIONS, NATURE_OPTIONS } from './WheelPicker';
 export { KOVerdict } from './KOVerdict';
 export { SelectRow } from './SelectRow';
 export { Toggle } from './Toggle';

@@ -1,34 +1,17 @@
 import React, { useState } from 'react';
 import type { SpeedCompare } from '@/features/damage-calculator/utils/speed';
-import { fmtStage } from '@/features/damage-calculator/utils/speed';
-import { Badge } from '@/design-system/arena';
+import { Badge, WheelPicker, SP_OPTIONS, RANK_OPTIONS } from '@/design-system/arena';
 
 type Mode = 'actual' | 'scarf' | 'tailwind';
 const MODES: { key: Mode; label: string }[] = [
   { key: 'actual', label: 'Actual' }, { key: 'scarf', label: 'Scarf' }, { key: 'tailwind', label: 'Tailwind' },
 ];
 
-const stepBtn: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 'var(--r-sm)', background: 'var(--surface-inset)',
-  border: '1px solid var(--line-2)', color: 'var(--ink-2)', fontFamily: 'var(--font-display)',
-  fontSize: 14, fontWeight: 700, cursor: 'pointer', lineHeight: 1,
-};
 const micro: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--ink-3)' };
-
-function RankRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '2px 0 8px' }}>
-      <span style={micro}>{label}</span>
-      <span style={{ flex: 1 }} />
-      <button aria-label={`Lower ${label}`} style={stepBtn} onClick={() => onChange(Math.max(-6, value - 1))}>−</button>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700, color: 'var(--ink-1)', width: 28, textAlign: 'center' }}>{fmtStage(value)}</span>
-      <button aria-label={`Raise ${label}`} style={stepBtn} onClick={() => onChange(Math.min(6, value + 1))}>+</button>
-    </div>
-  );
-}
 
 export function ArenaSpeedCompareView({
   compare, layout, youName, oppName, oppBaseSpe, youStage, oppStage, onYouStage, onOppStage, formula, trickRoom = false,
+  youSpeSp, onYouSpeSp,
 }: {
   compare: SpeedCompare;
   layout: 'columns' | 'stacked';
@@ -37,6 +20,8 @@ export function ArenaSpeedCompareView({
   onYouStage: (val: number) => void; onOppStage: (val: number) => void;
   formula: string;
   trickRoom?: boolean;
+  /** Your Speed SP (0–32) — renders an inline wheel when a setter is supplied. */
+  youSpeSp?: number; onYouSpeSp?: (val: number) => void;
 }) {
   const [mode, setMode] = useState<Mode>('actual');
   const youEff = compare.yours[mode];
@@ -44,7 +29,18 @@ export function ArenaSpeedCompareView({
   const youCol = (
     <div style={{ minWidth: 0 }}>
       <div style={{ ...micro, marginBottom: 6 }}>{`You — ${youName}`}</div>
-      <RankRow label="Spe rank" value={youStage} onChange={onYouStage} />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        {onYouSpeSp && (
+          <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 120 }}>
+            <WheelPicker label="Spe SP" options={SP_OPTIONS} active={(youSpeSp ?? 0) > 0}
+              index={youSpeSp ?? 0} onChange={onYouSpeSp} />
+          </div>
+        )}
+        <div style={{ flex: '1 1 0', minWidth: 0, maxWidth: 120 }}>
+          <WheelPicker label="Spe rank" options={RANK_OPTIONS} active={youStage !== 0}
+            index={youStage + 6} onChange={(i) => onYouStage(i - 6)} />
+        </div>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {MODES.map(({ key, label }) => {
           const on = mode === key;
@@ -70,7 +66,10 @@ export function ArenaSpeedCompareView({
         <span>{`Opp — ${oppName} · Base Spe ${oppBaseSpe}`}</span>
         {trickRoom && <Badge tone="field">Trick Room</Badge>}
       </div>
-      <RankRow label="Spe rank" value={oppStage} onChange={onOppStage} />
+      <div style={{ width: 120, marginBottom: 8 }}>
+        <WheelPicker label="Spe rank" options={RANK_OPTIONS} active={oppStage !== 0}
+          index={oppStage + 6} onChange={(i) => onOppStage(i - 6)} />
+      </div>
       {compare.tiers.map((t) => {
         const first = trickRoom ? youEff < t.value : youEff > t.value;
         const outcome = youEff === t.value ? 'tie' : first ? 'faster' : 'outsped';
